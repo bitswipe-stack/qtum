@@ -4,7 +4,7 @@ define(_CLIENT_VERSION_MINOR, 1)
 define(_CLIENT_VERSION_BUILD, 0)
 define(_CLIENT_VERSION_RC, 0)
 define(_CLIENT_VERSION_IS_RELEASE, true)
-define(_COPYRIGHT_YEAR, 2024)
+define(_COPYRIGHT_YEAR, 2025)
 define(_COPYRIGHT_HOLDERS,[The %s Developers])
 define(_COPYRIGHT_HOLDERS_SUBSTITUTION,[[Qtum Core]])
 AC_INIT([Qtum Core],m4_join([.], _CLIENT_VERSION_MAJOR, _CLIENT_VERSION_MINOR, _CLIENT_VERSION_BUILD)m4_if(_CLIENT_VERSION_RC, [0], [], [rc]_CLIENT_VERSION_RC),[https://github.com/qtumproject/qtum/issues],[qtum],[https://qtum.org/])
@@ -1409,7 +1409,7 @@ AM_CONDITIONAL([ENABLE_ZMQ], [test "$use_zmq" = "yes"])
 # platforms, so we use older autoconf detection mechanisms:
 if test "x$GMP_LIBS" = "x"; then
   AC_CHECK_HEADER([gmp.h],,AC_MSG_ERROR(libgmp headers missing))
-  AC_CHECK_LIB([gmp],[__gmpn_sub_n],GMP_LIBS=-lgmp, [AC_MSG_ERROR(libgmp missing)])
+  AC_CHECK_LIB([gmp],[main],GMP_LIBS=-lgmp, [AC_MSG_ERROR(libgmp missing)])
 fi
 
 if test "x$GMPXX_LIBS" = "x"; then

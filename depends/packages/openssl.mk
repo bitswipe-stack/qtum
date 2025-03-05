@@ -55,7 +55,7 @@ endef
 
 define $(package)_preprocess_cmds
   sed -i.old "s/built on: \$date/built on: date not available/g" util/mkbuildinf.pl && \
-  sed -i.old "s|\"engines\", \"apps\", \"test\"|\"engines\"|" Configure
+  sed -i.old "s|\"engines\", \"apps\", \"test\", \"util\", \"tools\", \"fuzz\"|\"engines\", \"util\", \"tools\"|" Configure
 endef
 
 define $(package)_config_cmds
