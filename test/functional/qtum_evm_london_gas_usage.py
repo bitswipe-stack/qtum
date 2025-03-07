@@ -148,4 +148,4 @@ class QtumEVMLondonTest(BitcoinTestFramework):
         assert(self.contract_address not in self.node.listcontracts())
         
 if __name__ == '__main__':
-    QtumEVMLondonTest().main()
+    QtumEVMLondonTest(__file__).main()

@@ -624,4 +624,4 @@ class QtumSimpleDelegationContractTest(BitcoinTestFramework):
         self.sync_all()
 
 if __name__ == '__main__':
-    QtumSimpleDelegationContractTest().main()
+    QtumSimpleDelegationContractTest(__file__).main()

@@ -176,4 +176,4 @@ class QtumSoftMinerGasRelatedLimitsTest(BitcoinTestFramework):
         self.verify_hard_block_gas_limit_test()
 
 if __name__ == '__main__':
-    QtumSoftMinerGasRelatedLimitsTest().main()
+    QtumSoftMinerGasRelatedLimitsTest(__file__).main()

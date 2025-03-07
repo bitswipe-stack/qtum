@@ -224,4 +224,4 @@ class CondensingTxsTest(BitcoinTestFramework):
         assert("vin" not in self.node.getaccountinfo(self.sender3))
 
 if __name__ == '__main__':
-    CondensingTxsTest().main()
+    CondensingTxsTest(__file__).main()

@@ -40,4 +40,4 @@ class QtumCallContractStateNotRevertedTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumCallContractStateNotRevertedTest().main()
+    QtumCallContractStateNotRevertedTest(__file__).main()

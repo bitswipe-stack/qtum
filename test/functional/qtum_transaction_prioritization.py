@@ -303,4 +303,4 @@ class QtumTransactionPrioritizationTest(BitcoinTestFramework):
         self.verify_contract_ancestor_txs_test(with_restart=True, use_staking=True)
 
 if __name__ == '__main__':
-    QtumTransactionPrioritizationTest().main()
+    QtumTransactionPrioritizationTest(__file__).main()

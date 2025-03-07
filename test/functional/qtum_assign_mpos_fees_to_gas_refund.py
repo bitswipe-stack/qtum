@@ -77,4 +77,4 @@ class QtumAssignMPoSFeesToGasRefundTest(BitcoinTestFramework):
         assert_equal(self.node.getblockcount(), blockcount)
 
 if __name__ == '__main__':
-    QtumAssignMPoSFeesToGasRefundTest().main()
+    QtumAssignMPoSFeesToGasRefundTest(__file__).main()

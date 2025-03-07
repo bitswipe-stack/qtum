@@ -39,4 +39,4 @@ class QtumNullSenderTest(BitcoinTestFramework):
         assert_equal(self.node.getblockcount(), block_count+1)
 
 if __name__ == '__main__':
-    QtumNullSenderTest().main()
+    QtumNullSenderTest(__file__).main()

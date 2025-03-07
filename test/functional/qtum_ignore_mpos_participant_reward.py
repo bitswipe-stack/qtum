@@ -97,4 +97,4 @@ class QtumIgnoreMPOSParticipantRewardTest(BitcoinTestFramework):
         assert_equal(self.node.getblockcount(), blockcount)
         
 if __name__ == '__main__':
-    QtumIgnoreMPOSParticipantRewardTest().main()
+    QtumIgnoreMPOSParticipantRewardTest(__file__).main()

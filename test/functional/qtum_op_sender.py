@@ -491,4 +491,4 @@ class QtumOpSenderTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumOpSenderTest().main()
+    QtumOpSenderTest(__file__).main()

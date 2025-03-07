@@ -87,4 +87,4 @@ class Qtum8MBBlock(BitcoinTestFramework):
         assert_equal(block_count+1, self.nodes[1].getblockcount())
 
 if __name__ == '__main__':
-    Qtum8MBBlock().main()
+    Qtum8MBBlock(__file__).main()

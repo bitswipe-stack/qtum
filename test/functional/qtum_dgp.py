@@ -1141,4 +1141,4 @@ class QtumDGPTest(BitcoinTestFramework):
         state.assert_state()
 
 if __name__ == '__main__':
-    QtumDGPTest().main()
+    QtumDGPTest(__file__).main()

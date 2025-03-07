@@ -119,4 +119,4 @@ class QtumSignRawSenderTest(BitcoinTestFramework):
         assert_equal(self.nodes[0].listcontracts()[payable_contract_address], 1)
 
 if __name__ == '__main__':
-    QtumSignRawSenderTest().main()
+    QtumSignRawSenderTest(__file__).main()

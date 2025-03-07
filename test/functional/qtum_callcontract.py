@@ -235,4 +235,4 @@ class CallContractTest(BitcoinTestFramework):
         self.callcontract_verify_subcall_and_logs_test()
 
 if __name__ == '__main__':
-    CallContractTest().main()
+    CallContractTest(__file__).main()

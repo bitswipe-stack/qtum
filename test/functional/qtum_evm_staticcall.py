@@ -395,4 +395,4 @@ class QtumEVMStaticCallTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumEVMStaticCallTest().main()
+    QtumEVMStaticCallTest(__file__).main()

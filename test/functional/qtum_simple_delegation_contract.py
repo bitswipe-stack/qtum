@@ -63,4 +63,4 @@ class QtumSimpleDelegationContractTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumSimpleDelegationContractTest().main()
+    QtumSimpleDelegationContractTest(__file__).main()

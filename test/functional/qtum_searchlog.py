@@ -87,4 +87,4 @@ class QtumRPCSearchlogsTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumRPCSearchlogsTest().main()
+    QtumRPCSearchlogsTest(__file__).main()

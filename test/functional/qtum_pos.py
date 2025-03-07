@@ -397,4 +397,4 @@ class QtumPOSTest(BitcoinTestFramework):
         return (block, block_sig_key)
 
 if __name__ == '__main__':
-    QtumPOSTest().main()
+    QtumPOSTest(__file__).main()

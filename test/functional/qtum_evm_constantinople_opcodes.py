@@ -510,4 +510,4 @@ class QtumEVMConstantinopleOpcodesTest(BitcoinTestFramework):
         self.extcodehash_test(should_fail=False)
 
 if __name__ == '__main__':
-    QtumEVMConstantinopleOpcodesTest().main()
+    QtumEVMConstantinopleOpcodesTest(__file__).main()

@@ -104,4 +104,4 @@ class QtumDivergenceDosTest(BitcoinTestFramework):
         self.too_many_txs_test()
          
 if __name__ == '__main__':
-    QtumDivergenceDosTest().main()
+    QtumDivergenceDosTest(__file__).main()

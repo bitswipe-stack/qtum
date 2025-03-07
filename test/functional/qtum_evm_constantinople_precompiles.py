@@ -729,4 +729,4 @@ class QtumEVMConstantinoplePrecompiledContractsTest(BitcoinTestFramework):
         self.bn256pairing_test(should_fail=False)
 
 if __name__ == '__main__':
-    QtumEVMConstantinoplePrecompiledContractsTest().main()
+    QtumEVMConstantinoplePrecompiledContractsTest(__file__).main()

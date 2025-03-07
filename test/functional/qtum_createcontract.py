@@ -150,4 +150,4 @@ class CreatecontractTest(BitcoinTestFramework):
         self.createcontract_no_broadcast_test()
 
 if __name__ == '__main__':
-    CreatecontractTest().main()
+    CreatecontractTest(__file__).main()

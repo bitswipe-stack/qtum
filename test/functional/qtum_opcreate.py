@@ -176,4 +176,4 @@ class OpCreateTest(BitcoinTestFramework):
         self.gas_limit_signedness_2_test()
 
 if __name__ == '__main__':
-    OpCreateTest().main()
+    OpCreateTest(__file__).main()

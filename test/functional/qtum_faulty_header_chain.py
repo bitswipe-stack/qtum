@@ -136,4 +136,4 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         
 
 if __name__ == '__main__':
-    QtumHeaderSpamTest().main()
+    QtumHeaderSpamTest(__file__).main()

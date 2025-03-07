@@ -120,4 +120,4 @@ class QtumDGPGasSchedule(BitcoinTestFramework):
             self.sync_all()
 
 if __name__ == '__main__':
-    QtumDGPGasSchedule().main()
+    QtumDGPGasSchedule(__file__).main()

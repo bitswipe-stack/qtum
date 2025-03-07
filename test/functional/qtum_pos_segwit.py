@@ -152,4 +152,4 @@ class QtumPOSSegwitTest(BitcoinTestFramework):
         assert_equal(self.node.getblockcount(), block_count+1)
 
 if __name__ == '__main__':
-    QtumPOSSegwitTest().main()
+    QtumPOSSegwitTest(__file__).main()

@@ -234,4 +234,4 @@ class QtumEVMCreate2Test(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumEVMCreate2Test().main()
+    QtumEVMCreate2Test(__file__).main()

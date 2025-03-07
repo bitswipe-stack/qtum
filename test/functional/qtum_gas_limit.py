@@ -60,4 +60,4 @@ class QtumGasLimit(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumGasLimit().main()
+    QtumGasLimit(__file__).main()

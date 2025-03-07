@@ -65,4 +65,4 @@ class StateRootTest(BitcoinTestFramework):
         self.verify_state_hash_remains_on_restart()
 
 if __name__ == '__main__':
-    StateRootTest().main()
+    StateRootTest(__file__).main()

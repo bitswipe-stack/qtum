@@ -83,4 +83,4 @@ class QtumTransactionReceiptOriginContractAddressTest(BitcoinTestFramework):
         assert_equal(len(logs['entries']), 1)
 
 if __name__ == '__main__':
-    QtumTransactionReceiptOriginContractAddressTest().main()
+    QtumTransactionReceiptOriginContractAddressTest(__file__).main()

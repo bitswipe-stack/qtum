@@ -145,4 +145,4 @@ class QtumDGPBlockSizeSyncTest(BitcoinTestFramework):
         self.sync_all()
 
 if __name__ == '__main__':
-    QtumDGPBlockSizeSyncTest().main()
+    QtumDGPBlockSizeSyncTest(__file__).main()

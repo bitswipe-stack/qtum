@@ -37,4 +37,4 @@ class QtumGasLimitOverflowTest(BitcoinTestFramework):
         self.node.generate(1)
 
 if __name__ == '__main__':
-    QtumGasLimitOverflowTest().main()
+    QtumGasLimitOverflowTest(__file__).main()

@@ -77,4 +77,4 @@ class QtumIdenticalRefunds(BitcoinTestFramework):
         assert_equal(self.node.getblockcount(), block_count)
         
 if __name__ == '__main__':
-    QtumIdenticalRefunds().main()
+    QtumIdenticalRefunds(__file__).main()

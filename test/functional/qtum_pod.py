@@ -106,4 +106,4 @@ class QtumPODTest(BitcoinTestFramework):
         assert_equal(self.staker.getbestblockhash(), block.hash)
 
 if __name__ == '__main__':
-    QtumPODTest().main()
+    QtumPODTest(__file__).main()

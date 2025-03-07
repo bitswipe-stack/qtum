@@ -50,4 +50,4 @@ class QtumCallContractTimestampTest(BitcoinTestFramework):
         assert(expected_now == now or expected_now == now+1)
 
 if __name__ == '__main__':
-    QtumCallContractTimestampTest().main()
+    QtumCallContractTimestampTest(__file__).main()

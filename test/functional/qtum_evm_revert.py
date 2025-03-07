@@ -163,4 +163,4 @@ class QtumEVMRevertTest(BitcoinTestFramework):
         
 
 if __name__ == '__main__':
-    QtumEVMRevertTest().main()
+    QtumEVMRevertTest(__file__).main()

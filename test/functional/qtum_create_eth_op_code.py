@@ -186,4 +186,4 @@ class QtumCreateEthOpCodeTest(BitcoinTestFramework):
         self.check_suicide_test()
 
 if __name__ == '__main__':
-    QtumCreateEthOpCodeTest().main()
+    QtumCreateEthOpCodeTest(__file__).main()

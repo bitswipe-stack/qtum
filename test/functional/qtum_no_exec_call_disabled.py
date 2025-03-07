@@ -75,4 +75,4 @@ class QtumNoExecCallDisabledTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumNoExecCallDisabledTest().main()
+    QtumNoExecCallDisabledTest(__file__).main()

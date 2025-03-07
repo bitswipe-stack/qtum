@@ -70,4 +70,4 @@ class QtumPrioritizeCreateOverCallTest(BitcoinTestFramework):
         assert_equal(self.node.listcontracts()[self.contract_address], 1)
 
 if __name__ == '__main__':
-    QtumPrioritizeCreateOverCallTest().main()
+    QtumPrioritizeCreateOverCallTest(__file__).main()

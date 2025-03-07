@@ -182,4 +182,4 @@ class QtumDuplicateStakeTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumDuplicateStakeTest().main()
+    QtumDuplicateStakeTest(__file__).main()

@@ -332,4 +332,4 @@ class QtumQRC20Test(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumQRC20Test().main()
+    QtumQRC20Test(__file__).main()

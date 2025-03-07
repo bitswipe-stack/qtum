@@ -126,4 +126,4 @@ class QtumDGPActivation(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumDGPActivation().main()
+    QtumDGPActivation(__file__).main()

@@ -100,4 +100,4 @@ class QtumPOSConflictingStakingMempoolTxTest(BitcoinTestFramework):
         assert_equal(int(self.nodes[0].getbalance()*COIN), int((19*(INITIAL_BLOCK_REWARD-0.01)+INITIAL_BLOCK_REWARD)*COIN))
         assert_equal(self.nodes[0].getbestblockhash(), self.nodes[1].getbestblockhash())
 if __name__ == '__main__':
-    QtumPOSConflictingStakingMempoolTxTest().main()
+    QtumPOSConflictingStakingMempoolTxTest(__file__).main()

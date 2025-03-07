@@ -41,4 +41,4 @@ class QtumBlockNumberCorruptionTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumBlockNumberCorruptionTest().main()
+    QtumBlockNumberCorruptionTest(__file__).main()

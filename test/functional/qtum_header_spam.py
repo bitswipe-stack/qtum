@@ -326,4 +326,4 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         assert_equal(self.nodes[1].getchaintips()[0]['hash'], self.node.getbestblockhash())
 
 if __name__ == '__main__':
-    QtumHeaderSpamTest().main()
+    QtumHeaderSpamTest(__file__).main()

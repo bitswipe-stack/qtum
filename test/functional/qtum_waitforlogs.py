@@ -124,4 +124,4 @@ class QtumRPCWaitforlogs(BitcoinTestFramework):
         self.check_topics(contract_addresses, block_hashes,send_result)
 
 if __name__ == '__main__':
-    QtumRPCWaitforlogs().main()
+    QtumRPCWaitforlogs(__file__).main()

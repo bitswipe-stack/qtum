@@ -84,4 +84,4 @@ class QtumDGPGasPriceLingeringMempoolTxTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumDGPGasPriceLingeringMempoolTxTest().main()
+    QtumDGPGasPriceLingeringMempoolTxTest(__file__).main()

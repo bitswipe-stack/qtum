@@ -178,4 +178,4 @@ class QtumBlockHeaderTest(BitcoinTestFramework):
             self.reconnect_p2p()
 
 if __name__ == '__main__':
-    QtumBlockHeaderTest().main()
+    QtumBlockHeaderTest(__file__).main()

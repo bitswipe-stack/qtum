@@ -61,4 +61,4 @@ class QtumSpendOpCallTest(BitcoinTestFramework):
         assert_equal(self.nodes[0].getblockcount(), block_count)
 
 if __name__ == '__main__':
-    QtumSpendOpCallTest().main()
+    QtumSpendOpCallTest(__file__).main()

@@ -41,4 +41,4 @@ class QtumEVMConstantinopleActivationTest(BitcoinTestFramework):
             self.node.generate(1)
 
 if __name__ == '__main__':
-    QtumEVMConstantinopleActivationTest().main()
+    QtumEVMConstantinopleActivationTest(__file__).main()

@@ -218,4 +218,4 @@ class OpCallTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    OpCallTest().main()
+    OpCallTest(__file__).main()

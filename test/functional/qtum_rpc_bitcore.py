@@ -105,4 +105,4 @@ class QtumBitcoreTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    QtumBitcoreTest().main()
+    QtumBitcoreTest(__file__).main()

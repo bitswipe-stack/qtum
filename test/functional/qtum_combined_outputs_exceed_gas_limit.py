@@ -51,4 +51,4 @@ class QtumCombinedOutputsExceedGasLimitTest(BitcoinTestFramework):
         assert_equal(self.node.getblockcount(), block_count+2)
 
 if __name__ == '__main__':
-    QtumCombinedOutputsExceedGasLimitTest().main()
+    QtumCombinedOutputsExceedGasLimitTest(__file__).main()

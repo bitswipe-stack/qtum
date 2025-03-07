@@ -45,4 +45,4 @@ class QtumManyValueRefundsFromSameTxTest(BitcoinTestFramework):
         assert_equal(self.node.getblockcount(), block_count+1)
 
 if __name__ == '__main__':
-    QtumManyValueRefundsFromSameTxTest().main()
+    QtumManyValueRefundsFromSameTxTest(__file__).main()

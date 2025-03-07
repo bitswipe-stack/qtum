@@ -240,4 +240,4 @@ class QtumEVMGlobalsTest(BitcoinTestFramework):
         self.sync_all()
 
 if __name__ == '__main__':
-    QtumEVMGlobalsTest().main()
+    QtumEVMGlobalsTest(__file__).main()

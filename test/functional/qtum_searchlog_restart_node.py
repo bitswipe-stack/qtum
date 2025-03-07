@@ -149,4 +149,4 @@ class QtumRPCSearchlogsTestModified(BitcoinTestFramework):
         self.check_logs(contract_addresses, first_output, False)
 
 if __name__ == '__main__':
-    QtumRPCSearchlogsTestModified().main()
+    QtumRPCSearchlogsTestModified(__file__).main()

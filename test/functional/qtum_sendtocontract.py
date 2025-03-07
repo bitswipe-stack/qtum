@@ -127,4 +127,4 @@ class SendToContractTest(BitcoinTestFramework):
         self.sendtocontract_no_broadcast()
 
 if __name__ == '__main__':
-    SendToContractTest().main()
+    SendToContractTest(__file__).main()
