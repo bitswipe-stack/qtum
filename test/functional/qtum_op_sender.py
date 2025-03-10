@@ -62,7 +62,7 @@ def SignatureHashOutput(scriptCode, txTo, nOut, hashtype, amount):
         hashOutputs = uint256_from_str(hash256(serialize_outputs))
 
     ss = bytes()
-    ss += struct.pack("<i", txTo.nVersion)
+    ss += struct.pack("<i", txTo.version)
     ss += ser_uint256(hashPrevouts)
     ss += ser_uint256(hashSequence)
     ss += GetOutputWithoutSenderSig(txTo.vout[nOut]).serialize()

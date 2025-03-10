@@ -949,7 +949,6 @@ void RPCConsole::keyPressEvent(QKeyEvent *event)
 void RPCConsole::changeEvent(QEvent* e)
 {
     if (e->type() == QEvent::PaletteChange) {
-        ui->clearButton->setIcon(platformStyle->SingleColorIcon(QStringLiteral(":/icons/remove")));
         ui->clearButton->setIcon(platformStyle->MultiStatesIcon(QStringLiteral(":/icons/remove"), PlatformStyle::PushButtonIcon));
         ui->fontBiggerButton->setIcon(platformStyle->MultiStatesIcon(QStringLiteral(":/icons/fontbigger"), PlatformStyle::PushButtonIcon));
         ui->fontSmallerButton->setIcon(platformStyle->MultiStatesIcon(QStringLiteral(":/icons/fontsmaller"), PlatformStyle::PushButtonIcon));

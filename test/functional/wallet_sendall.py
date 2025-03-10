@@ -405,7 +405,7 @@ class SendallTest(BitcoinTestFramework):
         self.log.info("Test that sendall does ancestor aware funding for unconfirmed inputs")
 
         # higher parent feerate
-        self.def_wallet.sendtoaddress(address=self.wallet.getnewaddress(), amount=17, fee_rate=20)
+        self.def_wallet.sendtoaddress(address=self.wallet.getnewaddress(), amount=17, fee_rate=420)
         self.wallet.syncwithvalidationinterfacequeue()
 
         assert_equal(self.wallet.getbalances()["mine"]["untrusted_pending"], 17)
@@ -414,14 +414,14 @@ class SendallTest(BitcoinTestFramework):
         parent_txid = unspent["txid"]
         assert_equal(self.wallet.gettransaction(parent_txid)["confirmations"], 0)
 
-        res_1 = self.wallet.sendall(recipients=[self.def_wallet.getnewaddress()], inputs=[unspent], fee_rate=20, add_to_wallet=False, lock_unspents=True)
+        res_1 = self.wallet.sendall(recipients=[self.def_wallet.getnewaddress()], inputs=[unspent], fee_rate=420, add_to_wallet=False, lock_unspents=True)
         child_hex = res_1["hex"]
 
         child_tx = self.wallet.decoderawtransaction(child_hex)
         higher_parent_feerate_amount = child_tx["vout"][0]["value"]
 
         # lower parent feerate
-        self.def_wallet.sendtoaddress(address=self.wallet.getnewaddress(), amount=17, fee_rate=10)
+        self.def_wallet.sendtoaddress(address=self.wallet.getnewaddress(), amount=17, fee_rate=410)
         self.wallet.syncwithvalidationinterfacequeue()
         assert_equal(self.wallet.getbalances()["mine"]["untrusted_pending"], 34)
         unspent = self.wallet.listunspent(minconf=0)[0]
@@ -429,7 +429,7 @@ class SendallTest(BitcoinTestFramework):
         parent_txid = unspent["txid"]
         assert_equal(self.wallet.gettransaction(parent_txid)["confirmations"], 0)
 
-        res_2 = self.wallet.sendall(recipients=[self.def_wallet.getnewaddress()], inputs=[unspent], fee_rate=20, add_to_wallet=False, lock_unspents=True)
+        res_2 = self.wallet.sendall(recipients=[self.def_wallet.getnewaddress()], inputs=[unspent], fee_rate=420, add_to_wallet=False, lock_unspents=True)
         child_hex = res_2["hex"]
 
         child_tx = self.wallet.decoderawtransaction(child_hex)

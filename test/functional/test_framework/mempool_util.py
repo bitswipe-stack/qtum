@@ -35,7 +35,7 @@ def fill_mempool(test_framework, node):
     txouts = gen_return_txouts()
     relayfee = node.getnetworkinfo()['relayfee']
 
-    assert_equal(relayfee, Decimal('0.00001000'))
+    assert_equal(relayfee, Decimal('0.00400000'))
 
     tx_batch_size = 1
     num_of_batches = 75
@@ -77,5 +77,5 @@ def fill_mempool(test_framework, node):
     assert tx_to_be_evicted_id not in node.getrawmempool()
 
     test_framework.log.debug("Check that mempoolminfee is larger than minrelaytxfee")
-    assert_equal(node.getmempoolinfo()['minrelaytxfee'], Decimal('0.00001000'))
-    assert_greater_than(node.getmempoolinfo()['mempoolminfee'], Decimal('0.00001000'))
+    assert_equal(node.getmempoolinfo()['minrelaytxfee'], Decimal('0.00400000'))
+    assert_greater_than(node.getmempoolinfo()['mempoolminfee'], Decimal('0.00400000'))

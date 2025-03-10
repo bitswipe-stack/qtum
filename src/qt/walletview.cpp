@@ -261,8 +261,8 @@ void WalletView::gotoSendCoinsPage(QString addr)
     setCurrentWidget(overviewPage);
     if(walletFrame && walletFrame->currentWalletView() == this)
     {
-    if (!addr.isEmpty())
-        sendCoinsPage->setAddress(addr);
+        if (!addr.isEmpty())
+            sendCoinsPage->setAddress(addr);
         sendCoinsPage->show();
     }
 }

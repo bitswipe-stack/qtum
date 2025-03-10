@@ -57,7 +57,7 @@ class QtumDivergenceDosTest(BitcoinTestFramework):
         tx1.rehash()
 
         tx2 = CTransaction()
-        tx2.nVersion = 2
+        tx2.version = 2
         tx2.vin = [CTxIn(COutPoint(tx1.sha256, 0), scriptSig=CScript([OP_SPEND]), nSequence=0xffffffff)]
         tx2.vout = [CTxOut(0, scriptPubKey=CScript([OP_DUP, OP_HASH160, hex_str_to_bytes("00"*19)+b"\x01", OP_EQUALVERIFY, OP_CHECKSIG]))]
         tx2.rehash()
@@ -73,13 +73,13 @@ class QtumDivergenceDosTest(BitcoinTestFramework):
         tx1.rehash()
 
         tx2 = CTransaction()
-        tx2.nVersion = 2
+        tx2.version = 2
         tx2.vin = [CTxIn(COutPoint(tx1.sha256, 0), scriptSig=CScript([OP_SPEND]), nSequence=0xffffffff)]
         tx2.vout = [CTxOut(0, scriptPubKey=CScript([b"\x00", CScriptNum(0), CScriptNum(0), hex_str_to_bytes("00"), hex_str_to_bytes(self.contract_address), OP_CALL]))]
         tx2.rehash()
 
         tx3 = CTransaction()
-        tx2.nVersion = 2
+        tx2.version = 2
         tx3.vin = [CTxIn(COutPoint(tx2.sha256, 0), scriptSig=CScript([OP_SPEND]))]
         tx3.vout = [CTxOut(0, scriptPubKey=CScript([OP_DUP, OP_HASH160, hex_str_to_bytes("00"*19)+b"\x00", OP_EQUALVERIFY, OP_CHECKSIG]))]
         tx3.rehash()
