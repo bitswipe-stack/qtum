@@ -6902,6 +6902,7 @@ void PeerManagerImpl::CleanBlockIndex()
 {
     unsigned int cleanTimeout = gArgs.GetIntArg("-cleanblockindextimeout", DEFAULT_CLEANBLOCKINDEXTIMEOUT);
     if(cleanTimeout == 0) cleanTimeout = DEFAULT_CLEANBLOCKINDEXTIMEOUT;
+    cleanTimeout *= 10; // Number of intervals with 100 milliseconds
 
     while(!m_stop_thread_clean_block_index)
     {
@@ -6962,7 +6963,7 @@ void PeerManagerImpl::CleanBlockIndex()
         }
 
         for(unsigned int i = 0; (i < cleanTimeout) && !m_stop_thread_clean_block_index; i++)
-            UninterruptibleSleep(std::chrono::seconds{1});
+            UninterruptibleSleep(std::chrono::milliseconds{100});
     }
 }
 
