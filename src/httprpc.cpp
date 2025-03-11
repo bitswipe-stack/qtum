@@ -224,11 +224,8 @@ static bool HTTPReq_JSONRPC(const std::any& context, HTTPRequest* req)
             reply = JSONRPCExec(jreq, catch_errors);
 
             if (jreq.isLongPolling) {
-                UniValue result = reply["result"];
-                if(!result.isNull()) {
-                    jreq.PollReply(result);
-                    return true;
-                }
+                jreq.PollReply(reply["result"]);
+                return true;
             }
 
             if (jreq.IsNotification()) {
