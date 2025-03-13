@@ -1250,7 +1250,7 @@ void BitcoinGUI::updateNetworkState()
         //: A substring of the tooltip.
         tooltip = tr("%n active connection(s) to Qtum network.", "", count);
     } else {
-       //: A substring of the tooltip.
+        //: A substring of the tooltip.
         tooltip = tr("Network activity disabled.");
         icon = ":/icons/network_disabled";
     }

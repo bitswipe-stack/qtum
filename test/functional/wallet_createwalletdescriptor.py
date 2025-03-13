@@ -63,7 +63,7 @@ class WalletCreateDescriptorTest(BitcoinTestFramework):
         new_descs = list(curr_descs - old_descs)
         assert_equal(len(new_descs), 1)
         assert_equal(len(wallet.gethdkeys()), 1)
-        assert_equal(new_descs[0][0], descsum_create(f"tr({xprv}/86h/1h/0h/0/*)"))
+        assert_equal(new_descs[0][0], descsum_create(f"tr({xprv}/86h/88h/0h/0/*)"))
         assert_equal(new_descs[0][1], True)
         assert_equal(new_descs[0][2], False)
 
@@ -73,7 +73,7 @@ class WalletCreateDescriptorTest(BitcoinTestFramework):
         new_descs = list(curr_descs - old_descs)
         assert_equal(len(new_descs), 1)
         assert_equal(len(wallet.gethdkeys()), 1)
-        assert_equal(new_descs[0][0], descsum_create(f"tr({xprv}/86h/1h/0h/1/*)"))
+        assert_equal(new_descs[0][0], descsum_create(f"tr({xprv}/86h/88h/0h/1/*)"))
         assert_equal(new_descs[0][1], True)
         assert_equal(new_descs[0][2], True)
 

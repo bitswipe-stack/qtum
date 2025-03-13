@@ -124,7 +124,7 @@ class ScantxoutsetTest(BitcoinTestFramework):
 
         # Check that the blockhash and confirmations fields are correct
         self.generate(self.nodes[0], 2)
-        unspent = self.nodes[0].scantxoutset("start", ["addr(mpQ8rokAhp1TAtJQR6F6TaUmjAWkAWYYBq)"])["unspents"][0]
+        unspent = self.nodes[0].scantxoutset("start", ["addr(" + convert_btc_address_to_qtum("mpQ8rokAhp1TAtJQR6F6TaUmjAWkAWYYBq") + ")"])["unspents"][0]
         blockhash = self.nodes[0].getblockhash(info["height"])
         assert_equal(unspent["height"], info["height"])
         assert_equal(unspent["blockhash"], blockhash)

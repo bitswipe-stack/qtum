@@ -876,7 +876,6 @@ RPCHelpMan createmultisig()
             if (!pwallet) return NullUniValue;
 
             LOCK(pwallet->cs_wallet);
-            std::string pubkey;
 
             int required = request.params[0].getInt<int>();
 
@@ -884,13 +883,14 @@ RPCHelpMan createmultisig()
             const UniValue& keys = request.params[1].get_array();
             std::vector<CPubKey> pubkeys;
             for (unsigned int i = 0; i < keys.size(); ++i) {
-				if (IsHex(keys[i].get_str()) && (keys[i].get_str().length() == 66 || keys[i].get_str().length() == 130)) {
-				    pubkeys.push_back(HexToPubKey(keys[i].get_str()));
-				} else if (getAddressToPubKey(*pwallet, keys[i].get_str(), pubkey)){
-				    pubkeys.push_back(HexToPubKey(pubkey));
-				} else {
-				    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("Invalid public key: %s\n.", keys[i].get_str()));
-				}
+                std::string pubkey;
+                if (getAddressToPubKey(*pwallet, keys[i].get_str(), pubkey)){
+                    pubkeys.push_back(HexToPubKey(pubkey));
+                } else if (IsHex(keys[i].get_str())) {
+                    pubkeys.push_back(HexToPubKey(keys[i].get_str()));
+                } else {
+                    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("Invalid public key: %s\n.", keys[i].get_str()));
+                }
             }
 
             // Get the output type

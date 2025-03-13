@@ -16,7 +16,7 @@ from test_framework.util import (
     assert_greater_than,
     assert_raises_rpc_error,
 )
-from test_framework.qtum import convert_btc_bech32_address_to_qtum, convert_btc_address_to_qtum 
+from test_framework.qtum import convert_btc_bech32_address_to_qtum, convert_btc_address_to_qtum
 from test_framework.segwit_addr import Encoding
 
 
@@ -145,7 +145,7 @@ class WalletSignerTest(BitcoinTestFramework):
 
         # Returned address MUST match:
         address_fail = hww.getnewaddress(address_type="bech32")
-        assert_equal(address_fail, "bcrt1ql7zg7ukh3dwr25ex2zn9jse926f27xy2jz58tm")
+        assert_equal(address_fail, convert_btc_bech32_address_to_qtum("bcrt1ql7zg7ukh3dwr25ex2zn9jse926f27xy2jz58tm"))
         assert_raises_rpc_error(-1, 'Signer echoed unexpected address wrong_address',
             hww.walletdisplayaddress, address_fail
         )
