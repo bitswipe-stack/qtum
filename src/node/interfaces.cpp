@@ -1064,11 +1064,12 @@ public:
         return TestBlockValidity(state, chainman().GetParams(), chainman().ActiveChainstate(), block, tip, /*fCheckPOW=*/false, check_merkle_root);
     }
 
-    std::unique_ptr<CBlockTemplate> createNewBlock(const CScript& script_pub_key, const BlockCreateOptions& options) override
+    std::unique_ptr<CBlockTemplate> createNewBlock(const CScript& script_pub_key, const BlockCreateOptions& options,
+                                                   bool fProofOfStake, int64_t* pTotalFees, int32_t nTime, int32_t nTimeLimit) override
     {
         BlockAssembler::Options assemble_options{options};
         ApplyArgsManOptions(*Assert(m_node.args), assemble_options);
-        return BlockAssembler{chainman().ActiveChainstate(), context()->mempool.get(), assemble_options}.CreateNewBlock(script_pub_key);
+        return BlockAssembler{chainman().ActiveChainstate(), context()->mempool.get(), assemble_options}.CreateNewBlock(script_pub_key, fProofOfStake, pTotalFees, nTime, nTimeLimit);
     }
 
     NodeContext* context() override { return &m_node; }

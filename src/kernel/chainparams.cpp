@@ -97,8 +97,6 @@ public:
         consensus.nSubsidyHalvingInterval = 985500; // qtum halving every 4 years
         consensus.script_flag_exceptions.emplace( // BIP16 exception
             uint256{"000075aef83cf2853580f8ae8ce6f8c3096cfa21d98334d6e3f95e5582ed986c"}, SCRIPT_VERIFY_NONE);
-        consensus.script_flag_exceptions.emplace( // Taproot exception
-            uint256{"0000000000000000000f14c35b2d841e986ab5441de8c585d5ffe55ea1e395ad"}, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_WITNESS);
         consensus.BIP34Height = 0;
         consensus.BIP34Hash = uint256{"000075aef83cf2853580f8ae8ce6f8c3096cfa21d98334d6e3f95e5582ed986c"};
         consensus.BIP65Height = 0; // 000000000000000004c2b624ed5d7756c508d90fd0da2c7c679febfa6c4735f0
@@ -429,7 +427,7 @@ public:
         consensus.nPowTargetSpacing = 2 * 64;
         consensus.nRBTPowTargetSpacing = 32;
         consensus.fPowAllowMinDifficultyBlocks = false;
-        consensus.enforce_BIP94 = true;
+        consensus.enforce_BIP94 = true; // Special difficulty rule for Testnet4 in Bitcoin
         consensus.fPowNoRetargeting = true;
         consensus.fPoSNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 1512; // 75% for testchains
@@ -467,8 +465,8 @@ public:
                 1,
                 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x000098f1979a05d728ab584a4bbd1bd7d571e8d41e55d800c07aa36427093bdd"));
-        assert(genesis.hashMerkleRoot == uint256S("0xf682a4e45d7e964e40f3e1408f218343c253e585c53d6f50a9e009525d254dea"));
+        assert(consensus.hashGenesisBlock == uint256{"000098f1979a05d728ab584a4bbd1bd7d571e8d41e55d800c07aa36427093bdd"});
+        assert(genesis.hashMerkleRoot == uint256{"f682a4e45d7e964e40f3e1408f218343c253e585c53d6f50a9e009525d254dea"});
 
         vFixedSeeds.clear();
         vSeeds.clear();
@@ -992,9 +990,9 @@ void CChainParams::UpdateDifficultyChangeBlockHeight(int nHeight)
 {
     consensus.nSubsidyHalvingInterval = 985500; // qtum halving every 4 years
     consensus.nSubsidyHalvingIntervalV2 = consensus.nBlocktimeDownscaleFactor*985500; // qtum halving every 4 years (nSubsidyHalvingInterval * nBlocktimeDownscaleFactor)
-    consensus.posLimit = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-    consensus.QIP9PosLimit = uint256S("0000000000001fffffffffffffffffffffffffffffffffffffffffffffffffff");
-    consensus.RBTPosLimit = uint256S("0000000000003fffffffffffffffffffffffffffffffffffffffffffffffffff");
+    consensus.posLimit = uint256{"00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
+    consensus.QIP9PosLimit = uint256{"0000000000001fffffffffffffffffffffffffffffffffffffffffffffffffff"};
+    consensus.RBTPosLimit = uint256{"0000000000003fffffffffffffffffffffffffffffffffffffffffffffffffff"};
     consensus.QIP9Height = nHeight;
     consensus.fPowAllowMinDifficultyBlocks = false;
     consensus.fPowNoRetargeting = true;

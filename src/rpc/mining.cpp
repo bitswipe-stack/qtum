@@ -164,7 +164,8 @@ static UniValue generateBlocks(ChainstateManager& chainman, Mining& miner, const
 {
     UniValue blockHashes(UniValue::VARR);
     while (nGenerate > 0 && !chainman.m_interrupt) {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(miner.createNewBlock(coinbase_script));
+        int32_t nTimeLimit = TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()) + node::POW_MINER_MAX_TIME;
+        std::unique_ptr<CBlockTemplate> pblocktemplate(miner.createNewBlock(coinbase_script, {}, false, nullptr, 0, nTimeLimit));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
 
@@ -794,7 +795,8 @@ static RPCHelpMan getblocktemplate()
 
         // Create new block
         CScript scriptDummy = CScript() << OP_TRUE;
-        pblocktemplate = miner.createNewBlock(scriptDummy);
+        bool fProofOfStake = chainman.ActiveChain().Height() >= Params().GetConsensus().nLastPOWBlock ? true : false;
+        pblocktemplate = miner.createNewBlock(scriptDummy, {}, fProofOfStake);
         if (!pblocktemplate) {
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
         }
