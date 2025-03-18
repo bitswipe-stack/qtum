@@ -779,6 +779,11 @@ void DeleteBlockChainData()
     fs::remove(datadir / "banlist.dat");
     fs::remove(datadir / "fee_estimates.dat");
     fs::remove(datadir / "mempool.dat");
+
+    // Create block chain data dirs
+    fs::create_directory(datadir / "chainstate");
+    fs::create_directory(gArgs.GetBlocksDirPath());
+    fs::create_directory(datadir / "stateQtum");
 }
 
 #if HAVE_SYSTEM
