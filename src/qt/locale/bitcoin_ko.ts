@@ -1316,6 +1316,14 @@ Signing is only possible with addresses of the type 'legacy'.</source>
         <translation>지갑 생성하기</translation>
     </message>
     <message>
+        <source>You are one step away from creating your new wallet!</source>
+        <translation type="unfinished">새 지갑을 생성하기 한 단계 남았습니다!</translation>
+    </message>
+    <message>
+        <source>Please provide a name and, if desired, enable any advanced options</source>
+        <translation type="unfinished">이름을 제공하고, 원하시면 고급 옵션을 활성화하세요</translation>
+    </message>
+    <message>
         <source>Wallet Name</source>
         <translation>지갑 이름</translation>
     </message>
@@ -4277,6 +4285,10 @@ Note:  Since the fee is calculated on a per-byte basis, a fee rate of "100 satos
     <message>
         <source>Sign &amp;Message</source>
         <translation>메시지 서명</translation>
+    </message>
+    <message>
+        <source>You can sign messages/agreements with your legacy (P2PKH) addresses to prove you can receive qtums sent to them. Be careful not to sign anything vague or random, as phishing attacks may try to trick you into signing your identity over to them. Only sign fully-detailed statements you agree to.</source>
+        <translation>소유하고 계신 주소로 메시지/협의에 대해 서명하여 해당 주소를 통해 QTUM을 받을 수 있음을 증명할 수 있습니다. 피싱 공격을 예방하기 위해 명확하지 않은 내용 또는 랜덤 메시지에 대한 서명은 삼가 하시고 메시지에 대해 충분히 동의할 경우에만 서명하세요. </translation>
     </message>
     <message>
         <source>Reset all sign message fields</source>
