@@ -196,7 +196,7 @@ GIT_ARCHIVE="${DIST_ARCHIVE_BASE}/${DISTNAME}.tar.gz"
 # Create the source tarball if not already there
 if [ ! -e "$GIT_ARCHIVE" ]; then
     mkdir -p "$(dirname "$GIT_ARCHIVE")"
-    git archive --prefix="${DISTNAME}/" --output="$GIT_ARCHIVE" HEAD
+    contrib/guix/libexec/archive-all.sh "${DISTNAME}" "$GIT_ARCHIVE"
 fi
 
 mkdir -p "$OUTDIR"
@@ -258,7 +258,7 @@ mkdir -p "$DISTSRC"
     case "$HOST" in
         *mingw*)
             cmake --build build -j "$JOBS" -t deploy ${V:+--verbose}
-            mv build/bitcoin-win64-setup.exe "${OUTDIR}/${DISTNAME}-win64-setup-unsigned.exe"
+            mv build/qtum-win64-setup.exe "${OUTDIR}/${DISTNAME}-win64-setup-unsigned.exe"
             ;;
     esac
 
@@ -303,9 +303,9 @@ mkdir -p "$DISTSRC"
                 ;;
         esac
 
-        # copy over the example bitcoin.conf file. if contrib/devtools/gen-bitcoin-conf.sh
+        # copy over the example qtum.conf file. if contrib/devtools/gen-bitcoin-conf.sh
         # has not been run before buildling, this file will be a stub
-        cp "${DISTSRC}/share/examples/bitcoin.conf" "${DISTNAME}/"
+        cp "${DISTSRC}/share/examples/qtum.conf" "${DISTNAME}/"
 
         cp -r "${DISTSRC}/share/rpcauth" "${DISTNAME}/share/"
 
@@ -368,7 +368,7 @@ mkdir -p "$DISTSRC"
             ;;
         *darwin*)
             cmake --build build --target deploy ${V:+--verbose}
-            mv build/dist/Bitcoin-Core.zip "${OUTDIR}/${DISTNAME}-${HOST}-unsigned.zip"
+            mv build/dist/Qtum-Core.zip "${OUTDIR}/${DISTNAME}-${HOST}-unsigned.zip"
             mkdir -p "unsigned-app-${HOST}"
             cp  --target-directory="unsigned-app-${HOST}" \
                 contrib/macdeploy/detached-sig-create.sh

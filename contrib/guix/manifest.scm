@@ -13,6 +13,7 @@
              ((gnu packages linux) #:select (linux-libre-headers-6.1))
              (gnu packages llvm)
              (gnu packages mingw)
+             (gnu packages perl)
              (gnu packages pkg-config)
              ((gnu packages python) #:select (python-minimal))
              ((gnu packages python-build) #:select (python-tomli python-poetry-core))
@@ -548,6 +549,7 @@ inspecting signatures in Mach-O binaries.")
         cmake-minimal
         gnu-make
         ;; Scripting
+        perl
         python-minimal ;; (3.10)
         ;; Git
         git-minimal
