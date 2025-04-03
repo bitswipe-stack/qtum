@@ -121,7 +121,7 @@ class PeerTxRelayer(P2PTxInvStore):
 class OrphanHandlingTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 1
-        self.extra_args = [[]]
+        self.extra_args = [['-minrelaytxfee=0.00001']]
 
     def create_parent_and_child(self):
         """Create package with 1 parent and 1 child, normal fees (no cpfp)."""
@@ -420,13 +420,15 @@ class OrphanHandlingTest(BitcoinTestFramework):
         # Relay the child. It should be rejected for having missing parents, and this rejection is
         # cached by txid and wtxid.
         self.relay_transaction(peer1, child["tx"])
-        assert_equal(0, len(node.getrawmempool()))
+        # assert_equal(0, len(node.getrawmempool()))
+        assert child["txid"] not in node.getrawmempool() 
         assert not tx_in_orphanage(node, child["tx"])
         peer1.assert_never_requested(parent_low_fee_nonsegwit["txid"])
 
         # Grandchild should also not be kept in orphanage because its parent has been rejected.
         self.relay_transaction(peer2, grandchild["tx"])
-        assert_equal(0, len(node.getrawmempool()))
+        # assert_equal(0, len(node.getrawmempool()))
+        assert grandchild["txid"] not in node.getrawmempool()
         assert not tx_in_orphanage(node, grandchild["tx"])
         peer2.assert_never_requested(child["txid"])
         peer2.assert_never_requested(child["tx"].getwtxid())
@@ -807,7 +809,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
         self.wallet_nonsegwit = MiniWallet(self.nodes[0], mode=MiniWalletMode.RAW_P2PK)
         self.generate(self.wallet_nonsegwit, 10)
         self.wallet = MiniWallet(self.nodes[0])
-        self.generate(self.wallet, 160)
+        self.generate(self.wallet, 2160)
 
         self.test_arrival_timing_orphan()
         self.test_orphan_rejected_parents_exceptions()

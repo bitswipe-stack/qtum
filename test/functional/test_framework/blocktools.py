@@ -46,18 +46,19 @@ from .script_util import (
     script_to_p2wsh_script,
 )
 from .util import assert_equal
+from .qtumconfig import INITIAL_BLOCK_REWARD, INITIAL_BLOCK_REWARD_POS
 
 MAX_BLOCK_SIGOPS = 20000
 MAX_BLOCK_SIGOPS_WEIGHT = MAX_BLOCK_SIGOPS * WITNESS_SCALE_FACTOR
 MAX_STANDARD_TX_WEIGHT = 400000
 
 # Genesis block time (regtest)
-TIME_GENESIS_BLOCK = 1296688602
+TIME_GENESIS_BLOCK = 1504695029
 
 MAX_FUTURE_BLOCK_TIME = 2 * 60 * 60
 
 # Coinbase transaction outputs can only be spent after this number of new blocks (network rule)
-COINBASE_MATURITY = 100
+COINBASE_MATURITY = 2000
 
 # From BIP141
 WITNESS_COMMITMENT_HEADER = b"\xaa\x21\xa9\xed"
@@ -86,7 +87,7 @@ def nbits_str(nbits):
 def target_str(target):
     return f"{target:064x}"
 
-def create_block(hashprev=None, coinbase=None, ntime=None, *, version=None, tmpl=None, txlist=None):
+def create_block(hashprev=None, coinbase=None, ntime=None, *, version=4, tmpl=None, txlist=None):
     """Create a block (with regtest difficulty)."""
     block = CBlock()
     if tmpl is None:
@@ -115,7 +116,7 @@ def get_witness_script(witness_root, witness_nonce):
     output_data = WITNESS_COMMITMENT_HEADER + ser_uint256(witness_commitment)
     return CScript([OP_RETURN, output_data])
 
-def add_witness_commitment(block, nonce=0):
+def add_witness_commitment(block, nonce=0, is_pos=False):
     """Add a witness commitment to the block's coinbase transaction.
 
     According to BIP141, blocks with witness rules active must commit to the
@@ -123,7 +124,7 @@ def add_witness_commitment(block, nonce=0):
     # First calculate the merkle root of the block's
     # transactions, with witnesses.
     witness_nonce = nonce
-    witness_root = block.calc_witness_merkle_root()
+    witness_root = block.calc_witness_merkle_root(is_pos)
     # witness_nonce should go to coinbase witness.
     block.vtx[0].wit.vtxinwit = [CTxInWitness()]
     block.vtx[0].wit.vtxinwit[0].scriptWitness.stack = [ser_uint256(witness_nonce)]
@@ -143,7 +144,7 @@ def script_BIP34_coinbase_height(height):
     return CScript([CScriptNum(height)])
 
 
-def create_coinbase(height, pubkey=None, *, script_pubkey=None, extra_output_script=None, fees=0, nValue=50, retarget_period=REGTEST_RETARGET_PERIOD):
+def create_coinbase(height, pubkey=None, *, script_pubkey=None, extra_output_script=None, fees=0, nValue=None, retarget_period=REGTEST_RETARGET_PERIOD):
     """Create a coinbase transaction.
 
     If pubkey is passed in, the coinbase output will be a P2PK output;
@@ -154,10 +155,14 @@ def create_coinbase(height, pubkey=None, *, script_pubkey=None, extra_output_scr
     coinbase = CTransaction()
     coinbase.vin.append(CTxIn(COutPoint(0, 0xffffffff), script_BIP34_coinbase_height(height), SEQUENCE_FINAL))
     coinbaseoutput = CTxOut()
-    coinbaseoutput.nValue = nValue * COIN
-    if nValue == 50:
-        halvings = int(height / retarget_period)
-        coinbaseoutput.nValue >>= halvings
+    if nValue:
+        coinbaseoutput.nValue = nValue
+    elif height > 5000:
+        coinbaseoutput.nValue = int(INITIAL_BLOCK_REWARD_POS*COIN)
+    else:
+        coinbaseoutput.nValue = INITIAL_BLOCK_REWARD * COIN
+    #halvings = int(height / retarget_period)  # regtest
+    #coinbaseoutput.nValue >>= halvings
         coinbaseoutput.nValue += fees
     if pubkey is not None:
         coinbaseoutput.scriptPubKey = key_to_p2pk_script(pubkey)

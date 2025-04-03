@@ -34,7 +34,7 @@ from test_framework.wallet import (
 )
 
 # 1sat/vB feerate denominated in BTC/KvB
-FEERATE_1SAT_VB = Decimal("0.00001000")
+FEERATE_1SAT_VB = Decimal("0.00400000")
 # Number of seconds to wait to ensure no getdata is received
 GETDATA_WAIT = 60
 

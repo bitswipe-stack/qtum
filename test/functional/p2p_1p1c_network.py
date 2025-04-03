@@ -32,7 +32,7 @@ from test_framework.wallet import (
 )
 
 # 1sat/vB feerate denominated in BTC/KvB
-FEERATE_1SAT_VB = Decimal("0.00001000")
+FEERATE_1SAT_VB = Decimal("0.00400000")
 
 class PackageRelayTest(BitcoinTestFramework):
     def set_test_params(self):
