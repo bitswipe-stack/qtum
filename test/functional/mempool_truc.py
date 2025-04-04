@@ -21,17 +21,18 @@ MAX_REPLACEMENT_CANDIDATES = 100
 TRUC_MAX_VSIZE = 10000
 TRUC_CHILD_MAX_VSIZE = 1000
 
-def cleanup(extra_args=None):
+def cleanup(extra_args=[]):
     def decorator(func):
         def wrapper(self):
+            extra_args.append('-minrelaytxfee=0.0000001')
             try:
-                if extra_args is not None:
+                if len(extra_args)>1:
                     self.restart_node(0, extra_args=extra_args)
                 func(self)
             finally:
                 # Clear mempool again after test
                 self.generate(self.nodes[0], 1)
-                if extra_args is not None:
+                if len(extra_args)>1:
                     self.restart_node(0)
         return wrapper
     return decorator
@@ -476,7 +477,7 @@ class MempoolTRUC(BitcoinTestFramework):
         assert_equal(node.getmempoolentry(ancestor_tx["txid"])["descendantcount"], 3)
 
         # Create a replacement of child_1. It does not conflict with child_2.
-        child_1_conflict = self.wallet.send_self_transfer(from_node=node, version=3, utxo_to_spend=ancestor_tx["new_utxos"][0], fee_rate=Decimal("0.01"))
+        child_1_conflict = self.wallet.send_self_transfer(from_node=node, version=3, utxo_to_spend=ancestor_tx["new_utxos"][0], fee_rate=Decimal("0.04"))
 
         # Ensure child_1 and child_1_conflict are different transactions
         assert (child_1_conflict["txid"] != child_1["txid"])

@@ -24,6 +24,7 @@ from test_framework.wallet import (
     getnewdestination,
 )
 
+from test_framework.qtumconfig import COINBASE_MATURITY, INITIAL_BLOCK_REWARD
 class RpcCreateMultiSigTest(BitcoinTestFramework):
     def add_options(self, parser):
         self.add_wallet_options(parser)
@@ -54,7 +55,7 @@ class RpcCreateMultiSigTest(BitcoinTestFramework):
             self.check_addmultisigaddress_errors()
 
         self.log.info('Generating blocks ...')
-        self.generate(self.wallet, 149)
+        self.generate(self.wallet, COINBASE_MATURITY + 49)
 
         wallet_multi = self.create_wallet(node1, 'wmulti') if self._requires_wallet else None
         self.create_keys(21)  # max number of allowed keys + 1
@@ -67,8 +68,10 @@ class RpcCreateMultiSigTest(BitcoinTestFramework):
         self.test_mixing_uncompressed_and_compressed_keys(node0, wallet_multi)
         self.test_sortedmulti_descriptors_bip67()
 
+        node0.createwallet(wallet_name='wmulti1', disable_private_keys=False)
+        wmulti1 = node0.get_wallet_rpc('wmulti1')
         # Check that bech32m is currently not allowed
-        assert_raises_rpc_error(-5, "createmultisig cannot create bech32m multisig addresses", self.nodes[0].createmultisig, 2, self.pub, "bech32m")
+        assert_raises_rpc_error(-5, "createmultisig cannot create bech32m multisig addresses", wmulti1.createmultisig, 2, self.pub, "bech32m")
 
         self.log.info('Check correct encoding of multisig script for all n (1..20)')
         for nkeys in range(1, 20+1):
@@ -142,7 +145,7 @@ class RpcCreateMultiSigTest(BitcoinTestFramework):
         mredeem = msig["redeemScript"]
         assert_equal(desc, msig['descriptor'])
         if output_type == 'bech32':
-            assert madd[0:4] == "bcrt"  # actually a bech32 address
+            assert madd[0:4] == "qcrt"  # actually a bech32 address
 
         if wallet_multi is not None:
             # compare against addmultisigaddress
