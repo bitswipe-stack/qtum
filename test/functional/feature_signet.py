@@ -8,7 +8,12 @@ from decimal import Decimal
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import assert_equal
+from test_framework.blocktools import create_block, add_witness_commitment
+from test_framework.script import CScriptOp
+import time
+from test_framework.wallet import MiniWallet
 
+SIGNET_HEADER = b"\xec\xc7\xda\xa2"
 SIGNET_DEFAULT_CHALLENGE = '512103ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be430210359ef5021964fe22d6f8e05b2463c9540ce96883fe3b278760f048f5189f2e6c452ae'
 
 signet_blocks = [
@@ -31,13 +36,17 @@ class SignetParams:
             self.shared_args = []
         else:
             self.challenge = challenge
-            self.shared_args = [f"-signetchallenge={challenge}"]
+            self.shared_args = [f"-signetchallenge={challenge}", '-txindex']
 
 class SignetBasicTest(BitcoinTestFramework):
+    def add_options(self, parser):
+        self.add_wallet_options(parser)
+
     def set_test_params(self):
         self.chain = "signet"
         self.num_nodes = 6
         self.setup_clean_chain = True
+        self.requires_wallet = True
         self.signets = [
             SignetParams(challenge='51'), # OP_TRUE
             SignetParams(), # default challenge
@@ -50,6 +59,9 @@ class SignetBasicTest(BitcoinTestFramework):
             self.signets[1].shared_args, self.signets[1].shared_args,
             self.signets[2].shared_args, self.signets[2].shared_args,
         ]
+
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
 
     def setup_network(self):
         self.setup_nodes()
@@ -72,6 +84,7 @@ class SignetBasicTest(BitcoinTestFramework):
         check_getblockchaininfo(node_idx=5, signet_idx=2)
 
         self.log.info('getmininginfo')
+        self.wallet = MiniWallet(self.nodes[0])
         def check_getmininginfo(node_idx, signet_idx):
             mining_info = self.nodes[node_idx].getmininginfo()
             assert_equal(mining_info['blocks'], 0)
@@ -85,9 +98,29 @@ class SignetBasicTest(BitcoinTestFramework):
         check_getmininginfo(node_idx=3, signet_idx=1)
         check_getmininginfo(node_idx=4, signet_idx=2)
 
-        self.generate(self.nodes[0], 1, sync_fun=self.no_op)
+        self.generate(self.nodes[0], 10, sync_fun=self.no_op)
 
         self.log.info("pregenerated signet blocks check")
+        block = create_block(tmpl=self.nodes[0].getblock(self.nodes[0].getbestblockhash()))
+        add_witness_commitment(block)
+        block.vtx[0].vout[-1].scriptPubKey = b''.join([block.vtx[0].vout[-1].scriptPubKey, CScriptOp.encode_op_pushdata(SIGNET_HEADER)])
+        block.vtx[0].rehash()
+        block.hashMerkleRoot = block.calc_merkle_root()
+        block.solve()
+        print(self.nodes[0].submitblock(block.serialize().hex()))
+        print(block.vtx[0].serialize().hex())
+
+        import pprint
+        pp = pprint.PrettyPrinter()
+        pp.pprint(self.nodes[0].getblock(hex(block.hashPrevBlock)[2:].zfill(64)))
+        pp.pprint(self.nodes[0].getblock(hex(block.sha256)[2:].zfill(64)))
+        pp.pprint(self.nodes[0].getblock(self.nodes[0].getbestblockhash()))
+
+        print("PREV", hex(block.hashPrevBlock)[2:].zfill(64))
+        print("PREV", hex(block.sha256)[2:].zfill(64))
+        print("BEST", self.nodes[0].getbestblockhash(), self.nodes[0].getblockcount())
+        pp.pprint(self.nodes[0].getrawtransaction(self.nodes[0].getblock(self.nodes[0].getbestblockhash())['tx'][0], True))
+        return
 
         height = 0
         for block in signet_blocks:
