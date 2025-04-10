@@ -18,6 +18,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 include(../cmake/crc32c.cmake)
 include(../cmake/leveldb.cmake)
 include(../cmake/minisketch.cmake)
+include(ExternalProject)
 add_subdirectory(univalue)
 #=============================
 # secp256k1 subtree
@@ -124,6 +125,28 @@ if(WITH_ZMQ)
   add_subdirectory(zmq)
 endif()
 
+# Add libff library
+cmake_policy(PUSH)
+set(WITH_PROCPS OFF CACHE BOOL "" FORCE)
+set(IS_LIBFF_PARENT OFF CACHE BOOL "" FORCE)
+set(USE_ASM OFF CACHE BOOL "" FORCE)
+set(CURVE ALT_BN128 CACHE STRING "" FORCE)
+add_subdirectory(libff)
+cmake_policy(POP)
+
+# Add evmone library
+ExternalProject_Add(evmone
+    PREFIX ${CMAKE_BINARY_DIR}/src/evmone
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/src/evmone
+    CMAKE_ARGS 
+        -DBUILD_SHARED_LIBS=OFF
+        -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} 
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_LINKER=${CMAKE_LINKER}
+        -DCMAKE_CXX_FLAGS=-DQTUM_BUILD
+)
+
 # Home for common functionality shared by different executables and libraries.
 # Similar to `bitcoin_util` library, but higher-level.
 add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
@@ -188,6 +211,9 @@ target_link_libraries(bitcoin_common
     Boost::headers
     $<TARGET_NAME_IF_EXISTS:USDT::headers>
     $<$<PLATFORM_ID:Windows>:ws2_32>
+    ff
+    -L${CMAKE_BINARY_DIR}/lib evmone-standalone
+    -L${CMAKE_BINARY_DIR}/lib evmone_precompiles
 )
 
 include(InstallBinaryComponent)
