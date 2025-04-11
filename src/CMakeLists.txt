@@ -125,6 +125,9 @@ if(WITH_ZMQ)
   add_subdirectory(zmq)
 endif()
 
+# Add cryptopp library
+add_subdirectory(cryptopp)
+
 # Add libff library
 cmake_policy(PUSH)
 set(WITH_PROCPS OFF CACHE BOOL "" FORCE)
@@ -212,6 +215,7 @@ target_link_libraries(bitcoin_common
     $<TARGET_NAME_IF_EXISTS:USDT::headers>
     $<$<PLATFORM_ID:Windows>:ws2_32>
     ff
+    cryptopp
     -L${CMAKE_BINARY_DIR}/lib evmone-standalone
     -L${CMAKE_BINARY_DIR}/lib evmone_precompiles
 )
