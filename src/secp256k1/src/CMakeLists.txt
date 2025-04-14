@@ -138,6 +138,7 @@ if(SECP256K1_INSTALL)
   if(SECP256K1_ENABLE_MODULE_ELLSWIFT)
     list(APPEND ${PROJECT_NAME}_headers "${PROJECT_SOURCE_DIR}/include/secp256k1_ellswift.h")
   endif()
+  list(APPEND ${PROJECT_NAME}_headers "${PROJECT_SOURCE_DIR}/include/secp256k1_sha256.h")
   install(FILES ${${PROJECT_NAME}_headers}
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )

@@ -6,6 +6,14 @@ include(AddWindowsResources)
 
 configure_file(${PROJECT_SOURCE_DIR}/cmake/bitcoin-build-config.h.in bitcoin-build-config.h USE_SOURCE_PERMISSIONS @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libff/libff)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/evmone/evmc/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/evmone/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/evmone/lib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils/ethash/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils/libscrypt)
 
 #=============================
 # Subprojects
@@ -26,7 +34,7 @@ add_subdirectory(univalue)
 message("")
 message("Configuring secp256k1 subtree...")
 set(SECP256K1_DISABLE_SHARED ON CACHE BOOL "" FORCE)
-set(SECP256K1_ENABLE_MODULE_ECDH OFF CACHE BOOL "" FORCE)
+set(SECP256K1_ENABLE_MODULE_ECDH ON CACHE BOOL "" FORCE)
 set(SECP256K1_ENABLE_MODULE_RECOVERY ON CACHE BOOL "" FORCE)
 set(SECP256K1_ENABLE_MODULE_MUSIG OFF CACHE BOOL "" FORCE)
 set(SECP256K1_BUILD_BENCHMARK OFF CACHE BOOL "" FORCE)
@@ -203,7 +211,161 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   script/sign.cpp
   script/signingprovider.cpp
   script/solver.cpp
+  qtum/qtumutils.cpp
+  libff/libff/algebra/curves/public_params.hpp
+  libff/libff/algebra/curves/curve_utils.hpp
+  eth_client/libdevcore/Address.cpp
+  eth_client/libdevcore/Address.h
+  eth_client/libdevcore/Assertions.h
+  eth_client/libdevcore/Common.cpp
+  eth_client/libdevcore/Common.h
+  eth_client/libdevcore/CommonData.cpp
+  eth_client/libdevcore/CommonData.h
+  eth_client/libdevcore/CommonIO.cpp
+  eth_client/libdevcore/CommonIO.h
+  eth_client/libdevcore/DBFactory.cpp
+  eth_client/libdevcore/DBFactory.h
+  eth_client/libdevcore/Exceptions.h
+  eth_client/libdevcore/FileSystem.cpp
+  eth_client/libdevcore/FileSystem.h
+  eth_client/libdevcore/FixedHash.cpp
+  eth_client/libdevcore/FixedHash.h
+  eth_client/libdevcore/Guards.h
+  eth_client/libdevcore/JsonUtils.cpp
+  eth_client/libdevcore/JsonUtils.h
+  eth_client/libdevcore/LevelDB.cpp
+  eth_client/libdevcore/LevelDB.h
+  eth_client/libdevcore/Log.cpp
+  eth_client/libdevcore/Log.h
+  eth_client/libdevcore/OverlayDB.cpp
+  eth_client/libdevcore/OverlayDB.h
+  eth_client/libdevcore/RLP.cpp
+  eth_client/libdevcore/RLP.h
+  eth_client/libdevcore/SHA3.cpp
+  eth_client/libdevcore/SHA3.h
+  eth_client/libdevcore/StateCacheDB.cpp
+  eth_client/libdevcore/StateCacheDB.h
+  eth_client/libdevcore/TrieCommon.cpp
+  eth_client/libdevcore/TrieCommon.h
+  eth_client/libdevcore/TrieDB.h
+  eth_client/libdevcore/TrieHash.cpp
+  eth_client/libdevcore/TrieHash.h
+  eth_client/libdevcore/UndefMacros.h
+  eth_client/libdevcore/db.h
+  eth_client/libdevcore/dbfwd.h
+  eth_client/libdevcore/vector_ref.h
+  eth_client/libdevcrypto/Blake2.cpp
+  eth_client/libdevcrypto/Blake2.h
+  eth_client/libdevcrypto/Common.cpp
+  eth_client/libdevcrypto/Common.h
+  eth_client/libdevcrypto/CryptoPP.cpp
+  eth_client/libdevcrypto/CryptoPP.h
+  eth_client/libdevcrypto/Exceptions.h
+  eth_client/libdevcrypto/Hash.cpp
+  eth_client/libdevcrypto/Hash.h
+  eth_client/libdevcrypto/LibSnark.cpp
+  eth_client/libdevcrypto/LibSnark.h
+  eth_client/libdevcrypto/LibKzg.cpp
+  eth_client/libdevcrypto/LibKzg.h
+  eth_client/libethashseal/GenesisInfo.cpp
+  eth_client/libethashseal/GenesisInfo.h
+  eth_client/libethashseal/genesis/qtumNetwork.cpp
+  eth_client/libethcore/ABI.h
+  eth_client/libethcore/BlockHeader.cpp
+  eth_client/libethcore/BlockHeader.h
+  eth_client/libethcore/ChainOperationParams.cpp
+  eth_client/libethcore/ChainOperationParams.h
+  eth_client/libethcore/Common.cpp
+  eth_client/libethcore/Common.h
+  eth_client/libethcore/EVMSchedule.cpp
+  eth_client/libethcore/EVMSchedule.h
+  eth_client/libethcore/Exceptions.h
+  eth_client/libethcore/LogEntry.cpp
+  eth_client/libethcore/LogEntry.h
+  eth_client/libethcore/Precompiled.cpp
+  eth_client/libethcore/Precompiled.h
+  eth_client/libethcore/SealEngine.cpp
+  eth_client/libethcore/SealEngine.h
+  eth_client/libethcore/TransactionBase.cpp
+  eth_client/libethcore/TransactionBase.h
+  eth_client/libethereum/Account.cpp
+  eth_client/libethereum/Account.h
+  eth_client/libethereum/ChainParams.cpp
+  eth_client/libethereum/ChainParams.h
+  eth_client/libethereum/CodeSizeCache.h
+  eth_client/libethereum/DatabasePaths.cpp
+  eth_client/libethereum/DatabasePaths.h
+  eth_client/libethereum/Executive.cpp
+  eth_client/libethereum/Executive.h
+  eth_client/libethereum/ExtVM.cpp
+  eth_client/libethereum/ExtVM.h
+  eth_client/libethereum/LastBlockHashesFace.h
+  eth_client/libethereum/SecureTrieDB.h
+  eth_client/libethereum/State.cpp
+  eth_client/libethereum/State.h
+  eth_client/libethereum/Transaction.cpp
+  eth_client/libethereum/Transaction.h
+  eth_client/libethereum/TransactionReceipt.cpp
+  eth_client/libethereum/TransactionReceipt.h
+  eth_client/libethereum/ValidationSchemes.cpp
+  eth_client/libethereum/ValidationSchemes.h
+  eth_client/libevm/EVMC.cpp
+  eth_client/libevm/EVMC.h
+  eth_client/libevm/ExtVMFace.cpp
+  eth_client/libevm/ExtVMFace.h
+  eth_client/libevm/VMFace.h
+  eth_client/libevm/VMFactory.cpp
+  eth_client/libevm/VMFactory.h
+  eth_client/utils/ethash/include/ethash/ethash.h
+  eth_client/utils/ethash/include/ethash/ethash.hpp
+  eth_client/utils/ethash/include/ethash/global_context.h
+  eth_client/utils/ethash/include/ethash/global_context.hpp
+  eth_client/utils/ethash/include/ethash/hash_types.h
+  eth_client/utils/ethash/include/ethash/hash_types.hpp
+  eth_client/utils/ethash/include/ethash/keccak.h
+  eth_client/utils/ethash/include/ethash/keccak.hpp
+  eth_client/utils/ethash/include/ethash/version.h
+  eth_client/utils/ethash/lib/ethash/endianness.hpp
+  eth_client/utils/ethash/lib/ethash/ethash.cpp
+  eth_client/utils/ethash/lib/ethash/ethash-internal.hpp
+  eth_client/utils/ethash/lib/ethash/primes.c
+  eth_client/utils/ethash/lib/ethash/primes.h
+  eth_client/utils/ethash/lib/global_context/global_context.cpp
+  eth_client/utils/ethash/lib/keccak/keccak.c
+  eth_client/utils/ethash/lib/support/attributes.h
+  eth_client/utils/intx/intx.hpp
+  eth_client/utils/json_spirit/JsonSpiritHeaders.h
+  eth_client/utils/json_spirit/json_spirit.h
+  eth_client/utils/json_spirit/json_spirit.vcproj
+  eth_client/utils/json_spirit/json_spirit_error_position.h
+  eth_client/utils/json_spirit/json_spirit_reader.cpp
+  eth_client/utils/json_spirit/json_spirit_reader.h
+  eth_client/utils/json_spirit/json_spirit_reader_template.h
+  eth_client/utils/json_spirit/json_spirit_stream_reader.h
+  eth_client/utils/json_spirit/json_spirit_utils.h
+  eth_client/utils/json_spirit/json_spirit_value.cpp
+  eth_client/utils/json_spirit/json_spirit_value.h
+  eth_client/utils/json_spirit/json_spirit_writer.cpp
+  eth_client/utils/json_spirit/json_spirit_writer.h
+  eth_client/utils/json_spirit/json_spirit_writer_template.h
+  eth_client/utils/libscrypt/b64.c
+  eth_client/utils/libscrypt/b64.h
+  eth_client/utils/libscrypt/crypto-mcf.c
+  eth_client/utils/libscrypt/crypto-scrypt-saltgen.c
+  eth_client/utils/libscrypt/crypto_scrypt-check.c
+  eth_client/utils/libscrypt/crypto_scrypt-hash.c
+  eth_client/utils/libscrypt/crypto_scrypt-hexconvert.c
+  eth_client/utils/libscrypt/crypto_scrypt-hexconvert.h
+  eth_client/utils/libscrypt/crypto_scrypt-nosse.c
+  eth_client/utils/libscrypt/libscrypt.h
+  eth_client/utils/libscrypt/sha256.c
+  eth_client/utils/libscrypt/sha256.h
+  eth_client/utils/libscrypt/slowequals.c
+  eth_client/utils/libscrypt/slowequals.h
+  eth_client/utils/libscrypt/sysendian.h
 )
+
+link_directories(${CMAKE_BINARY_DIR}/lib)
 target_link_libraries(bitcoin_common
   PRIVATE
     core_interface
@@ -214,10 +376,14 @@ target_link_libraries(bitcoin_common
     Boost::headers
     $<TARGET_NAME_IF_EXISTS:USDT::headers>
     $<$<PLATFORM_ID:Windows>:ws2_32>
+    leveldb
     ff
     cryptopp
-    -L${CMAKE_BINARY_DIR}/lib evmone-standalone
-    -L${CMAKE_BINARY_DIR}/lib evmone_precompiles
+    Boost::filesystem
+    Boost::program_options
+    Boost::thread
+    evmone_precompiles-standalone
+    evmone-standalone
 )
 
 include(InstallBinaryComponent)
