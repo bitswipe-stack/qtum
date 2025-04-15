@@ -270,6 +270,7 @@ if(WIN32)
     _WIN32_IE=0x0A00
     WIN32_LEAN_AND_MEAN
     NOMINMAX
+    BOOST_THREAD_USE_LIB
   )
 
   if(MSVC)
@@ -404,6 +405,8 @@ if(BUILD_DAEMON OR BUILD_GUI OR BUILD_CLI OR BUILD_TESTS OR BUILD_BENCH OR BUILD
   find_package(Libevent 2.1.8 MODULE REQUIRED)
 endif()
 
+find_package(OpenSSL MODULE REQUIRED)
+
 include(cmake/introspection.cmake)
 
 include(cmake/ccache.cmake)
@@ -453,6 +456,18 @@ else()
   # set the -Wno-foo case if it works.
   try_append_cxx_flags("-Wunused-parameter" TARGET warn_interface SKIP_LINK
     IF_CHECK_PASSED "-Wno-unused-parameter"
+  )
+  try_append_cxx_flags("-Wunknown-pragmas" TARGET warn_interface SKIP_LINK
+    IF_CHECK_PASSED "-Wno-unknown-pragmas"
+  )
+  try_append_cxx_flags("-Wstrict-aliasing" TARGET warn_interface SKIP_LINK
+    IF_CHECK_PASSED "-Wno-strict-aliasing"
+  )
+  try_append_cxx_flags("-Wduplicated-branches" TARGET warn_interface SKIP_LINK
+    IF_CHECK_PASSED "-Wno-duplicated-branches"
+  )
+  try_append_cxx_flags("-Wc++11-narrowing" TARGET warn_interface SKIP_LINK
+    IF_CHECK_PASSED "-Wno-c++11-narrowing"
   )
 endif()
 

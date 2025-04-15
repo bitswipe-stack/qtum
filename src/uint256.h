@@ -92,6 +92,7 @@ public:
      *
      * @{*/
     std::string GetHex() const;
+    std::string GetReverseHex() const;
     /** Unlike FromHex this accepts any invalid input, thus it is fragile and deprecated!
      *
      * - Hex numbers that don't specify enough bytes to fill the internal array
@@ -106,6 +107,7 @@ public:
      *   "0x123" => {0x23, 0x1, 0x0, ..., 0x0}
      */
     void SetHexDeprecated(std::string_view str);
+    void SetReverseHex(std::string_view str);
     std::string ToString() const;
     /**@}*/
 

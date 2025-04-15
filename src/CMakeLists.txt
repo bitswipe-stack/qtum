@@ -15,6 +15,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils/ethash/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils/libscrypt)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DQTUM_BUILD")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DQTUM_BUILD")
+
 #=============================
 # Subprojects
 #=============================
@@ -155,7 +158,8 @@ ExternalProject_Add(evmone
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         -DCMAKE_LINKER=${CMAKE_LINKER}
-        -DCMAKE_CXX_FLAGS=-DQTUM_BUILD
+        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+        -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
 )
 
 # Home for common functionality shared by different executables and libraries.
@@ -384,6 +388,8 @@ target_link_libraries(bitcoin_common
     Boost::thread
     evmone_precompiles-standalone
     evmone-standalone
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 include(InstallBinaryComponent)
