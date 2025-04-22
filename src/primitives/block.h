@@ -39,7 +39,7 @@ public:
         SetNull();
     }
 
-    SERIALIZE_METHODS(CBlockHeader, obj) { READWRITE(obj.nVersion, obj.hashPrevBlock, obj.hashMerkleRoot, obj.nTime, obj.nBits, obj.nNonce); }
+    SERIALIZE_METHODS(CBlockHeader, obj) { READWRITE(obj.nVersion, obj.hashPrevBlock, obj.hashMerkleRoot, obj.nTime, obj.nBits, obj.nNonce, obj.hashStateRoot, obj.hashUTXORoot, obj.prevoutStake, obj.vchBlockSigDlgt); }
 
     void SetNull()
     {
@@ -61,6 +61,10 @@ public:
     }
 
     uint256 GetHash() const;
+
+    uint256 GetHashWithoutSign() const;
+
+    std::string GetWithoutSign() const;
 
     NodeSeconds Time() const
     {
@@ -92,6 +96,14 @@ public:
         }
         return ret;
     }
+
+    void SetBlockSignature(const std::vector<unsigned char>& vchSign);
+    std::vector<unsigned char> GetBlockSignature() const;
+
+    void SetProofOfDelegation(const std::vector<unsigned char>& vchPoD);
+    std::vector<unsigned char> GetProofOfDelegation() const;
+
+    bool HasProofOfDelegation() const;
 };
 
 
@@ -129,6 +141,11 @@ public:
         fChecked = false;
         m_checked_witness_commitment = false;
         m_checked_merkle_root = false;
+    }
+
+    std::pair<COutPoint, unsigned int> GetProofOfStake() const //qtum
+    {
+        return IsProofOfStake()? std::make_pair(prevoutStake, nTime) : std::make_pair(COutPoint(), (unsigned int)0);
     }
 
     CBlockHeader GetBlockHeader() const
