@@ -414,7 +414,7 @@ BOOST_FIXTURE_TEST_CASE(updatecoins_simulation_test, UpdateTest)
             // Update the expected result to know about the new output coins
             assert(tx.vout.size() == 1);
             const COutPoint outpoint(tx.GetHash(), 0);
-            result[outpoint] = Coin{tx.vout[0], height, CTransaction{tx}.IsCoinBase()};
+            result[outpoint] = Coin{tx.vout[0], height, CTransaction{tx}.IsCoinBase(), CTransaction{tx}.IsCoinStake()};
 
             // Call UpdateCoins on the top cache
             CTxUndo undo;
@@ -736,7 +736,7 @@ static void CheckAddCoin(const CAmount base_value, const MaybeCoin& cache_coin, 
 {
     SingleEntryCacheTest test{base_value, cache_coin};
     bool possible_overwrite{coinbase};
-    auto add_coin{[&] { test.cache.AddCoin(OUTPOINT, Coin{CTxOut{modify_value, CScript{}}, 1, coinbase}, possible_overwrite); }};
+    auto add_coin{[&] { test.cache.AddCoin(OUTPOINT, Coin{CTxOut{modify_value, CScript{}}, 1, coinbase, false}, possible_overwrite); }};
     if (auto* expected_coin{std::get_if<MaybeCoin>(&expected)}) {
         add_coin();
         test.cache.SelfTest();
