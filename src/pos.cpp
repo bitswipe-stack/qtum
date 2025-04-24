@@ -640,7 +640,7 @@ bool AddMPoSScript(std::vector<BlockScript> &mposScriptList, int nHeight, const 
     CBlockIndex* pblockindex = chain[nHeight];
     if(!pblockindex)
     {
-        LogPrint(BCLog::COINSTAKE, "Block index not found\n");
+        LogDebug(BCLog::COINSTAKE, "Block index not found\n");
         return false;
     }
 
@@ -663,7 +663,7 @@ bool AddMPoSScript(std::vector<BlockScript> &mposScriptList, int nHeight, const 
     {
         if(stakeAddress == uint160())
         {
-            LogPrint(BCLog::COINSTAKE, "Fail to solve script for mpos reward recipient\n");
+            LogDebug(BCLog::COINSTAKE, "Fail to solve script for mpos reward recipient\n");
             //This should never fail, but in case it somehow did we don't want it to bring the network to a halt
             //So, use an OP_RETURN script to burn the coins for the unknown staker
             blockScript = CScript() << OP_RETURN;
@@ -682,7 +682,7 @@ bool AddMPoSScript(std::vector<BlockScript> &mposScriptList, int nHeight, const 
 
             if(delegateAddress == uint160())
             {
-                LogPrint(BCLog::COINSTAKE, "Fail to solve script for mpos delegate reward recipient\n");
+                LogDebug(BCLog::COINSTAKE, "Fail to solve script for mpos delegate reward recipient\n");
                 blockScript.delegateScript = CScript() << OP_RETURN;
             }else{
                 // Make public key hash script
@@ -708,7 +708,7 @@ bool AddMPoSScript(std::vector<BlockScript> &mposScriptList, int nHeight, const 
             return true;
 
         }
-        LogPrint(BCLog::COINSTAKE, "The block is not proof-of-stake\n");
+        LogDebug(BCLog::COINSTAKE, "The block is not proof-of-stake\n");
         return false;
     }
 
@@ -734,7 +734,7 @@ bool GetMPoSOutputs(std::vector<CTxOut>& mposOutputList, int64_t nRewardPiece, i
     std::vector<BlockScript> mposScriptList;
     if(!GetMPoSOutputScripts(mposScriptList, nHeight, consensusParams, chain, blockman))
     {
-        LogPrint(BCLog::COINSTAKE, "Fail to get the list of recipients\n");
+        LogDebug(BCLog::COINSTAKE, "Fail to get the list of recipients\n");
         return false;
     }
 
@@ -747,7 +747,7 @@ bool GetMPoSOutputs(std::vector<CTxOut>& mposOutputList, int64_t nRewardPiece, i
             int64_t nRewardDelegate, nRewardStaker;
             if(!SplitOfflineStakeReward(nRewardPiece, blockScript.fee, nRewardDelegate, nRewardStaker))
             {
-                LogPrint(BCLog::COINSTAKE, "Fail to split the offline staking reward\n");
+                LogDebug(BCLog::COINSTAKE, "Fail to split the offline staking reward\n");
                 return false;
             }
 

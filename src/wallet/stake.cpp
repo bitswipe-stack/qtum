@@ -123,20 +123,20 @@ bool CreateCoinStakeFromMine(CWallet& wallet, unsigned int nBits, const CAmount&
         if (CheckKernel(pindexPrev, nBits, nTimeBlock, prevoutStake, wallet.chain().getCoinsTip(), cache, wallet.chain().chainman().ActiveChainstate()))
         {
             // Found a kernel
-            LogPrint(BCLog::COINSTAKE, "CreateCoinStake : kernel found\n");
+            LogDebug(BCLog::COINSTAKE, "CreateCoinStake : kernel found\n");
             std::vector<valtype> vSolutions;
             CScript scriptPubKeyOut;
             scriptPubKeyKernel = pcoin.first->tx->vout[pcoin.second].scriptPubKey;
             TxoutType whichType = Solver(scriptPubKeyKernel, vSolutions);
             if (whichType == TxoutType::NONSTANDARD)
             {
-                LogPrint(BCLog::COINSTAKE, "CreateCoinStake : failed to parse kernel\n");
+                LogDebug(BCLog::COINSTAKE, "CreateCoinStake : failed to parse kernel\n");
                 break;
             }
-            LogPrint(BCLog::COINSTAKE, "CreateCoinStake : parsed kernel type=%d\n", (int)whichType);
+            LogDebug(BCLog::COINSTAKE, "CreateCoinStake : parsed kernel type=%d\n", (int)whichType);
             if (whichType != TxoutType::PUBKEY && whichType != TxoutType::PUBKEYHASH)
             {
-                LogPrint(BCLog::COINSTAKE, "CreateCoinStake : no support for kernel type=%d\n", (int)whichType);
+                LogDebug(BCLog::COINSTAKE, "CreateCoinStake : no support for kernel type=%d\n", (int)whichType);
                 break;  // only support pay to public key and pay to address
             }
             if (whichType == TxoutType::PUBKEYHASH) // pay to address type
@@ -147,7 +147,7 @@ bool CreateCoinStakeFromMine(CWallet& wallet, unsigned int nBits, const CAmount&
                 CPubKey pubKeyStake;
                 if (!wallet.HasPrivateKey(pkhash, fAllowWatchOnly) || !wallet.GetPubKey(pkhash, pubKeyStake))
                 {
-                    LogPrint(BCLog::COINSTAKE, "CreateCoinStake : failed to get key for kernel type=%d\n", (int)whichType);
+                    LogDebug(BCLog::COINSTAKE, "CreateCoinStake : failed to get key for kernel type=%d\n", (int)whichType);
                     break;  // unable to find corresponding public key
                 }
                 scriptPubKeyOut << pubKeyStake.getvch() << OP_CHECKSIG;
@@ -162,13 +162,13 @@ bool CreateCoinStakeFromMine(CWallet& wallet, unsigned int nBits, const CAmount&
                 CPubKey pubKeyStake;
                 if (!wallet.HasPrivateKey(pkhash, fAllowWatchOnly) || !wallet.GetPubKey(pkhash, pubKeyStake))
                 {
-                    LogPrint(BCLog::COINSTAKE, "CreateCoinStake : failed to get key for kernel type=%d\n", (int)whichType);
+                    LogDebug(BCLog::COINSTAKE, "CreateCoinStake : failed to get key for kernel type=%d\n", (int)whichType);
                     break;  // unable to find corresponding public key
                 }
 
                 if (pubKeyStake != pubKey)
                 {
-                    LogPrint(BCLog::COINSTAKE, "CreateCoinStake : invalid key for kernel type=%d\n", (int)whichType);
+                    LogDebug(BCLog::COINSTAKE, "CreateCoinStake : invalid key for kernel type=%d\n", (int)whichType);
                     break; // keys mismatch
                 }
 
@@ -181,7 +181,7 @@ bool CreateCoinStakeFromMine(CWallet& wallet, unsigned int nBits, const CAmount&
             vwtxPrev.push_back(pcoin);
             txNew.vout.push_back(CTxOut(0, scriptPubKeyOut));
 
-            LogPrint(BCLog::COINSTAKE, "CreateCoinStake : added kernel type=%d\n", (int)whichType);
+            LogDebug(BCLog::COINSTAKE, "CreateCoinStake : added kernel type=%d\n", (int)whichType);
             fKernelFound = true;
         }
 
@@ -330,7 +330,7 @@ bool CreateCoinStakeFromDelegate(CWallet& wallet, unsigned int nBits, const CAmo
         if (CheckKernel(pindexPrev, nBits, nTimeBlock, prevoutStake, wallet.chain().getCoinsTip(), cache, wallet.chain().chainman().ActiveChainstate()))
         {
             // Found a kernel
-            LogPrint(BCLog::COINSTAKE, "CreateCoinStake : kernel found\n");
+            LogDebug(BCLog::COINSTAKE, "CreateCoinStake : kernel found\n");
             std::vector<valtype> vSolutions;
 
             Coin coinPrev;
@@ -345,13 +345,13 @@ bool CreateCoinStakeFromDelegate(CWallet& wallet, unsigned int nBits, const CAmo
             TxoutType whichType = Solver(scriptPubKeyKernel, vSolutions);
             if (whichType == TxoutType::NONSTANDARD)
             {
-                LogPrint(BCLog::COINSTAKE, "CreateCoinStake : failed to parse kernel\n");
+                LogDebug(BCLog::COINSTAKE, "CreateCoinStake : failed to parse kernel\n");
                 break;
             }
-            LogPrint(BCLog::COINSTAKE, "CreateCoinStake : parsed kernel type=%d\n", (int)whichType);
+            LogDebug(BCLog::COINSTAKE, "CreateCoinStake : parsed kernel type=%d\n", (int)whichType);
             if (whichType != TxoutType::PUBKEY && whichType != TxoutType::PUBKEYHASH)
             {
-                LogPrint(BCLog::COINSTAKE, "CreateCoinStake : no support for kernel type=%d\n", (int)whichType);
+                LogDebug(BCLog::COINSTAKE, "CreateCoinStake : no support for kernel type=%d\n", (int)whichType);
                 break;  // only support pay to public key and pay to address
             }
             if (whichType == TxoutType::PUBKEYHASH) // pay to address type
@@ -368,7 +368,7 @@ bool CreateCoinStakeFromDelegate(CWallet& wallet, unsigned int nBits, const CAmo
                 CPubKey pubKeyStake;
                 if (!wallet.HasPrivateKey(pkhash, fAllowWatchOnly) || !wallet.GetPubKey(pkhash, pubKeyStake))
                 {
-                    LogPrint(BCLog::COINSTAKE, "CreateCoinStake : failed to get staker key for kernel type=%d\n", (int)whichType);
+                    LogDebug(BCLog::COINSTAKE, "CreateCoinStake : failed to get staker key for kernel type=%d\n", (int)whichType);
                     break;  // unable to find corresponding public key
                 }
                 scriptPubKeyStaker << pubKeyStake.getvch() << OP_CHECKSIG;
@@ -387,7 +387,7 @@ bool CreateCoinStakeFromDelegate(CWallet& wallet, unsigned int nBits, const CAmo
                 CPubKey pubKeyStake;
                 if (!wallet.HasPrivateKey(pkhash, fAllowWatchOnly) || !wallet.GetPubKey(pkhash, pubKeyStake))
                 {
-                    LogPrint(BCLog::COINSTAKE, "CreateCoinStake : failed to get staker key for kernel type=%d\n", (int)whichType);
+                    LogDebug(BCLog::COINSTAKE, "CreateCoinStake : failed to get staker key for kernel type=%d\n", (int)whichType);
                     break;  // unable to find corresponding public key
                 }
 
@@ -401,7 +401,7 @@ bool CreateCoinStakeFromDelegate(CWallet& wallet, unsigned int nBits, const CAmo
             const CWalletTx* pcoinSuperStaker = wallet.GetCoinSuperStaker(setCoins, superStakerAddress, prevoutSuperStaker, nValueSuperStaker);
             if(!pcoinSuperStaker)
             {
-                LogPrint(BCLog::COINSTAKE, "CreateCoinStake : failed to get utxo for super staker %s\n", EncodeDestination(superStakerAddress));
+                LogDebug(BCLog::COINSTAKE, "CreateCoinStake : failed to get utxo for super staker %s\n", EncodeDestination(superStakerAddress));
                 break;  // unable to find utxo from the super staker
             }
 
@@ -414,7 +414,7 @@ bool CreateCoinStakeFromDelegate(CWallet& wallet, unsigned int nBits, const CAmo
                 txNew.vout.push_back(CTxOut(0, scriptPubKeyKernel));
             }
 
-            LogPrint(BCLog::COINSTAKE, "CreateCoinStake : added kernel type=%d\n", (int)whichType);
+            LogDebug(BCLog::COINSTAKE, "CreateCoinStake : added kernel type=%d\n", (int)whichType);
             fKernelFound = true;
         }
 

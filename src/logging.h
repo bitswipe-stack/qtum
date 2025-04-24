@@ -71,6 +71,9 @@ namespace BCLog {
         TXRECONCILIATION = (CategoryMask{1} << 26),
         SCAN        = (CategoryMask{1} << 27),
         TXPACKAGES  = (CategoryMask{1} << 28),
+        COINSTAKE   = (CategoryMask{1} << 29),
+        HTTPPOLL    = (CategoryMask{1} << 30),
+        INDEX       = (CategoryMask{1} << 31),
         ALL         = ~NONE,
     };
     enum class Level {
