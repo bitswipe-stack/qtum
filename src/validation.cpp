@@ -64,6 +64,9 @@
 #include <util/translation.h>
 #include <validationinterface.h>
 
+#include <libethcore/ABI.h>
+#include <common/args.h>
+
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -1947,6 +1950,11 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
     return result;
 }
 
+bool CheckIndexProof(const CBlockIndex& block, const Consensus::Params& consensusParams)
+{
+    return {};
+}
+
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
     int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
@@ -2443,9 +2451,92 @@ static unsigned int GetBlockScriptFlags(const CBlockIndex& block_index, const Ch
     return flags;
 }
 
+/////////////////////////////////////////////////////////////////////// qtum
+bool GetSpentCoinFromBlock(const CBlockIndex* pindex, COutPoint prevout, Coin* coin, Chainstate& chainstate) {
+    std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
+    CBlock& block = *pblock;
+    if (!chainstate.m_blockman.ReadBlock(block, *pindex)) {
+        LogError("GetSpentCoinFromBlock(): Could not read block from disk");
+        return false;
+    }
+
+    for(size_t j = 1; j < block.vtx.size(); ++j) {
+        CTransactionRef& tx = block.vtx[j];
+        for(size_t k = 0; k < tx->vin.size(); ++k) {
+            const COutPoint& tmpprevout = tx->vin[k].prevout;
+            if(tmpprevout == prevout) {
+                CBlockUndo undo;
+                if(!chainstate.m_blockman.ReadBlockUndo(undo, *pindex)) {
+                    LogError("GetSpentCoinFromBlock(): Could not read undo block from disk");
+                    return false;
+                }
+
+                if(undo.vtxundo.size() != block.vtx.size() - 1) {
+                    LogError("GetSpentCoinFromBlock(): undo tx size not equal to block tx size");
+                    return false;
+                }
+
+                CTxUndo &txundo = undo.vtxundo[j-1]; // no vtxundo for coinbase
+
+                if(txundo.vprevout.size() != tx->vin.size()) {
+                    LogError("GetSpentCoinFromBlock(): undo tx vin size not equal to block tx vin size");
+                    return false;
+                }
+
+                *coin = txundo.vprevout[k];
+                return true;
+            }
+
+        }
+    }
+    return false;
+}
+
+bool GetSpentCoinFromMainChain(const CBlockIndex* pforkPrev, COutPoint prevoutStake, Coin* coin, Chainstate& chainstate) {
+    const CBlockIndex* pforkBase = chainstate.m_chain.FindFork(pforkPrev);
+
+    // If the forkbase is more than coinbaseMaturity blocks in the past, do not attempt to scan the main chain.
+    int nHeight = chainstate.m_chain.Tip()->nHeight;
+    int coinbaseMaturity = Params().GetConsensus().CoinbaseMaturity(nHeight);
+    if(nHeight - pforkBase->nHeight > coinbaseMaturity) {
+        LogError("The fork's base is behind by more than 500 blocks");
+        return false;
+    }
+
+    // First, we make sure that the prevout has not been spent in any of pforktip's ancestors as the prevoutStake.
+    // This is done to prevent a single staker building a long chain based on only a single prevout.
+    {
+        const CBlockIndex* pindex = pforkPrev;
+        while(pindex && pindex != pforkBase) {
+            // The coinstake has already been spent in the fork.
+            if(pindex->prevoutStake == prevoutStake) {
+                LogError("prevout already spent in the orphan chain");
+                return false;
+            }
+            pindex = pindex->pprev;
+        }
+    }
+
+    // Scan through blocks until we reach the forkbase to check if the prevoutStake has been spent in one of those blocks
+    // If it not in any of those blocks, and not in the utxo set, it can't be spendable in the orphan chain.
+    {
+        CBlockIndex* pindex = chainstate.m_chain.Tip();
+        while(pindex && pindex != pforkBase) {
+            if(GetSpentCoinFromBlock(pindex, prevoutStake, coin, chainstate)) {
+                return true;
+            }
+            pindex = pindex->pprev;
+        }
+    }
+
+    return false;
+}
 
 std::vector<ResultExecute> CallContract(const dev::Address& addrContract, std::vector<unsigned char> opcode, Chainstate& chainstate, const dev::Address& sender, uint64_t gasLimit, CAmount nAmount){
     return {};
+}
+
+void writeVMlog(const std::vector<ResultExecute>& res, CChain& chain, const CTransaction& tx, const CBlock& block){
 }
 
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins.
@@ -5652,6 +5743,30 @@ double ChainstateManager::GuessVerificationProgress(const CBlockIndex* pindex) c
     }
 
     return std::min<double>(pindex->m_chain_tx_count / fTxTotal, 1.0);
+}
+
+std::string exceptedMessage(const dev::eth::TransactionException& excepted, const dev::bytes& output)
+{
+    std::string message;
+    try
+    {
+        // Process the revert message from the output
+        if(excepted == dev::eth::TransactionException::RevertInstruction)
+        {
+            // Get function: Error(string)
+            dev::bytesConstRef oRawData(&output);
+            dev::bytes errorFunc = oRawData.cropped(0, 4).toBytes();
+            if(dev::toHex(errorFunc) == "08c379a0")
+            {
+                dev::bytesConstRef oData = oRawData.cropped(4);
+                message = dev::eth::ABIDeserialiser<std::string>::deserialise(oData);
+            }
+        }
+    }
+    catch(...)
+    {}
+
+    return message;
 }
 
 std::optional<uint256> ChainstateManager::SnapshotBlockhash() const

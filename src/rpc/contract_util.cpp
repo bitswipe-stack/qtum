@@ -505,9 +505,9 @@ bool CallToken::execEvents(const int64_t &fromBlock, const int64_t &toBlock, con
                 tokenEvent.receiver = topicsList[2].get_str().substr(24);
                 ToQtumAddress(tokenEvent.receiver, tokenEvent.receiver);
             }
-            tokenEvent.blockHash = uint256S(eventMap["blockHash"].get_str());
+            tokenEvent.blockHash = uint256::FromHex(eventMap["blockHash"].get_str()).value_or(uint256::ZERO);
             tokenEvent.blockNumber = eventMap["blockNumber"].getInt<int64_t>();
-            tokenEvent.transactionHash = uint256S(eventMap["transactionHash"].get_str());
+            tokenEvent.transactionHash = uint256::FromHex(eventMap["transactionHash"].get_str()).value_or(uint256::ZERO);
 
             // Parse data
             std::string data = eventLog["data"].get_str();

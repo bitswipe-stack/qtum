@@ -121,10 +121,19 @@ bool CheckStakeKernelHash(CBlockIndex* pindexPrev, unsigned int nBits, uint32_t 
     return true;
 }
 
+bool ViewGetCoin(CCoinsViewCache& view, const COutPoint &outpoint, Coin &coin) {
+    auto coinIn = view.GetCoin(outpoint);
+    if (coinIn.has_value()) {
+        coin = std::move(*coinIn);
+        return true;
+    }
+    return false;
+}
+
 bool GetStakeCoin(const COutPoint& prevout, Coin& coinPrev, CBlockIndex*& blockFrom, CBlockIndex* pindexPrev, BlockValidationState& state, CCoinsViewCache& view)
 {
     // Get the coin
-    if(!view.GetCoin(prevout, coinPrev)){
+    if(!ViewGetCoin(view, prevout, coinPrev)){
         return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "stake-prevout-not-exist", strprintf("CheckProofOfStake() : Stake prevout does not exist %s", prevout.hash.ToString()));
     }
 
@@ -278,7 +287,7 @@ bool CheckProofOfStake(CBlockIndex* pindexPrev, BlockValidationState& state, con
 bool CheckBlockInputPubKeyMatchesOutputPubKey(const CBlock& block, CCoinsViewCache& view, bool delegateOutputExist) {
 
     Coin coinIn;
-    if(!view.GetCoin(block.prevoutStake, coinIn)) {
+    if(!ViewGetCoin(view, block.prevoutStake, coinIn)) {
         LogError("%s: Could not fetch prevoutStake from UTXO set", __func__);
         return false;
     }
@@ -334,7 +343,7 @@ bool CheckBlockInputPubKeyMatchesOutputPubKey(const CBlock& block, CCoinsViewCac
 
 bool CheckRecoveredPubKeyFromBlockSignature(CBlockIndex* pindexPrev, const CBlockHeader& block, CCoinsViewCache& view, Chainstate& chainstate) {
     Coin coinPrev;
-    if(!view.GetCoin(block.prevoutStake, coinPrev)){
+    if(!ViewGetCoin(view, block.prevoutStake, coinPrev)){
         if(!GetSpentCoinFromMainChain(pindexPrev, block.prevoutStake, &coinPrev, chainstate)) {
             LogError("CheckRecoveredPubKeyFromBlockSignature(): Could not find %s and it was not at the tip", block.prevoutStake.hash.GetHex());
             return false;
@@ -423,7 +432,7 @@ bool CheckKernel(CBlockIndex* pindexPrev, unsigned int nBits, uint32_t nTimeBloc
     if(it == cache.end()) {
         //not found in cache (shouldn't happen during staking, only during verification which does not use cache)
         Coin coinPrev;
-        if(!view.GetCoin(prevout, coinPrev)){
+        if(!ViewGetCoin(view, prevout, coinPrev)){
             if(!GetSpentCoinFromMainChain(pindexPrev, prevout, &coinPrev, chainstate)) {
                 LogError("CheckKernel(): Could not find coin and it was not at the tip");
                 return false;
@@ -479,7 +488,7 @@ void CacheKernel(std::map<COutPoint, CStakeCache>& cache, const COutPoint& prevo
     }
 
     Coin coinPrev;
-    if(!view.GetCoin(prevout, coinPrev)){
+    if(!ViewGetCoin(view, prevout, coinPrev)){
         return;
     }
 

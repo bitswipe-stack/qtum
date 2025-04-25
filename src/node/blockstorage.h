@@ -19,6 +19,11 @@
 #include <uint256.h>
 #include <util/fs.h>
 #include <util/hasher.h>
+#include <primitives/block.h>
+#include <libdevcore/Common.h>
+#include <libdevcore/FixedHash.h>
+#include <index/disktxpos.h>
+#include <coins.h>
 
 #include <array>
 #include <atomic>
@@ -91,6 +96,38 @@ public:
     int ReadHeightIndex(int low, int high, int minconf,
             std::vector<std::vector<uint256>> &blocksOfHashes,
             std::set<dev::h160> const &addresses, ChainstateManager &chainman);
+    bool EraseHeightIndex(const unsigned int &height);
+    bool WipeHeightIndex();
+
+
+    bool WriteStakeIndex(unsigned int height, uint160 address);
+    bool ReadStakeIndex(unsigned int height, uint160& address);
+    bool ReadStakeIndex(unsigned int high, unsigned int low, std::vector<uint160> addresses);
+    bool EraseStakeIndex(unsigned int height);
+
+    bool WriteDelegateIndex(unsigned int height, uint160 address, uint8_t fee);
+    bool ReadDelegateIndex(unsigned int height, uint160& address, uint8_t& fee);
+    bool EraseDelegateIndex(unsigned int height);
+
+    bool EraseBlockIndex(const std::vector<uint256>&vect);
+
+    // Block explorer database functions
+    bool WriteAddressIndex(const std::vector<std::pair<CAddressIndexKey, CAmount> > &vect);
+    bool EraseAddressIndex(const std::vector<std::pair<CAddressIndexKey, CAmount> > &vect);
+    bool ReadAddressIndex(uint256 addressHash, int type,
+                        std::vector<std::pair<CAddressIndexKey, CAmount> > &addressIndex,
+                        int start = 0, int end = 0);
+    bool UpdateAddressUnspentIndex(const std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue > >&vect);
+    bool ReadAddressUnspentIndex(uint256 addressHash, int type,
+                                std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &vect);
+    bool WriteTimestampIndex(const CTimestampIndexKey &timestampIndex);
+    bool ReadTimestampIndex(const unsigned int &high, const unsigned int &low, const bool fActiveOnly, std::vector<std::pair<uint256, unsigned int> > &vect, ChainstateManager & chainman);
+    bool WriteTimestampBlockIndex(const CTimestampBlockIndexKey &blockhashIndex, const CTimestampBlockIndexValue &logicalts);
+    bool ReadTimestampBlockIndex(const uint256 &hash, unsigned int &logicalTS);
+    bool ReadSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value);
+    bool UpdateSpentIndex(const std::vector<std::pair<CSpentIndexKey, CSpentIndexValue> >&vect);
+    bool blockOnchainActive(const uint256 &hash, ChainstateManager &chainman);
+    //////////////////////////////////////////////////////////////////////////////
 };
 } // namespace kernel
 
@@ -443,8 +480,18 @@ public:
      */
     void UnlinkPrunedFiles(const std::set<int>& setFilesToPrune) const;
 
+    //! Checks that the block hash at height nHeight matches the expected hardened checkpoint
+    bool CheckHardened(int nHeight, const uint256& hash, const CCheckpointData& data) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+    //! Returns last CBlockIndex* from the auto selected checkpoint
+    const CBlockIndex* AutoSelectSyncCheckpoint(const CBlockIndex *pindexBest) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+    //! Check against automatically selected checkpoint
+    bool CheckSync(int nHeight, const CBlockIndex *pindexBest) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
     /** Functions for disk access for blocks */
-    bool ReadBlock(CBlock& block, const FlatFilePos& pos) const;
+    template <typename Block>
+    bool ReadBlock(Block& block, const FlatFilePos& pos) const;
     bool ReadBlock(CBlock& block, const CBlockIndex& index) const;
     bool ReadRawBlock(std::vector<uint8_t>& block, const FlatFilePos& pos) const;
 

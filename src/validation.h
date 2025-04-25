@@ -429,6 +429,8 @@ public:
     CSHA256 ScriptExecutionCacheHasher() const { return m_script_execution_cache_hasher; }
 };
 
+bool CheckIndexProof(const CBlockIndex& block, const Consensus::Params& consensusParams);
+
 /** Functions for validating blocks and updating the block tree */
 
 /** Context-independent validity checks */
@@ -477,7 +479,16 @@ public:
         int nCheckDepth) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 };
 
+//////////////////////////////////////////////////////// qtum
+bool GetSpentCoinFromBlock(const CBlockIndex* pindex, COutPoint prevout, Coin* coin, Chainstate& chainstate);
+
+bool GetSpentCoinFromMainChain(const CBlockIndex* pforkPrev, COutPoint prevoutStake, Coin* coin, Chainstate& chainstate);
+
 std::vector<ResultExecute> CallContract(const dev::Address& addrContract, std::vector<unsigned char> opcode, Chainstate& chainstate, const dev::Address& sender = dev::Address(), uint64_t gasLimit=0, CAmount nAmount=0);
+
+void writeVMlog(const std::vector<ResultExecute>& res, CChain& chain, const CTransaction& tx = CTransaction(), const CBlock& block = CBlock());
+
+std::string exceptedMessage(const dev::eth::TransactionException& excepted, const dev::bytes& output);
 
 enum DisconnectResult
 {

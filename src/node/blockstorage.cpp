@@ -17,6 +17,7 @@
 #include <kernel/notifications_interface.h>
 #include <logging.h>
 #include <pow.h>
+#include <pos.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>
@@ -35,6 +36,7 @@
 #include <util/strencodings.h>
 #include <util/translation.h>
 #include <validation.h>
+#include <chainparams.h>
 
 #include <cstddef>
 #include <map>
@@ -160,14 +162,23 @@ bool BlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, s
                 pindexNew->nTime          = diskindex.nTime;
                 pindexNew->nBits          = diskindex.nBits;
                 pindexNew->nNonce         = diskindex.nNonce;
+                pindexNew->nMoneySupply   = diskindex.nMoneySupply;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
+                pindexNew->hashStateRoot  = diskindex.hashStateRoot; // qtum
+                pindexNew->hashUTXORoot   = diskindex.hashUTXORoot; // qtum
+                pindexNew->nStakeModifier = diskindex.nStakeModifier;
+                pindexNew->prevoutStake   = diskindex.prevoutStake;
+                pindexNew->vchBlockSigDlgt    = diskindex.vchBlockSigDlgt; // qtum
 
-                if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, consensusParams)) {
-                    LogError("%s: CheckProofOfWork failed: %s\n", __func__, pindexNew->ToString());
+                if (!CheckIndexProof(*pindexNew, consensusParams)) {
+                    LogError("%s: CheckIndexProof failed: %s\n", __func__, pindexNew->ToString());
                     return false;
                 }
 
+                // NovaCoin: build setStakeSeen
+                if (pindexNew->IsProofOfStake())
+                    setStakeSeen.insert(std::make_pair(pindexNew->prevoutStake, pindexNew->nTime));
                 pcursor->Next();
             } else {
                 LogError("%s: failed to read value\n", __func__);
@@ -242,6 +253,326 @@ int BlockTreeDB::ReadHeightIndex(int low, int high, int minconf,
 
     return curheight;
 }
+
+bool BlockTreeDB::EraseHeightIndex(const unsigned int &height) {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    CDBBatch batch(*this);
+
+    pcursor->Seek(std::make_pair(DB_HEIGHTINDEX, CHeightTxIndexIteratorKey(height)));
+
+    while (pcursor->Valid()) {
+        std::pair<uint8_t, CHeightTxIndexKey> key;
+        if (pcursor->GetKey(key) && key.first == DB_HEIGHTINDEX && key.second.height == height) {
+            batch.Erase(key);
+            pcursor->Next();
+        } else {
+            break;
+        }
+    }
+
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::WipeHeightIndex() {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    CDBBatch batch(*this);
+
+    pcursor->Seek(DB_HEIGHTINDEX);
+
+    while (pcursor->Valid()) {
+        std::pair<uint8_t, CHeightTxIndexKey> key;
+        if (pcursor->GetKey(key) && key.first == DB_HEIGHTINDEX) {
+            batch.Erase(key);
+            pcursor->Next();
+        } else {
+            break;
+        }
+    }
+
+    return WriteBatch(batch);
+}
+
+
+bool BlockTreeDB::WriteStakeIndex(unsigned int height, uint160 address) {
+    CDBBatch batch(*this);
+    batch.Write(std::make_pair(DB_STAKEINDEX, height), address);
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::ReadStakeIndex(unsigned int height, uint160& address){
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+
+    pcursor->Seek(std::make_pair(DB_STAKEINDEX, height));
+
+    while (pcursor->Valid()) {
+        std::pair<uint8_t, CHeightTxIndexKey> key;
+        pcursor->GetKey(key); //note: it's apparently ok if this returns an error https://github.com/bitcoin/bitcoin/issues/7890
+        if (key.first == DB_STAKEINDEX) {
+            pcursor->GetValue(address);
+            return true;
+        }else{
+            return false;
+        }
+    }
+    return false;
+}
+bool BlockTreeDB::ReadStakeIndex(unsigned int high, unsigned int low, std::vector<uint160> addresses){
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+
+    pcursor->Seek(std::make_pair(DB_STAKEINDEX, low));
+
+    while (pcursor->Valid()) {
+        std::pair<uint8_t, CHeightTxIndexKey> key;
+        pcursor->GetKey(key); //note: it's apparently ok if this returns an error https://github.com/bitcoin/bitcoin/issues/7890
+        if (key.first == DB_STAKEINDEX && key.second.height < high) {
+            uint160 value;
+            pcursor->GetValue(value);
+            addresses.push_back(value);
+            pcursor->Next();
+        } else {
+            break;
+        }
+    }
+
+    return true;
+}
+
+bool BlockTreeDB::EraseStakeIndex(unsigned int height) {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    CDBBatch batch(*this);
+
+    pcursor->Seek(std::make_pair(DB_STAKEINDEX, height));
+
+    while (pcursor->Valid()) {
+        std::pair<uint8_t, CHeightTxIndexKey> key;
+        if (pcursor->GetKey(key) && key.first == DB_HEIGHTINDEX && key.second.height == height) {
+            batch.Erase(key);
+            pcursor->Next();
+        } else {
+            break;
+        }
+    }
+
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::WriteDelegateIndex(unsigned int height, uint160 address, uint8_t fee) {
+    CDBBatch batch(*this);
+    batch.Write(std::make_pair(DB_DELEGATEINDEX, height), DelegateEntry(address, fee));
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::ReadDelegateIndex(unsigned int height, uint160& address, uint8_t& fee){
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+
+    pcursor->Seek(std::make_pair(DB_DELEGATEINDEX, height));
+
+    DelegateEntry info;
+    while (pcursor->Valid()) {
+        std::pair<uint8_t, CHeightTxIndexKey> key;
+        pcursor->GetKey(key);
+        if (key.first == DB_DELEGATEINDEX) {
+            pcursor->GetValue(info);
+            address = info.address;
+            fee = info.fee;
+            return true;
+        }else{
+            return false;
+        }
+    }
+    return false;
+}
+
+bool BlockTreeDB::EraseDelegateIndex(unsigned int height) {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    CDBBatch batch(*this);
+
+    pcursor->Seek(std::make_pair(DB_DELEGATEINDEX, height));
+
+    while (pcursor->Valid()) {
+        std::pair<uint8_t, CHeightTxIndexKey> key;
+        if (pcursor->GetKey(key) && key.first == DB_HEIGHTINDEX && key.second.height == height) {
+            batch.Erase(key);
+            pcursor->Next();
+        } else {
+            break;
+        }
+    }
+
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::WriteAddressIndex(const std::vector<std::pair<CAddressIndexKey, CAmount > >&vect) {
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<CAddressIndexKey, CAmount> >::const_iterator it=vect.begin(); it!=vect.end(); it++)
+        batch.Write(std::make_pair(DB_ADDRESSINDEX, it->first), it->second);
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::EraseAddressIndex(const std::vector<std::pair<CAddressIndexKey, CAmount > >&vect) {
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<CAddressIndexKey, CAmount> >::const_iterator it=vect.begin(); it!=vect.end(); it++)
+        batch.Erase(std::make_pair(DB_ADDRESSINDEX, it->first));
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::ReadAddressIndex(uint256 addressHash, int type,
+                                    std::vector<std::pair<CAddressIndexKey, CAmount> > &addressIndex,
+                                    int start, int end) {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+
+    if (start > 0 && end > 0) {
+        pcursor->Seek(std::make_pair(DB_ADDRESSINDEX, CAddressIndexIteratorHeightKey(type, addressHash, start)));
+    } else {
+        pcursor->Seek(std::make_pair(DB_ADDRESSINDEX, CAddressIndexIteratorKey(type, addressHash)));
+    }
+
+    while (pcursor->Valid()) {
+        std::pair<uint8_t,CAddressIndexKey> key;
+        if (pcursor->GetKey(key) && key.first == DB_ADDRESSINDEX && key.second.hashBytes == addressHash) {
+            if (end > 0 && key.second.blockHeight > end) {
+                break;
+            }
+            CAmount nValue;
+            if (pcursor->GetValue(nValue)) {
+                addressIndex.push_back(std::make_pair(key.second, nValue));
+                pcursor->Next();
+            } else {
+                LogError("failed to get address index value");
+                return false;
+            }
+        } else {
+            break;
+        }
+    }
+
+    return true;
+}
+
+bool BlockTreeDB::UpdateAddressUnspentIndex(const std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue > >&vect) {
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it=vect.begin(); it!=vect.end(); it++) {
+        if (it->second.IsNull()) {
+            batch.Erase(std::make_pair(DB_ADDRESSUNSPENTINDEX, it->first));
+        } else {
+            batch.Write(std::make_pair(DB_ADDRESSUNSPENTINDEX, it->first), it->second);
+        }
+    }
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::ReadAddressUnspentIndex(uint256 addressHash, int type,
+                                           std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &unspentOutputs) {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    pcursor->Seek(std::make_pair(DB_ADDRESSUNSPENTINDEX, CAddressIndexIteratorKey(type, addressHash)));
+
+    while (pcursor->Valid()) {
+        std::pair<uint8_t,CAddressUnspentKey> key;
+        if (pcursor->GetKey(key) && key.first == DB_ADDRESSUNSPENTINDEX && key.second.hashBytes == addressHash) {
+            CAddressUnspentValue nValue;
+            if (pcursor->GetValue(nValue)) {
+                unspentOutputs.push_back(std::make_pair(key.second, nValue));
+                pcursor->Next();
+            } else {
+                LogError("failed to get address unspent value");
+                return false;
+            }
+        } else {
+            break;
+        }
+    }
+
+    return true;
+}
+
+bool BlockTreeDB::WriteTimestampIndex(const CTimestampIndexKey &timestampIndex) {
+    CDBBatch batch(*this);
+    batch.Write(std::make_pair(DB_TIMESTAMPINDEX, timestampIndex), 0);
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::ReadTimestampIndex(const unsigned int &high, const unsigned int &low, const bool fActiveOnly, std::vector<std::pair<uint256, unsigned int> > &hashes, ChainstateManager &chainman) {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+
+    pcursor->Seek(std::make_pair(DB_TIMESTAMPINDEX, CTimestampIndexIteratorKey(low)));
+
+    while (pcursor->Valid()) {
+        std::pair<uint8_t, CTimestampIndexKey> key;
+        if (pcursor->GetKey(key) && key.first == DB_TIMESTAMPINDEX && key.second.timestamp < high) {
+            if (fActiveOnly) {
+                if (blockOnchainActive(key.second.blockHash, chainman)) {
+                    hashes.push_back(std::make_pair(key.second.blockHash, key.second.timestamp));
+                }
+            } else {
+                hashes.push_back(std::make_pair(key.second.blockHash, key.second.timestamp));
+            }
+
+            pcursor->Next();
+        } else {
+            break;
+        }
+    }
+
+    return true;
+}
+
+bool BlockTreeDB::WriteTimestampBlockIndex(const CTimestampBlockIndexKey &blockhashIndex, const CTimestampBlockIndexValue &logicalts) {
+    CDBBatch batch(*this);
+    batch.Write(std::make_pair(DB_BLOCKHASHINDEX, blockhashIndex), logicalts);
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::ReadTimestampBlockIndex(const uint256 &hash, unsigned int &ltimestamp) {
+
+    CTimestampBlockIndexValue lts;
+    if (!Read(std::make_pair(DB_BLOCKHASHINDEX, hash), lts))
+       return false;
+
+    ltimestamp = lts.ltimestamp;
+    return true;
+}
+
+bool BlockTreeDB::ReadSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value) {
+    return Read(std::make_pair(DB_SPENTINDEX, key), value);
+}
+
+bool BlockTreeDB::UpdateSpentIndex(const std::vector<std::pair<CSpentIndexKey, CSpentIndexValue> >&vect) {
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<CSpentIndexKey,CSpentIndexValue> >::const_iterator it=vect.begin(); it!=vect.end(); it++) {
+        if (it->second.IsNull()) {
+            batch.Erase(std::make_pair(DB_SPENTINDEX, it->first));
+        } else {
+            batch.Write(std::make_pair(DB_SPENTINDEX, it->first), it->second);
+        }
+    }
+    return WriteBatch(batch);
+}
+
+bool BlockTreeDB::blockOnchainActive(const uint256 &hash, ChainstateManager &chainman) {
+    LOCK(cs_main);
+    node::BlockMap::iterator mi = chainman.BlockIndex().find(hash);
+    if (mi == chainman.BlockIndex().end())
+        return false;
+
+    CBlockIndex* pblockindex = &(*mi).second;
+    return pblockindex && chainman.ActiveChain().Contains(pblockindex);
+}
+
+bool BlockTreeDB::EraseBlockIndex(const std::vector<uint256> &vect)
+{
+    CDBBatch batch(*this);
+    for (std::vector<uint256>::const_iterator it=vect.begin(); it!=vect.end(); it++)
+        batch.Erase(std::make_pair(DB_BLOCK_INDEX, *it));
+    return WriteBatch(batch);
+}
+///////////////////////////////////////////////////////
 } // namespace kernel
 
 namespace node {
@@ -299,7 +630,8 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block, CBlockInde
 {
     AssertLockHeld(cs_main);
 
-    auto [mi, inserted] = m_block_index.try_emplace(block.GetHash(), block);
+    uint256 hash = block.GetHash();
+    auto [mi, inserted] = m_block_index.try_emplace(hash, block);
     if (!inserted) {
         return &mi->second;
     }
@@ -310,6 +642,8 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block, CBlockInde
     // competitive advantage.
     pindexNew->nSequenceId = 0;
 
+    if (pindexNew->IsProofOfStake())
+        setStakeSeen.insert(std::make_pair(pindexNew->prevoutStake, pindexNew->nTime));
     pindexNew->phashBlock = &((*mi).first);
     BlockMap::iterator miPrev = m_block_index.find(block.hashPrevBlock);
     if (miPrev != m_block_index.end()) {
@@ -319,6 +653,7 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block, CBlockInde
     }
     pindexNew->nTimeMax = (pindexNew->pprev ? std::max(pindexNew->pprev->nTimeMax, pindexNew->nTime) : pindexNew->nTime);
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
+    pindexNew->nStakeModifier = ComputeStakeModifier(pindexNew->pprev, block.IsProofOfWork() ? hash : block.prevoutStake.hash.ToUint256());
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
     if (best_header == nullptr || best_header->nChainWork < pindexNew->nChainWork) {
         best_header = pindexNew;
@@ -648,6 +983,14 @@ bool BlockManager::LoadBlockIndexDB(const std::optional<uint256>& snapshot_block
     m_block_tree_db->ReadReindexing(fReindexing);
     if (fReindexing) m_blockfiles_indexed = false;
 
+    ///////////////////////////////////////////////////////////// // qtum
+    m_block_tree_db->ReadFlag("addrindex", fAddressIndex);
+    LogPrintf("LoadBlockIndexDB(): address index %s\n", fAddressIndex ? "enabled" : "disabled");
+    /////////////////////////////////////////////////////////////
+    // Check whether we have a transaction index
+    m_block_tree_db->ReadFlag("logevents", fLogEvents);
+    LogPrintf("%s: log events index %s\n", __func__, fLogEvents ? "enabled" : "disabled");
+
     return true;
 }
 
@@ -712,6 +1055,38 @@ bool BlockManager::CheckBlockDataAvailability(const CBlockIndex& upper_block, co
 {
     if (!(upper_block.nStatus & BLOCK_HAVE_DATA)) return false;
     return GetFirstBlock(upper_block, BLOCK_HAVE_DATA, &lower_block) == &lower_block;
+}
+
+bool BlockManager::CheckHardened(int nHeight, const uint256& hash, const CCheckpointData& data)
+{
+    const MapCheckpoints& checkpoints = data.mapCheckpoints;
+
+    MapCheckpoints::const_iterator i = checkpoints.find(nHeight);
+    if (i == checkpoints.end()) return true;
+    return hash == i->second;
+}
+
+// Automatically select a suitable sync-checkpoint 
+const CBlockIndex* BlockManager::AutoSelectSyncCheckpoint(const CBlockIndex *pindexBest)
+{
+    const CBlockIndex *pindex = pindexBest;
+    // Search backward for a block within max span and maturity window
+    int checkpointSpan = GetConsensus().CheckpointSpan(pindexBest->nHeight);
+    while (pindex->pprev && pindex->nHeight + checkpointSpan > pindexBest->nHeight)
+        pindex = pindex->pprev;
+    return pindex;
+}
+
+// Check against synchronized checkpoint
+bool BlockManager::CheckSync(int nHeight, const CBlockIndex *pindexBest)
+{
+    const CBlockIndex* pindexSync = nullptr;
+    if(nHeight)
+        pindexSync = AutoSelectSyncCheckpoint(pindexBest);
+
+    if(nHeight && nHeight <= pindexSync->nHeight)
+        return false;
+    return true;
 }
 
 // If we're using -prune with -reindex, then delete block files that will be ignored by the
@@ -1089,7 +1464,8 @@ bool BlockManager::WriteBlockUndo(const CBlockUndo& blockundo, BlockValidationSt
     return true;
 }
 
-bool BlockManager::ReadBlock(CBlock& block, const FlatFilePos& pos) const
+template <typename Block>
+bool BlockManager::ReadBlock(Block& block, const FlatFilePos& pos) const
 {
     block.SetNull();
 
@@ -1109,7 +1485,9 @@ bool BlockManager::ReadBlock(CBlock& block, const FlatFilePos& pos) const
     }
 
     // Check the header
-    if (!CheckProofOfWork(block.GetHash(), block.nBits, GetConsensus())) {
+    // PoS blocks can be loaded out of order from disk, which makes PoS impossible to validate. So, do not validate their headers
+    // they will be validated later in CheckBlock and ConnectBlock anyway
+    if (block.IsProofOfWork() && !CheckProofOfWork(block.GetHash(), block.nBits, GetConsensus())) {
         LogError("%s: Errors in block header at %s\n", __func__, pos.ToString());
         return false;
     }
