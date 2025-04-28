@@ -54,6 +54,12 @@
 #include <versionbits.h>
 #include <libdevcore/CommonData.h>
 #include <pow.h>
+#include <pos.h>
+#include <txdb.h>
+#include <util/convert.h>
+#include <qtum/qtumdelegation.h>
+#include <util/tokenstr.h>
+#include <rpc/contract_util.h>
 
 #include <stdint.h>
 
@@ -686,6 +692,171 @@ static RPCHelpMan getblockhash()
     };
 }
 
+static RPCHelpMan getaccountinfo()
+{
+    return RPCHelpMan{"getaccountinfo",
+                "\nGet contract details including balance, storage data and code.\n",
+                {
+                    {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
+                },
+                RPCResult{
+                    RPCResult::Type::OBJ, "", "",
+                    {
+                        {RPCResult::Type::STR, "address", "The address of the contract"},
+                        {RPCResult::Type::NUM, "balance", "The balance of the contract"},
+                        {RPCResult::Type::STR_HEX, "code", "The bytecode of the contract"},
+                        {RPCResult::Type::OBJ_DYN, "storage", "The storage data of the contract",
+                        {
+                            {RPCResult::Type::OBJ_DYN, "data", "The storage data entry",
+                            {
+                                {RPCResult::Type::STR_HEX, "hex", "The hex data"},
+                            }},
+                        }},
+                        {RPCResult::Type::OBJ, "vin", /*optional=*/true, "",
+                        {
+                            {RPCResult::Type::STR_HEX, "hash", "The data hash"},
+                            {RPCResult::Type::NUM, "nVout", "The vout index"},
+                            {RPCResult::Type::NUM, "value", "The vout value"},
+                        }},
+                    }},
+                RPCExamples{
+                    HelpExampleCli("getaccountinfo", "eb23c0b3e6042821da281a2e2364feb22dd543e3")
+            + HelpExampleRpc("getaccountinfo", "eb23c0b3e6042821da281a2e2364feb22dd543e3")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    LOCK(cs_main);
+
+    std::string strAddr = request.params[0].get_str();
+    if(strAddr.size() != 40 || !CheckHex(strAddr))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Incorrect address");
+
+    dev::Address addrAccount(strAddr);
+    if(!globalState->addressInUse(addrAccount))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Address does not exist");
+    
+    UniValue result(UniValue::VOBJ);
+
+    result.pushKV("address", strAddr);
+    result.pushKV("balance", CAmount(globalState->balance(addrAccount)));
+    std::vector<uint8_t> code(globalState->code(addrAccount));
+    auto storage(globalState->storage(addrAccount));
+
+    UniValue storageUV(UniValue::VOBJ);
+    for (auto j: storage)
+    {
+        UniValue e(UniValue::VOBJ);
+        e.pushKV(dev::toHex(dev::h256(j.second.first)), dev::toHex(dev::h256(j.second.second)));
+        storageUV.pushKV(j.first.hex(), e);
+    }
+        
+    result.pushKV("storage", storageUV);
+
+    result.pushKV("code", HexStr(code));
+
+    std::unordered_map<dev::Address, Vin> vins = globalState->vins();
+    if(vins.count(addrAccount)){
+        UniValue vin(UniValue::VOBJ);
+        valtype vchHash(vins[addrAccount].hash.asBytes());
+        std::reverse(vchHash.begin(), vchHash.end());
+        vin.pushKV("hash", HexStr(vchHash));
+        vin.pushKV("nVout", uint64_t(vins[addrAccount].nVout));
+        vin.pushKV("value", uint64_t(vins[addrAccount].value));
+        result.pushKV("vin", vin);
+    }
+    return result;
+},
+    };
+}
+
+static RPCHelpMan getstorage()
+{
+    return RPCHelpMan{"getstorage",
+                "\nGet contract storage data.\n",
+                {
+                    {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
+                    {"blocknum", RPCArg::Type::NUM,  RPCArg::Default{-1}, "Number of block to get state from."},
+                    {"index", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Zero-based index position of the storage"},
+                },
+                RPCResult{
+                    RPCResult::Type::OBJ_DYN, "", "The storage data of the contract",
+                    {
+                        {RPCResult::Type::OBJ_DYN, "data", "The storage data entry",
+                        {
+                            {RPCResult::Type::STR_HEX, "hex", "The hex data"},
+                        }},
+                    }
+                },
+                RPCExamples{
+                    HelpExampleCli("getstorage", "eb23c0b3e6042821da281a2e2364feb22dd543e3")
+            + HelpExampleRpc("getstorage", "eb23c0b3e6042821da281a2e2364feb22dd543e3")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    LOCK(cs_main);
+
+    CChain& active_chain = chainman.ActiveChain();
+    std::string strAddr = request.params[0].get_str();
+    if(strAddr.size() != 40 || !CheckHex(strAddr))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Incorrect address"); 
+
+    TemporaryState ts(globalState);
+    if (!request.params[1].isNull())
+    {
+        if (request.params[1].isNum())
+        {
+            auto blockNum = request.params[1].getInt<int>();
+            if((blockNum < 0 && blockNum != -1) || blockNum > active_chain.Height())
+                throw JSONRPCError(RPC_INVALID_PARAMS, "Incorrect block number");
+
+            if(blockNum != -1)
+                ts.SetRoot(uintToh256(active_chain[blockNum]->hashStateRoot), uintToh256(active_chain[blockNum]->hashUTXORoot));
+                
+        } else {
+            throw JSONRPCError(RPC_INVALID_PARAMS, "Incorrect block number");
+        }
+    }
+
+    dev::Address addrAccount(strAddr);
+    if(!globalState->addressInUse(addrAccount))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Address does not exist");
+    
+    UniValue result(UniValue::VOBJ);
+
+    bool onlyIndex = !request.params[2].isNull();
+    unsigned index = 0;
+    if (onlyIndex)
+        index = request.params[2].getInt<int>();
+
+    auto storage(globalState->storage(addrAccount));
+
+    if (onlyIndex)
+    {
+        if (index >= storage.size())
+        {
+            std::ostringstream stringStream;
+            stringStream << "Storage size: " << storage.size() << " got index: " << index;
+            throw JSONRPCError(RPC_INVALID_PARAMS, stringStream.str());
+        }
+        auto elem = std::next(storage.begin(), index);
+        UniValue e(UniValue::VOBJ);
+
+        storage = {{elem->first, {elem->second.first, elem->second.second}}};
+    } 
+    for (const auto& j: storage)
+    {
+        UniValue e(UniValue::VOBJ);
+        e.pushKV(dev::toHex(dev::h256(j.second.first)), dev::toHex(dev::h256(j.second.second)));
+        result.pushKV(j.first.hex(), e);
+    }
+    return result;
+},
+    };
+}
+
 static RPCHelpMan getblockheader()
 {
     return RPCHelpMan{"getblockheader",
@@ -978,6 +1149,349 @@ static RPCHelpMan getblock()
     }
 
     return blockToJSON(chainman.m_blockman, block, *tip, *pblockindex, tx_verbosity, chainman.GetConsensus().powLimit);
+},
+    };
+}
+
+////////////////////////////////////////////////////////////////////// // qtum
+RPCHelpMan callcontract()
+{
+    return RPCHelpMan{"callcontract",
+                "\nCall contract methods offline, or test contract deployment offline.\n",
+                {
+                    {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address, or empty address \"\""},
+                    {"data", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The data hex string"},
+                    {"senderaddress", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "The sender address string"},
+                    {"gaslimit", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "The gas limit for executing the contract."},
+                    {"amount", RPCArg::Type::AMOUNT, RPCArg::Optional::OMITTED, "The amount in " + CURRENCY_UNIT + " to send. eg 0.1, default: 0"},
+                },
+                RPCResult{
+                    RPCResult::Type::OBJ, "", "",
+                    {
+                        {RPCResult::Type::STR, "address", "The address of the contract"},
+                        {RPCResult::Type::OBJ, "executionResult", "The method execution result",
+                            {
+                                {RPCResult::Type::NUM, "gasUsed", "The gas used"},
+                                {RPCResult::Type::STR, "excepted", "The thrown exception"},
+                                {RPCResult::Type::STR_HEX, "newAddress", "The new address of the contract"},
+                                {RPCResult::Type::STR_HEX, "output", "The returned data from the method"},
+                                {RPCResult::Type::NUM, "codeDeposit", "The code deposit"},
+                                {RPCResult::Type::NUM, "gasRefunded", "The gas refunded"},
+                                {RPCResult::Type::NUM, "depositSize", "The deposit size"},
+                                {RPCResult::Type::NUM, "gasForDeposit", "The gas for deposit"},
+                                {RPCResult::Type::STR, "exceptedMessage", "The thrown exception message"},
+                            }},
+                        {RPCResult::Type::OBJ, "transactionReceipt", "The transaction receipt",
+                            {
+                                {RPCResult::Type::STR_HEX, "stateRoot", "The state root hash"},
+                                {RPCResult::Type::STR_HEX, "utxoRoot", "The utxo root hash"},
+                                {RPCResult::Type::NUM, "gasUsed", "The gas used"},
+                                {RPCResult::Type::STR_HEX, "bloom", "The bloom"},
+                                {RPCResult::Type::ARR, "log", "The logs from the receipt",
+                                    {
+                                        {RPCResult::Type::OBJ, "", "",
+                                            {
+                                                {RPCResult::Type::STR_HEX, "address", "The contract address"},
+                                                {RPCResult::Type::ARR, "topics", "The topic",
+                                                    {{RPCResult::Type::STR_HEX, "topic", "The topic"}}},
+                                                {RPCResult::Type::STR_HEX, "data", "The logged data"},
+                                            }
+                                        }
+                                    }
+                                },
+
+                            }},
+                    }},
+                RPCExamples{
+                    HelpExampleCli("callcontract", "eb23c0b3e6042821da281a2e2364feb22dd543e3 06fdde03")
+            + HelpExampleCli("callcontract", "\"\" 60606040525b33600060006101000a81548173ffffffffffffffffffffffffffffffffffffffff02191690836c010000000000000000000000009081020402179055506103786001600050819055505b600c80605b6000396000f360606040526008565b600256")
+            + HelpExampleRpc("callcontract", "eb23c0b3e6042821da281a2e2364feb22dd543e3 06fdde03")
+            + HelpExampleRpc("callcontract", "\"\" 60606040525b33600060006101000a81548173ffffffffffffffffffffffffffffffffffffffff02191690836c010000000000000000000000009081020402179055506103786001600050819055505b600c80605b6000396000f360606040526008565b600256")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    ChainstateManager& chainman = EnsureAnyChainman(request.context); 
+    return CallToContract(request.params, chainman);
+},
+    };
+}
+
+RPCHelpMan searchlogs()
+{
+    return RPCHelpMan{"searchlogs",
+                "\nSearch logs, requires -logevents to be enabled.\n",
+                {
+                    {"fromblock", RPCArg::Type::NUM, RPCArg::Optional::NO, "The number of the earliest block (latest may be given to mean the most recent block)."},
+                    {"toblock", RPCArg::Type::NUM, RPCArg::Optional::NO, "The number of the latest block (-1 may be given to mean the most recent block)."},
+                    {"addressfilter", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "Addresses filter conditions for logs.",
+                    {
+                        {"addresses", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "An address or a list of addresses to only get logs from particular account(s).",
+                            {
+                                {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED, ""},
+                            },
+                        },
+                    }},
+                    {"topicfilter", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "Topics filter conditions for logs.",
+                    {
+                        {"topics", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "An array of values from which at least one must appear in the log entries. The order is important, if you want to leave topics out use null, e.g. [null, \"0x00...\"].",
+                            {
+                                {"topic", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED, ""},
+                            },
+                        },
+                    }},
+                    {"minconf", RPCArg::Type::NUM, RPCArg::Default{0}, "Minimal number of confirmations before a log is returned"},
+                },
+                RPCResult{
+            RPCResult::Type::ARR, "", "",
+                {
+                    {RPCResult::Type::OBJ, "", "",
+                        {
+                            {RPCResult::Type::STR_HEX, "blockHash", "The block hash"},
+                            {RPCResult::Type::NUM, "blockNumber", "The block number"},
+                            {RPCResult::Type::STR_HEX, "transactionHash", "The transaction hash"},
+                            {RPCResult::Type::NUM, "transactionIndex", "The transaction index"},
+                            {RPCResult::Type::NUM, "outputIndex", "The output index"},
+                            {RPCResult::Type::STR_HEX, "from", "The from address"},
+                            {RPCResult::Type::STR_HEX, "to", "The to address"},
+                            {RPCResult::Type::NUM, "cumulativeGasUsed", "The cumulative gas used"},
+                            {RPCResult::Type::NUM, "gasUsed", "The gas used"},
+                            {RPCResult::Type::STR_HEX, "contractAddress", "The contract address"},
+                            {RPCResult::Type::STR, "excepted", "The thrown exception"},
+                            {RPCResult::Type::STR, "exceptedMessage", "The thrown exception message"},
+                            {RPCResult::Type::STR_HEX, "bloom", "Bloom filter for light clients to quickly retrieve related logs"},
+                            {RPCResult::Type::STR_HEX, "stateRoot", "The hash state root"},
+                            {RPCResult::Type::STR_HEX, "utxoRoot", "The hash UTXO root"},
+                            {RPCResult::Type::ARR, "log", "The logs from the receipt",
+                                {
+                                    {RPCResult::Type::OBJ, "", "",
+                                        {
+                                            {RPCResult::Type::STR_HEX, "address", "The contract address"},
+                                            {RPCResult::Type::ARR, "topics", "The topic",
+                                                {{RPCResult::Type::STR_HEX, "topic", "The topic"}}},
+                                            {RPCResult::Type::STR_HEX, "data", "The logged data"},
+                                        }
+                                    }
+                                }
+                            },
+                        }}
+                }},
+                RPCExamples{
+                    HelpExampleCli("searchlogs", "0 100 '{\"addresses\": [\"12ae42729af478ca92c8c66773a3e32115717be4\"]}' '{\"topics\": [null,\"b436c2bf863ccd7b8f63171201efd4792066b4ce8e543dde9c3e9e9ab98e216c\"]}'")
+            + HelpExampleRpc("searchlogs", "0 100 '{\"addresses\": [\"12ae42729af478ca92c8c66773a3e32115717be4\"]} {\"topics\": [null,\"b436c2bf863ccd7b8f63171201efd4792066b4ce8e543dde9c3e9e9ab98e216c\"]}'")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    return SearchLogs(request.params, chainman);
+},
+    };
+}
+
+RPCHelpMan gettransactionreceipt()
+{
+    return RPCHelpMan{"gettransactionreceipt",
+                "\nGet the transaction receipt.\n",
+                {
+                    {"hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The transaction hash"},
+                },
+               RPCResult{
+            RPCResult::Type::ARR, "", "",
+                {
+                    {RPCResult::Type::OBJ, "", "",
+                        {
+                            {RPCResult::Type::STR_HEX, "blockHash", "The block hash"},
+                            {RPCResult::Type::NUM, "blockNumber", "The block number"},
+                            {RPCResult::Type::STR_HEX, "transactionHash", "The transaction hash"},
+                            {RPCResult::Type::NUM, "transactionIndex", "The transaction index"},
+                            {RPCResult::Type::NUM, "outputIndex", "The output index"},
+                            {RPCResult::Type::STR_HEX, "from", "The from address"},
+                            {RPCResult::Type::STR_HEX, "to", "The to address"},
+                            {RPCResult::Type::NUM, "cumulativeGasUsed", "The cumulative gas used"},
+                            {RPCResult::Type::NUM, "gasUsed", "The gas used"},
+                            {RPCResult::Type::STR_HEX, "contractAddress", "The contract address"},
+                            {RPCResult::Type::STR, "excepted", "The thrown exception"},
+                            {RPCResult::Type::STR, "exceptedMessage", "The thrown exception message"},
+                            {RPCResult::Type::STR_HEX, "bloom", "Bloom filter for light clients to quickly retrieve related logs"},
+                            {RPCResult::Type::STR_HEX, "stateRoot", "The hash state root"},
+                            {RPCResult::Type::STR_HEX, "utxoRoot", "The hash UTXO root"},
+                            {RPCResult::Type::ARR, "log", "The logs from the receipt",
+                                {
+                                    {RPCResult::Type::OBJ, "", "",
+                                        {
+                                            {RPCResult::Type::STR_HEX, "address", "The contract address"},
+                                            {RPCResult::Type::ARR, "topics", "The topic",
+                                                {{RPCResult::Type::STR_HEX, "topic", "The topic"}}},
+                                            {RPCResult::Type::STR_HEX, "data", "The logged data"},
+                                        }
+                                    }
+                                }
+                            },
+                        }}
+                }},
+                RPCExamples{
+                    HelpExampleCli("gettransactionreceipt", "3b04bc73afbbcf02cfef2ca1127b60fb0baf5f8946a42df67f1659671a2ec53c")
+            + HelpExampleRpc("gettransactionreceipt", "3b04bc73afbbcf02cfef2ca1127b60fb0baf5f8946a42df67f1659671a2ec53c")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    if(!fLogEvents)
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Events indexing disabled");
+
+    LOCK(cs_main);
+
+    std::string hashTemp = request.params[0].get_str();
+    if(hashTemp.size() != 64){
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Incorrect hash");
+    }
+    
+    uint256 hash = uint256::FromHex(hashTemp).value_or(uint256::ZERO);
+
+    std::vector<TransactionReceiptInfo> transactionReceiptInfo = pstorageresult->getResult(uintToh256(hash));
+
+    UniValue result(UniValue::VARR);
+    for(TransactionReceiptInfo& t : transactionReceiptInfo){
+        UniValue tri(UniValue::VOBJ);
+        transactionReceiptInfoToJSON(t, tri);
+        result.push_back(tri);
+    }
+    return result;
+},
+    };
+}
+
+RPCHelpMan getdelegationinfoforaddress()
+{
+    return RPCHelpMan{"getdelegationinfoforaddress",
+                "\nGet delegation information for an address.\n",
+                {
+                    {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The qtum address string"},
+                },
+                RPCResult{
+                    RPCResult::Type::OBJ, "", "",
+                    {
+                        {RPCResult::Type::STR, "staker", "The staker address"},
+                        {RPCResult::Type::NUM, "fee", "The percentage of the reward"},
+                        {RPCResult::Type::NUM, "blockHeight", "The block height"},
+                        {RPCResult::Type::STR_HEX, "PoD", "The proof of delegation"},
+                        {RPCResult::Type::BOOL, "verified", "Verify delegation"},
+                    }},
+                RPCExamples{
+                    HelpExampleCli("getdelegationinfoforaddress", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+            + HelpExampleRpc("getdelegationinfoforaddress", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    LOCK(cs_main);
+
+    // Parse the public key hash address
+    std::string strAddress = request.params[0].get_str();
+
+    CTxDestination dest = DecodeDestination(strAddress);
+    if (!IsValidDestination(dest)) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address");
+    }
+
+    if (!std::holds_alternative<PKHash>(dest)) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to public key hash");
+    }
+
+    // Get delegation for an address
+    QtumDelegation qtumDelegation;
+    Delegation delegation;
+    PKHash pkhash = std::get<PKHash>(dest);
+    uint160 address = uint160(pkhash);
+    if(!qtumDelegation.GetDelegation(address, delegation, chainman.ActiveChainstate())) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Failed to get delegation");
+    }
+    bool verified = qtumDelegation.VerifyDelegation(address, delegation);
+
+    // Fill the json object with information
+    UniValue result(UniValue::VOBJ);
+    std::string strStaker = delegation.staker != uint160() ? EncodeDestination(PKHash(delegation.staker)) : "";
+    result.pushKV("staker", strStaker);
+    result.pushKV("fee", (int64_t)delegation.fee);
+    result.pushKV("blockHeight", (int64_t)delegation.blockHeight);
+    result.pushKV("PoD", HexStr(delegation.PoD));
+    result.pushKV("verified", verified);
+
+    return result;
+},
+    };
+}
+
+class DelegationsStakerFilter : public IDelegationFilter
+{
+public:
+    DelegationsStakerFilter(const uint160& _address):
+        address(_address)
+    {}
+
+    bool Match(const DelegationEvent& event) const override
+    {
+        return event.item.staker == address;
+    }
+
+private:
+    uint160 address;
+};
+
+RPCHelpMan listcontracts()
+{
+    return RPCHelpMan{"listcontracts",
+                "\nGet the contracts list.\n",
+                {
+                    {"start", RPCArg::Type::NUM, RPCArg::Default{1}, "The starting account index"},
+                    {"maxdisplay", RPCArg::Type::NUM, RPCArg::Default{20}, "Max accounts to list"},
+                },
+                RPCResult{
+                    RPCResult::Type::OBJ_DYN, "", "",
+                    {
+                        {RPCResult::Type::NUM, "account", "The balance for the account"},
+                    }},
+                RPCExamples{
+                    HelpExampleCli("listcontracts", "")
+            + HelpExampleRpc("listcontracts", "")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+	LOCK(cs_main);
+
+	int start=1;
+	if (!request.params[0].isNull()){
+		start = request.params[0].getInt<int>();
+		if (start<= 0)
+			throw JSONRPCError(RPC_TYPE_ERROR, "Invalid start, min=1");
+	}
+
+	int maxDisplay=20;
+	if (!request.params[1].isNull()){
+		maxDisplay = request.params[1].getInt<int>();
+		if (maxDisplay <= 0)
+			throw JSONRPCError(RPC_TYPE_ERROR, "Invalid maxDisplay");
+	}
+
+	UniValue result(UniValue::VOBJ);
+
+	auto map = globalState->addresses();
+	int contractsCount=(int)map.size();
+
+	if (contractsCount>0 && start > contractsCount)
+		throw JSONRPCError(RPC_TYPE_ERROR, "start greater than max index "+ i64tostr(contractsCount));
+
+	int itStartPos=std::min(start-1,contractsCount);
+	int i=0;
+	for (auto it = std::next(map.begin(),itStartPos); it!=map.end(); it++)
+	{
+		result.pushKV(it->first.hex(),ValueFromAmount(CAmount(globalState->balance(it->first))));
+		i++;
+		if(i==maxDisplay)break;
+	}
+
+	return result;
 },
     };
 }

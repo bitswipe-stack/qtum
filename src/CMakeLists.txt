@@ -211,6 +211,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   rpc/rawtransaction_util.cpp
   rpc/request.cpp
   rpc/util.cpp
+  rpc/contract_util.cpp
   scheduler.cpp
   script/descriptor.cpp
   script/miniscript.cpp
