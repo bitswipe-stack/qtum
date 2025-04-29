@@ -1425,3 +1425,16 @@ void CTxMemPool::ChangeSet::Apply()
     m_entry_vec.clear();
     m_ancestors.clear();
 }
+
+bool CTxMemPool::getSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value) const
+{
+    LOCK(cs);
+    mapSpentIndex::const_iterator it;
+
+    it = mapSpent.find(key);
+    if (it != mapSpent.end()) {
+        value = it->second;
+        return true;
+    }
+    return false;
+}

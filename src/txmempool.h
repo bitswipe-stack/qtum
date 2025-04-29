@@ -46,12 +46,95 @@ class ValidationSignals;
 struct bilingual_str;
 
 /** Fake height value used in Coin to signify they are only in the memory pool (since 0.8) */
-static const uint32_t MEMPOOL_HEIGHT = 0x7FFFFFFF;
+static const uint32_t MEMPOOL_HEIGHT = 0x0FFFFFFF;
 
 /**
  * Test whether the LockPoints height and time are still valid on the current chain
  */
 bool TestLockPointValidity(CChain& active_chain, const LockPoints& lp) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+//////////////////////////////////////////////////////// // qtum
+struct CSpentIndexKeyCompare
+{
+    bool operator()(const CSpentIndexKey& a, const CSpentIndexKey& b) const {
+        if (a.txid == b.txid) {
+            return a.outputIndex < b.outputIndex;
+        } else {
+            return a.txid < b.txid;
+        }
+    }
+};
+
+struct CMempoolAddressDelta
+{
+    int64_t time;
+    CAmount amount;
+    uint256 prevhash;
+    unsigned int prevout;
+
+    CMempoolAddressDelta(int64_t t, CAmount a, uint256 hash, unsigned int out) {
+        time = t;
+        amount = a;
+        prevhash = hash;
+        prevout = out;
+    }
+
+    CMempoolAddressDelta(int64_t t, CAmount a) {
+        time = t;
+        amount = a;
+        prevhash.SetNull();
+        prevout = 0;
+    }
+};
+
+struct CMempoolAddressDeltaKey
+{
+    int type;
+    uint256 addressBytes;
+    uint256 txhash;
+    unsigned int index;
+    int spending;
+
+    CMempoolAddressDeltaKey(int addressType, uint256 addressHash, uint256 hash, unsigned int i, int s) {
+        type = addressType;
+        addressBytes = addressHash;
+        txhash = hash;
+        index = i;
+        spending = s;
+    }
+
+    CMempoolAddressDeltaKey(int addressType, uint256 addressHash) {
+        type = addressType;
+        addressBytes = addressHash;
+        txhash.SetNull();
+        index = 0;
+        spending = 0;
+    }
+};
+
+struct CMempoolAddressDeltaKeyCompare
+{
+    bool operator()(const CMempoolAddressDeltaKey& a, const CMempoolAddressDeltaKey& b) const {
+        if (a.type == b.type) {
+            if (a.addressBytes == b.addressBytes) {
+                if (a.txhash == b.txhash) {
+                    if (a.index == b.index) {
+                        return a.spending < b.spending;
+                    } else {
+                        return a.index < b.index;
+                    }
+                } else {
+                    return a.txhash < b.txhash;
+                }
+            } else {
+                return a.addressBytes < b.addressBytes;
+            }
+        } else {
+            return a.type < b.type;
+        }
+    }
+};
+////////////////////////////////////////////////////////
 
 // extracts a transaction hash from CTxMemPoolEntry or CTransactionRef
 struct mempoolentry_txid
@@ -401,6 +484,19 @@ public:
 private:
     typedef std::map<txiter, setEntries, CompareIteratorByHash> cacheMap;
 
+    //////////////////////////////////////////////////////////////// // qtum
+    typedef std::map<CMempoolAddressDeltaKey, CMempoolAddressDelta, CMempoolAddressDeltaKeyCompare> addressDeltaMap;
+    addressDeltaMap mapAddress;
+
+    typedef std::map<uint256, std::vector<CMempoolAddressDeltaKey> > addressDeltaMapInserted;
+    addressDeltaMapInserted mapAddressInserted;
+
+    typedef std::map<CSpentIndexKey, CSpentIndexValue, CSpentIndexKeyCompare> mapSpentIndex;
+    mapSpentIndex mapSpent;
+
+    typedef std::map<uint256, std::vector<CSpentIndexKey> > mapSpentIndexInserted;
+    mapSpentIndexInserted mapSpentInserted;
+    ////////////////////////////////////////////////////////////////
 
     void UpdateParent(txiter entry, txiter parent, bool add) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void UpdateChild(txiter entry, txiter child, bool add) EXCLUSIVE_LOCKS_REQUIRED(cs);
@@ -453,6 +549,7 @@ public:
      */
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
+    bool getSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value) const;
 
     void removeRecursive(const CTransaction& tx, MemPoolRemovalReason reason) EXCLUSIVE_LOCKS_REQUIRED(cs);
     /** After reorg, filter the entries that would no longer be valid in the next block, and update

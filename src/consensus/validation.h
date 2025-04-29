@@ -47,6 +47,8 @@ enum class TxValidationResult {
     TX_NO_MEMPOOL,            //!< this node does not have a mempool so can't validate the transaction
     TX_RECONSIDERABLE,        //!< fails some policy, but might be acceptable if submitted in a (different) package
     TX_UNKNOWN,               //!< transaction was not validated because package failed
+    TX_INVALID_SENDER_SCRIPT, //!< invalid contract sender script, used in the mempool
+    TX_GAS_EXCEEDS_LIMIT,     //!< transaction gas exceeds block gas limit
 };
 
 /** A "reason" why a block was invalid, suitable for determining whether the

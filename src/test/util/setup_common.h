@@ -44,7 +44,6 @@ extern const std::function<std::vector<const char*>()> G_TEST_COMMAND_LINE_ARGUM
 /** Retrieve the unit test name. */
 extern const std::function<std::string()> G_TEST_GET_FULL_NAME;
 
-static constexpr CAmount CENT{1000000};
 
 /** Register common test args. Shared across binaries that rely on the test framework. */
 void SetupCommonTestArgs(ArgsManager& argsman);
@@ -127,7 +126,7 @@ struct TestingSetup : public ChainTestingSetup {
 /** Identical to TestingSetup, but chain set to regtest */
 struct RegTestingSetup : public TestingSetup {
     RegTestingSetup()
-        : TestingSetup{ChainType::REGTEST} {}
+        : TestingSetup{ChainType::UNITTEST} {}
 };
 
 class CBlock;
@@ -139,7 +138,7 @@ class CScript;
  */
 struct TestChain100Setup : public TestingSetup {
     TestChain100Setup(
-        const ChainType chain_type = ChainType::REGTEST,
+        const ChainType chain_type = ChainType::UNITTEST,
         TestOpts = {});
 
     /**
@@ -252,7 +251,7 @@ struct TestChain100Setup : public TestingSetup {
  * be used in "hot loops", for example fuzzing or benchmarking.
  */
 template <class T = const BasicTestingSetup>
-std::unique_ptr<T> MakeNoLogFileContext(const ChainType chain_type = ChainType::REGTEST, TestOpts opts = {})
+std::unique_ptr<T> MakeNoLogFileContext(const ChainType chain_type = ChainType::UNITTEST, TestOpts opts = {})
 {
     opts.extra_args = Cat(
         {
