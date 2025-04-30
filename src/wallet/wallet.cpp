@@ -3490,12 +3490,22 @@ int CWallet::GetTxBlocksToMaturity(const CWalletTx& wtx) const
     return std::max(0, (COINBASE_MATURITY+1) - chain_depth);
 }
 
-bool CWallet::IsTxImmatureCoinBase(const CWalletTx& wtx) const
+bool CWallet::IsTxImmature(const CWalletTx& wtx) const
 {
     AssertLockHeld(cs_wallet);
 
     // note GetBlocksToMaturity is 0 for non-coinbase tx
     return GetTxBlocksToMaturity(wtx) > 0;
+}
+
+bool CWallet::IsTxImmatureCoinBase(const CWalletTx& wtx) const
+{
+    return wtx.IsCoinBase() && IsTxImmature(wtx);
+}
+
+bool CWallet::IsTxImmatureCoinStake(const CWalletTx& wtx) const
+{
+    return wtx.IsCoinStake() && IsTxImmature(wtx);
 }
 
 bool CWallet::IsCrypted() const
@@ -4671,5 +4681,30 @@ std::optional<CKey> CWallet::GetKey(const CKeyID& keyid) const
         }
     }
     return std::nullopt;
+}
+
+uint256 CTokenInfo::GetHash() const
+{
+    return (HashWriter{} << SER_INFO_GETHASH(*this)).GetHash();
+}
+
+uint256 CTokenTx::GetHash() const
+{
+    return (HashWriter{} << SER_INFO_GETHASH(*this)).GetHash();
+}
+
+uint256 CDelegationInfo::GetHash() const
+{
+    return (HashWriter{} << SER_INFO_GETHASH(*this)).GetHash();
+}
+
+uint256 CSuperStakerInfo::GetHash() const
+{
+    return (HashWriter{} << SER_INFO_GETHASH(*this)).GetHash();
+}
+
+bool CWallet::AddSuperStakerEntry(const CSuperStakerInfo& superStaker, bool fFlushOnClose)
+{
+    return {};
 }
 } // namespace wallet
