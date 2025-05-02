@@ -1438,6 +1438,107 @@ private:
     uint160 address;
 };
 
+uint64_t getDelegateWeight(const uint160& keyid, const std::map<COutPoint, uint32_t>& immatureStakes, int height, node::BlockManager& blockman)
+{
+    // Decode address
+    uint256 hashBytes;
+    int type = 0;
+    if (!DecodeIndexKey(EncodeDestination(PKHash(keyid)), hashBytes, type)) {
+        return 0;
+    }
+
+    // Get address weight
+    uint64_t weight = 0;
+    if (!GetAddressWeight(hashBytes, type, immatureStakes, height, weight, blockman)) {
+        return 0;
+    }
+
+    return weight;
+}
+
+RPCHelpMan getdelegationsforstaker()
+{
+    return RPCHelpMan{"getdelegationsforstaker",
+                "requires -logevents to be enabled\n"
+                "\nGet the current list of delegates for a super staker.\n",
+                {
+                    {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The qtum address string for staker"},
+                },
+               RPCResult{
+            RPCResult::Type::ARR, "", "",
+                {
+                    {RPCResult::Type::OBJ, "", "",
+                        {
+                            {RPCResult::Type::STR, "delegate", "The delegate address"},
+                            {RPCResult::Type::STR, "staker", "The staker address"},
+                            {RPCResult::Type::NUM, "fee", "The percentage of the reward"},
+                            {RPCResult::Type::NUM, "blockHeight", "The block height"},
+                            {RPCResult::Type::NUM, "weight", /*optional=*/true, "Delegate weight, displayed when address index is enabled"},
+                            {RPCResult::Type::STR_HEX, "PoD", "The proof of delegation"},
+                        }}
+                }},
+                RPCExamples{
+                    HelpExampleCli("getdelegationsforstaker", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+            + HelpExampleRpc("getdelegationsforstaker", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    if (!fLogEvents)
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Events indexing disabled");
+
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    LOCK(cs_main);
+
+    // Parse the public key hash address
+    std::string strAddress = request.params[0].get_str();
+
+    CTxDestination dest = DecodeDestination(strAddress);
+    if (!IsValidDestination(dest)) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address");
+    }
+
+    if (!std::holds_alternative<PKHash>(dest)) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to public key hash");
+    }
+
+    // Get delegations for staker
+    QtumDelegation qtumDelegation;
+    std::vector<DelegationEvent> events;
+    PKHash pkhash = std::get<PKHash>(dest);
+    uint160 address = uint160(pkhash);
+    DelegationsStakerFilter filter(address);
+    if(!qtumDelegation.FilterDelegationEvents(events, filter, chainman)) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Failed to get delegations for staker");
+    }
+    std::map<uint160, Delegation> delegations = qtumDelegation.DelegationsFromEvents(events);
+
+    // Get chain parameters
+    std::map<COutPoint, uint32_t> immatureStakes = GetImmatureStakes(chainman);
+    int height = chainman.ActiveChain().Height();
+
+    // Fill the json object with information
+    UniValue result(UniValue::VARR);
+    for (std::map<uint160, Delegation>::iterator it=delegations.begin(); it!=delegations.end(); it++){
+        UniValue delegation(UniValue::VOBJ);
+        delegation.pushKV("delegate", EncodeDestination(PKHash(it->first)));
+        delegation.pushKV("staker", EncodeDestination(PKHash(it->second.staker)));
+        delegation.pushKV("fee", (int64_t)it->second.fee);
+        delegation.pushKV("blockHeight", (int64_t)it->second.blockHeight);
+        if(fAddressIndex)
+        {
+            delegation.pushKV("weight", getDelegateWeight(it->first, immatureStakes, height, chainman.m_blockman));
+        }
+        delegation.pushKV("PoD", HexStr(it->second.PoD));
+        result.push_back(delegation);
+    }
+
+    return result;
+},
+    };
+}
+//////////////////////////////////////////////////////////////////////
+
 RPCHelpMan listcontracts()
 {
     return RPCHelpMan{"listcontracts",

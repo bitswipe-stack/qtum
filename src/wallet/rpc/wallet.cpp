@@ -220,6 +220,254 @@ static RPCHelpMan setsuperstakervaluesforaddress()
     };
 }
 
+static RPCHelpMan listsuperstakercustomvalues()
+{
+    return RPCHelpMan{"listsuperstakercustomvalues",
+                    "\nList custom super staker configurations values." +
+                    HELP_REQUIRING_PASSPHRASE,
+                    {},
+                    RPCResult{
+                        RPCResult::Type::ARR, "", "",
+                        {
+                            {RPCResult::Type::OBJ, "", "",
+                            {
+                                {RPCResult::Type::STR, "address", "Address of the staker."},
+                                {RPCResult::Type::BOOL, "customconfig", "Custom configuration exist."},
+                                {RPCResult::Type::NUM, "stakingminfee", true, "Minimum fee for delegate."},
+                                {RPCResult::Type::STR, "stakingminutxovalue", true, "Minimum UTXO value for delegate."},
+                                {RPCResult::Type::ARR, "allow", true, "List of allowed delegate addresses.",
+                                    {
+                                        {RPCResult::Type::STR, "address", "The delegate address"},
+                                    },
+                                },
+                                {RPCResult::Type::ARR, "exclude", true, "List of excluded delegate addresses.",
+                                    {
+                                        {RPCResult::Type::STR, "address", "The delegate address"},
+                                    },
+                                }
+                            }}
+                        },
+                    },
+                    RPCExamples{
+                    HelpExampleCli("listsuperstakercustomvalues", "")
+                    + HelpExampleRpc("listsuperstakercustomvalues", "")
+                    },
+            [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!pwallet) return UniValue::VNULL;
+
+    LOCK(pwallet->cs_wallet);
+
+    // Search for super stakers
+    UniValue result(UniValue::VARR);
+    for(auto item : pwallet->mapSuperStaker)
+    {
+        CSuperStakerInfo superStaker = item.second;
+        if(superStaker.fCustomConfig)
+        {
+            result.push_back(GetJsonSuperStakerConfig(superStaker));
+        }
+    }
+
+    return result;
+},
+    };
+}
+
+static RPCHelpMan listsuperstakervaluesforaddress()
+{
+    return RPCHelpMan{"listsuperstakervaluesforaddress",
+                    "\nList super staker configuration values for address." +
+                    HELP_REQUIRING_PASSPHRASE,
+                    {
+                        {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The super staker Qtum address."},
+                    },
+                    RPCResult{
+                        RPCResult::Type::OBJ, "", "",
+                        {
+                            {RPCResult::Type::STR, "address", "Address of the staker."},
+                            {RPCResult::Type::BOOL, "customconfig", "Custom configuration exist."},
+                            {RPCResult::Type::NUM, "stakingminfee", true, "Minimum fee for delegate."},
+                            {RPCResult::Type::STR, "stakingminutxovalue", true, "Minimum UTXO value for delegate."},
+                            {RPCResult::Type::ARR, "allow", true, "List of allowed delegate addresses.",
+                                {
+                                    {RPCResult::Type::STR, "address", "The delegate address"},
+                                },
+                            },
+                            {RPCResult::Type::ARR, "exclude", true, "List of excluded delegate addresses.",
+                                {
+                                    {RPCResult::Type::STR, "address", "The delegate address"},
+                                },
+                            }
+                        }
+                    },
+                    RPCExamples{
+                    HelpExampleCli("listsuperstakervaluesforaddress", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+                    + HelpExampleRpc("listsuperstakervaluesforaddress", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+                    },
+            [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!pwallet) return UniValue::VNULL;
+
+    LOCK(pwallet->cs_wallet);
+
+    // Parse the super staker address
+    CTxDestination destStaker = DecodeDestination(request.params[0].get_str());
+    if (!std::holds_alternative<PKHash>(destStaker)) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address for staker. Only P2PK and P2PKH allowed");
+    }
+    PKHash pkhStaker = std::get<PKHash>(destStaker);
+
+    // Search for super staker
+    CSuperStakerInfo superStaker;
+    bool found = false;
+    for(auto item : pwallet->mapSuperStaker)
+    {
+        if(PKHash(item.second.stakerAddress) == pkhStaker)
+        {
+            superStaker = item.second;
+            found = true;
+            break;
+        }
+    }
+
+    if(!found)
+    {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Failed to find the super staker");
+    }
+
+    return GetJsonSuperStakerConfig(superStaker);
+},
+    };
+}
+
+static RPCHelpMan removesuperstakervaluesforaddress()
+{
+    return RPCHelpMan{"removesuperstakervaluesforaddress",
+                    "\nRemove super staker configuration values for address." +
+                    HELP_REQUIRING_PASSPHRASE,
+                    {
+                        {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The super staker Qtum address."},
+                    },
+                    RPCResult{RPCResult::Type::NONE, "", ""},
+                    RPCExamples{
+                    HelpExampleCli("removesuperstakervaluesforaddress", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+                    + HelpExampleRpc("removesuperstakervaluesforaddress", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+                    },
+            [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!pwallet) return UniValue::VNULL;
+
+    LOCK(pwallet->cs_wallet);
+
+    // Parse the super staker address
+    CTxDestination destStaker = DecodeDestination(request.params[0].get_str());
+    if (!std::holds_alternative<PKHash>(destStaker)) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address for staker. Only P2PK and P2PKH allowed");
+    }
+    PKHash pkhStaker = std::get<PKHash>(destStaker);
+
+    // Search for super staker
+    CSuperStakerInfo superStaker;
+    bool found = false;
+    for(auto item : pwallet->mapSuperStaker)
+    {
+        if(PKHash(item.second.stakerAddress) == pkhStaker &&
+                item.second.fCustomConfig)
+        {
+            superStaker = item.second;
+            found = true;
+            break;
+        }
+    }
+
+    if(found)
+    {
+        // Remove custom configuration
+        superStaker.fCustomConfig = false;
+        superStaker.nMinFee = 0;
+        superStaker.nMinDelegateUtxo = 0;
+        superStaker.nDelegateAddressType = 0;
+        superStaker.delegateAddressList.clear();
+
+        // Update super staker data
+        if(!pwallet->AddSuperStakerEntry(superStaker))
+            throw JSONRPCError(RPC_TYPE_ERROR, "Failed to update the super staker");
+    }
+    else
+    {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Failed to find the super staker");
+    }
+
+    return UniValue::VNULL;
+},
+    };
+}
+
+static RPCHelpMan reservebalance()
+{
+    return RPCHelpMan{"reservebalance",
+            "\nSet reserve amount not participating in network protection."
+            "\nIf no parameters provided current setting is printed.\n",
+            {
+                {"reserve", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED,"is true or false to turn balance reserve on or off."},
+                {"amount", RPCArg::Type::AMOUNT, RPCArg::Optional::OMITTED, "is a real and rounded to cent."},
+            },
+            RPCResult{
+                RPCResult::Type::OBJ, "", "",
+                {
+                    {RPCResult::Type::BOOL, "reserve", "Balance reserve on or off"},
+                    {RPCResult::Type::STR_AMOUNT, "amount", "Amount reserve rounded to cent"}
+                }
+            },
+             RPCExamples{
+            "\nSet reserve balance to 100\n"
+            + HelpExampleCli("reservebalance", "true 100") +
+            "\nSet reserve balance to 0\n"
+            + HelpExampleCli("reservebalance", "false") +
+            "\nGet reserve balance\n"
+            + HelpExampleCli("reservebalance", "")			},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!pwallet) return UniValue::VNULL;
+
+    if (request.params.size() > 0)
+    {
+        bool fReserve = request.params[0].get_bool();
+        if (fReserve)
+        {
+            if (request.params.size() == 1)
+                throw std::runtime_error("must provide amount to reserve balance.\n");
+            int64_t nAmount = AmountFromValue(request.params[1]);
+            nAmount = (nAmount / CENT) * CENT;  // round to cent
+            if (nAmount < 0)
+                throw std::runtime_error("amount cannot be negative.\n");
+            pwallet->m_reserve_balance = nAmount;
+        }
+        else
+        {
+            if (request.params.size() > 1)
+                throw std::runtime_error("cannot specify amount to turn off reserve.\n");
+            pwallet->m_reserve_balance = 0;
+        }
+    }
+
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("reserve", (pwallet->m_reserve_balance > 0));
+    result.pushKV("amount", ValueFromAmount(pwallet->m_reserve_balance));
+    return result;
+},
+    };
+}
+
 static RPCHelpMan getwalletinfo()
 {
     return RPCHelpMan{"getwalletinfo",
@@ -233,6 +481,7 @@ static RPCHelpMan getwalletinfo()
                         {RPCResult::Type::NUM, "walletversion", "the wallet version"},
                         {RPCResult::Type::STR, "format", "the database format (bdb or sqlite)"},
                         {RPCResult::Type::STR_AMOUNT, "balance", "DEPRECATED. Identical to getbalances().mine.trusted"},
+                        {RPCResult::Type::STR_AMOUNT, "stake", "DEPRECATED. Identical to getbalances().mine.stake"},
                         {RPCResult::Type::STR_AMOUNT, "unconfirmed_balance", "DEPRECATED. Identical to getbalances().mine.untrusted_pending"},
                         {RPCResult::Type::STR_AMOUNT, "immature_balance", "DEPRECATED. Identical to getbalances().mine.immature"},
                         {RPCResult::Type::NUM, "txcount", "the total number of transactions in the wallet"},
@@ -275,12 +524,25 @@ static RPCHelpMan getwalletinfo()
 
     size_t kpExternalSize = pwallet->KeypoolCountExternalKeys();
     const auto bal = GetBalance(*pwallet);
+    CAmount balance = bal.m_mine_trusted;
+    CAmount stake = bal.m_mine_stake;
+    CAmount unconfirmedBalance = bal.m_mine_untrusted_pending;
+    CAmount immatureBalance = bal.m_mine_immature;
+    bool privateKeysEnabled = !pwallet->IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS);
+    if(!privateKeysEnabled)
+    {
+        balance += bal.m_watchonly_trusted;
+        stake += bal.m_watchonly_stake;
+        unconfirmedBalance += bal.m_watchonly_untrusted_pending;
+        immatureBalance += bal.m_watchonly_immature;
+    }
     obj.pushKV("walletname", pwallet->GetName());
     obj.pushKV("walletversion", pwallet->GetVersion());
     obj.pushKV("format", pwallet->GetDatabase().Format());
-    obj.pushKV("balance", ValueFromAmount(bal.m_mine_trusted));
-    obj.pushKV("unconfirmed_balance", ValueFromAmount(bal.m_mine_untrusted_pending));
-    obj.pushKV("immature_balance", ValueFromAmount(bal.m_mine_immature));
+    obj.pushKV("balance", ValueFromAmount(balance));
+    obj.pushKV("stake", ValueFromAmount(stake));
+    obj.pushKV("unconfirmed_balance", ValueFromAmount(unconfirmedBalance));
+    obj.pushKV("immature_balance", ValueFromAmount(immatureBalance));
     obj.pushKV("txcount",       (int)pwallet->mapWallet.size());
     const auto kp_oldest = pwallet->GetOldestKeyPoolTime();
     if (kp_oldest.has_value()) {
@@ -303,7 +565,7 @@ static RPCHelpMan getwalletinfo()
         obj.pushKV("unlocked_until", pwallet->nRelockTime);
     }
     obj.pushKV("paytxfee", ValueFromAmount(pwallet->m_pay_tx_fee.GetFeePerK()));
-    obj.pushKV("private_keys_enabled", !pwallet->IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS));
+    obj.pushKV("private_keys_enabled", privateKeysEnabled);
     obj.pushKV("avoid_reuse", pwallet->IsWalletFlagSet(WALLET_FLAG_AVOID_REUSE));
     if (pwallet->IsScanning()) {
         UniValue scanning(UniValue::VOBJ);
@@ -398,7 +660,7 @@ static RPCHelpMan loadwallet()
 {
     return RPCHelpMan{"loadwallet",
                 "\nLoads a wallet from a wallet file or directory."
-                "\nNote that all wallet command-line options used when starting bitcoind will be"
+                "\nNote that all wallet command-line options used when starting qtumd will be"
                 "\napplied to the new wallet.\n",
                 {
                     {"filename", RPCArg::Type::STR, RPCArg::Optional::NO, "The path to the directory of the wallet to be loaded, either absolute or relative to the \"wallets\" directory. The \"wallets\" directory is set by the -walletdir option and defaults to the \"wallets\" folder within the data directory."},
@@ -1360,6 +1622,11 @@ Span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &walletpassphrase},
         {"wallet", &walletpassphrasechange},
         {"wallet", &walletprocesspsbt},
+        {"wallet", &reservebalance,                 },
+        {"wallet", &setsuperstakervaluesforaddress},
+        {"wallet", &listsuperstakercustomvalues},
+        {"wallet", &listsuperstakervaluesforaddress},
+        {"wallet", &removesuperstakervaluesforaddress},
     };
     return commands;
 }
