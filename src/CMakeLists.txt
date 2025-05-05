@@ -225,6 +225,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   qtum/qtumdelegation.cpp
   qtum/delegationutils.cpp
   util/contractabi.cpp
+  util/tokenstr.cpp
   eth_client/libdevcore/Address.cpp
   eth_client/libdevcore/Common.cpp
   eth_client/libdevcore/CommonData.cpp

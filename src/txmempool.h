@@ -549,6 +549,9 @@ public:
      */
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
+    bool getAddressIndex(std::vector<std::pair<uint256, int> > &addresses,
+                         std::vector<std::pair<CMempoolAddressDeltaKey, CMempoolAddressDelta> > &results);
+
     bool getSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value) const;
 
     void removeRecursive(const CTransaction& tx, MemPoolRemovalReason reason) EXCLUSIVE_LOCKS_REQUIRED(cs);
