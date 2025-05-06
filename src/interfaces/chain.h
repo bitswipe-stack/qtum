@@ -18,6 +18,8 @@
 #include <string>
 #include <vector>
 
+#include <bitcoin-build-config.h> // IWYU pragma: keep
+
 class ArgsManager;
 class CBlock;
 class CBlockUndo;
@@ -35,6 +37,12 @@ struct FeeCalculation;
 namespace node {
 struct NodeContext;
 } // namespace node
+
+#ifdef ENABLE_WALLET
+namespace wallet {
+class CWallet;
+} // namespace wallet
+#endif
 
 namespace interfaces {
 
@@ -295,6 +303,9 @@ public:
     //! Get the current prune height.
     virtual std::optional<int> getPruneHeight() = 0;
 
+    //! Is loading blocks.
+    virtual bool isLoadingBlocks() = 0;
+
     //! Check if the node is ready to broadcast transactions.
     virtual bool isReadyToBroadcast() = 0;
 
@@ -303,6 +314,9 @@ public:
 
     //! Check if shutdown requested.
     virtual bool shutdownRequested() = 0;
+
+    //! Get adjusted time.
+    virtual int64_t getAdjustedTime() = 0;
 
     //! Send init message.
     virtual void initMessage(const std::string& message) = 0;
@@ -389,6 +403,17 @@ public:
     //! Get internal node context. Useful for testing, but not
     //! accessible across processes.
     virtual node::NodeContext* context() { return nullptr; }
+
+    //! Get transaction gas fee.
+    virtual CAmount getTxGasFee(const CMutableTransaction& tx) = 0;
+
+#ifdef ENABLE_WALLET
+    //! Start staking qtums.
+    virtual void startStake(wallet::CWallet& wallet) = 0;
+
+    //! Stop staking qtums.
+    virtual void stopStake(wallet::CWallet& wallet) = 0;
+#endif
 };
 
 //! Interface to let node manage chain clients (wallets, or maybe tools for

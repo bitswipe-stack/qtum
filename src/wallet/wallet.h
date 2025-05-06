@@ -317,6 +317,13 @@ struct CRecipient
     bool fSubtractFeeFromAmount;
 };
 
+struct CScriptCache{
+    bool contract = false;
+    bool keyIdOk = false;
+    uint160 keyId;
+    bool solvable = false;
+};
+
 class WalletRescanReserver; //forward declarations for ScanForWalletTransactions/RescanFromTime
 /**
  * A CWallet maintains a set of transactions and balances, and provides the ability to create new transactions.
@@ -359,7 +366,9 @@ private:
     typedef std::unordered_multimap<COutPoint, uint256, SaltedOutpointHasher> TxSpends;
     TxSpends mapTxSpends GUARDED_BY(cs_wallet);
     void AddToSpends(const COutPoint& outpoint, const uint256& wtxid, WalletBatch* batch = nullptr) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
+    void RemoveFromSpends(const COutPoint& outpoint, const uint256& wtxid) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     void AddToSpends(const CWalletTx& wtx, WalletBatch* batch = nullptr) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
+    void RemoveFromSpends(const CWalletTx& wtx) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
 
     /**
      * Add a transaction to the wallet, or update it.  confirm.block_* should
@@ -468,6 +477,7 @@ public:
      * This lock protects all the fields added by CWallet.
      */
     mutable RecursiveMutex cs_wallet;
+    mutable RecursiveMutex cs_worker;
 
     WalletDatabase& GetDatabase() const override
     {
@@ -493,6 +503,9 @@ public:
 
     ~CWallet()
     {
+        // Stop stake
+        StopStake();
+
         // Should not have slots connected at this point.
         assert(NotifyUnload.empty());
     }
@@ -736,6 +749,9 @@ public:
     bool SubmitTxMemoryPoolAndRelay(CWalletTx& wtx, std::string& err_string, bool relay) const
         EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
 
+    CAmount GetTxGasFee(const CMutableTransaction& tx);
+    CAmount GetTxGasFee(const std::vector<CRecipient>& vecSend);
+
     bool ImportScripts(const std::set<CScript> scripts, int64_t timestamp) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     bool ImportPrivKeys(const std::map<CKeyID, CKey>& privkey_map, const int64_t timestamp) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     bool ImportPubKeys(const std::vector<std::pair<CKeyID, bool>>& ordered_pubkeys, const std::map<CKeyID, CPubKey>& pubkey_map, const std::map<CKeyID, std::pair<CPubKey, KeyOriginInfo>>& key_origins, const bool add_keypool, const int64_t timestamp) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
@@ -845,6 +861,10 @@ public:
 
     isminetype IsMine(const CTxDestination& dest) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     isminetype IsMine(const CScript& script) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
+    bool HasPrivateKey(const CTxDestination& dest, const bool& fAllowWatchOnly) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
+    CKeyID GetKeyForDestination(const CTxDestination& dest);
+    bool GetPubKey(const PKHash& pkhash, CPubKey& pubkey) const;
+    bool GetKeyOrigin(const PKHash& pkhash, KeyOriginInfo& info) const;
     /**
      * Returns amount of debit if the input matches the
      * filter, otherwise returns 0
@@ -876,6 +896,10 @@ public:
     bool SetAddressReceiveRequest(WalletBatch& batch, const CTxDestination& dest, const std::string& id, const std::string& value) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     bool EraseAddressReceiveRequest(WalletBatch& batch, const CTxDestination& dest, const std::string& id) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
 
+    bool SetContractBook(const std::string& strAddress, const std::string& strName, const std::string& strAbi);
+
+    bool DelContractBook(const std::string& strAddress);
+
     unsigned int GetKeyPoolSize() const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
 
     //! signify that a particular wallet feature is now used.
@@ -883,6 +907,9 @@ public:
 
     //! get the current wallet format (the oldest client version guaranteed to understand this wallet)
     int GetVersion() const { LOCK(cs_wallet); return nWalletVersion; }
+
+    //! disable transaction for coinstake
+    void DisableTransaction(const CTransaction &tx);
 
     //! Get wallet transactions that conflict with given transaction (spend same outputs)
     std::set<uint256> GetConflicts(const uint256& txid) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
@@ -914,6 +941,13 @@ public:
      */
     boost::signals2::signal<void(const uint256& hashTx, ChangeType status)> NotifyTransactionChanged;
 
+    /** 
+     * Wallet token transaction added, removed or updated.
+     * @note called with lock cs_wallet held.
+     */
+    boost::signals2::signal<void (CWallet *wallet, const uint256 &hashTx,
+            ChangeType status)> NotifyTokenTransactionChanged;
+
     /** Show progress e.g. for rescan */
     boost::signals2::signal<void (const std::string &title, int nProgress)> ShowProgress;
 
@@ -928,6 +962,27 @@ public:
      * Note: Called without locks held.
      */
     boost::signals2::signal<void (CWallet* wallet)> NotifyStatusChanged;
+
+    /** Wallet transaction added, removed or updated. */
+    boost::signals2::signal<void (CWallet *wallet, const uint256 &hashToken,
+            ChangeType status)> NotifyTokenChanged;
+
+    /** Contract book entry changed. */
+    boost::signals2::signal<void (CWallet *wallet, const std::string &address,
+            const std::string &label, const std::string &abi,
+            ChangeType status)> NotifyContractBookChanged;
+
+    /** Wallet delegation added, removed or updated. */
+    boost::signals2::signal<void (CWallet *wallet, const uint256 &hashDelegation,
+            ChangeType status)> NotifyDelegationChanged;
+
+    /** Wallet super staker added, removed or updated. */
+    boost::signals2::signal<void (CWallet *wallet, const uint256 &hashSuperStaker,
+            ChangeType status)> NotifySuperStakerChanged;
+
+    /** Wallet delegations staker added, removed or updated. */
+    boost::signals2::signal<void (CWallet *wallet, const uint160 &addressDelegate,
+            ChangeType status)> NotifyDelegationsStakerChanged;
 
     /** Inquire whether this wallet broadcasts transactions. */
     bool GetBroadcastTransactions() const { return fBroadcastTransactions; }
@@ -1047,7 +1102,9 @@ public:
     /** Get last block processed height */
     int GetLastBlockHeight() const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet)
     {
+#ifndef DEBUG_LOCKORDER
         AssertLockHeld(cs_wallet);
+#endif
         assert(m_last_block_processed_height >= 0);
         return m_last_block_processed_height;
     };
@@ -1138,14 +1195,71 @@ public:
     //! Returns nullopt when no descriptor has the key or if the wallet is locked.
     std::optional<CKey> GetKey(const CKeyID& keyid) const;
 
+    /* Add token entry into the wallet */
+    bool AddTokenEntry(const CTokenInfo& token, bool fFlushOnClose=true);
+
+    /* Add token tx entry into the wallet */
+    bool AddTokenTxEntry(const CTokenTx& tokenTx, bool fFlushOnClose=true);
+
+    /* Get details token tx entry into the wallet */
+    bool GetTokenTxDetails(const CTokenTx &wtx, uint256& credit, uint256& debit, std::string& tokenSymbol, uint8_t& decimals) const;
+
+    /* Check if token transaction is mine */
+    bool IsTokenTxMine(const CTokenTx &wtx) const;
+
+    /* Remove token entry from the wallet */
+    bool RemoveTokenEntry(const uint256& tokenHash, bool fFlushOnClose=true);
+
+    /* Clean token transaction entries in the wallet */
+    bool CleanTokenTxEntries(bool fFlushOnClose=true);
+
     /* Load delegation entry into the wallet */
     bool LoadDelegation(const CDelegationInfo &delegation);
+
+    /* Add delegation entry into the wallet */
+    bool AddDelegationEntry(const CDelegationInfo& delegation, bool fFlushOnClose=true);
+
+    /* Remove delegation entry from the wallet */
+    bool RemoveDelegationEntry(const uint256& delegationHash, bool fFlushOnClose=true);
 
     /* Load super staker entry into the wallet */
     bool LoadSuperStaker(const CSuperStakerInfo &superStaker);
 
     /* Add super staker entry into the wallet */
     bool AddSuperStakerEntry(const CSuperStakerInfo& superStaker, bool fFlushOnClose=true);
+
+    /* Remove super staker entry from the wallet */
+    bool RemoveSuperStakerEntry(const uint256& superStakerHash, bool fFlushOnClose=true);
+
+    /* Start staking qtums */
+    void StartStake();
+
+    /* Stop staking qtums */
+    void StopStake();
+
+    /* Is staking closing */
+    bool IsStakeClosing();
+
+    /* Clean coinstake transactions */
+    void CleanCoinStake();
+
+    /* Clean coinstake transactions when not reindex and not importing */
+    void TryCleanCoinStake();
+
+    std::map<uint160, Delegation> m_delegations_staker;
+    std::map<uint160, CAmount> m_delegations_weight;
+    std::map<uint160, Delegation> m_my_delegations;
+    std::map<uint160, bool> m_have_coin_superstaker;
+    int m_num_threads = 1;
+    mutable boost::thread_group threads;
+    std::string m_ledger_id;
+    boost::thread_group* stakeThread = nullptr;
+    std::map<COutPoint, CStakeCache> stakeCache;
+    std::map<COutPoint, CStakeCache> stakeDelegateCache;
+    bool fHasMinerStakeCache = false;
+    mutable std::map<COutPoint, CScriptCache> prevoutScriptCache;
+    mutable std::map<uint160, bool> addressStakeCache;
+    std::atomic<bool> fCleanCoinStake = true;
 };
 
 /**
