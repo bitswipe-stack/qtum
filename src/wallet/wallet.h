@@ -710,6 +710,10 @@ public:
     /** Sign the tx given the input coins and sighash. */
     bool SignTransaction(CMutableTransaction& tx, const std::map<COutPoint, Coin>& coins, int sighash, std::map<int, bilingual_str>& input_errors) const;
     SigningResult SignMessage(const std::string& message, const PKHash& pkhash, std::string& str_sig) const;
+    bool SignTransactionOutput(CMutableTransaction& tx) const;
+    bool SignTransactionOutput(CMutableTransaction& tx, int sighash, std::map<int, std::string>& output_errors) const;
+    bool SignTransactionStake(CMutableTransaction& tx, const std::vector<std::pair<const CWalletTx*,unsigned int>>& vwtxPrev) const;
+    bool SignBlockStake(CBlock& block, const PKHash& pkhash, bool compact) const;
 
     /**
      * Fills out a PSBT with information from the wallet. Fills in UTXOs if we have
@@ -744,6 +748,19 @@ public:
      * @param[in] orderForm BIP 70 / BIP 21 order form details to be set on the transaction.
      */
     void CommitTransaction(CTransactionRef tx, mapValue_t mapValue, std::vector<std::pair<std::string, std::string>> orderForm);
+
+    uint64_t GetStakeWeight(uint64_t* pStakerWeight = nullptr, uint64_t* pDelegateWeight = nullptr) const;
+    uint64_t GetSuperStakerWeight(const uint160& staker) const;
+    bool CanSuperStake(const std::set<std::pair<const CWalletTx*,unsigned int> >& setCoins, const std::vector<COutPoint>& setDelegateCoins) const;
+    bool GetSenderDest(const CTransaction& tx, CTxDestination& txSenderDest, bool sign=true) const;
+    bool GetHDKeyPath(const CTxDestination& dest, std::string& hdkeypath) const;
+    bool GetDelegationStaker(const uint160& keyid, Delegation& delegation);
+    const CWalletTx* GetCoinSuperStaker(const std::set<std::pair<const CWalletTx*,unsigned int> >& setCoins, const PKHash& superStaker, COutPoint& prevout, CAmount& nValueRet);
+    const CScriptCache& GetScriptCache(const COutPoint& prevout, const CScript& scriptPubKey, std::map<COutPoint, CScriptCache>* insertScriptCache = nullptr) const;
+    bool HasAddressStakeScripts(const uint160& keyId, std::map<uint160, bool>* insertAddressStake = nullptr) const;
+    void RefreshAddressStakeCache();
+    bool GetSuperStaker(CSuperStakerInfo &info, const uint160& stakerAddress) const;
+    void RefreshDelegates(bool myDelegates, bool stakerDelegates);
 
     /** Pass this transaction to node for mempool insertion and relay to peers if flag set to true */
     bool SubmitTxMemoryPoolAndRelay(CWalletTx& wtx, std::string& err_string, bool relay) const
@@ -1245,6 +1262,10 @@ public:
 
     /* Clean coinstake transactions when not reindex and not importing */
     void TryCleanCoinStake();
+
+    void updateDelegationsStaker(const std::map<uint160, Delegation>& delegations_staker);
+    void updateDelegationsWeight(const std::map<uint160, CAmount>& delegations_weight);
+    void updateHaveCoinSuperStaker(const std::set<std::pair<const CWalletTx*,unsigned int> >& setCoins);
 
     std::map<uint160, Delegation> m_delegations_staker;
     std::map<uint160, CAmount> m_delegations_weight;

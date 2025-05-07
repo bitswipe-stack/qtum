@@ -91,7 +91,8 @@ public:
      * @param[in] options options for creating the block
      * @returns a block template
      */
-    virtual std::unique_ptr<BlockTemplate> createNewBlock(const node::BlockCreateOptions& options = {}) = 0;
+    virtual std::unique_ptr<BlockTemplate> createNewBlock(const node::BlockCreateOptions& options = {},
+                                                                 bool fProofOfStake=false, int64_t* pTotalFees = 0, int32_t nTime=0, int32_t nTimeLimit=0) = 0;
 
     //! Get internal node context. Useful for RPC and testing,
     //! but not accessible across processes.

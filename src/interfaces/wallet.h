@@ -57,6 +57,14 @@ struct WalletTx;
 struct WalletTxOut;
 struct WalletTxStatus;
 struct WalletMigrationResult;
+struct TokenInfo;
+struct TokenTx;
+struct ContractBookData;
+struct DelegationInfo;
+struct DelegationDetails;
+struct SuperStakerInfo;
+struct DelegationStakerInfo;
+struct SignDelegation;
 
 using WalletOrderForm = std::vector<std::pair<std::string, std::string>>;
 using WalletValueMap = std::map<std::string, std::string>;
@@ -309,6 +317,14 @@ public:
     using TransactionChangedFn = std::function<void(const uint256& txid, ChangeType status)>;
     virtual std::unique_ptr<Handler> handleTransactionChanged(TransactionChangedFn fn) = 0;
 
+    //! Register handler for token transaction changed messages.
+    using TokenTransactionChangedFn = std::function<void(const uint256& id, ChangeType status)>;
+    virtual std::unique_ptr<Handler> handleTokenTransactionChanged(TokenTransactionChangedFn fn) = 0;
+
+    //! Register handler for token changed messages.
+    using TokenChangedFn = std::function<void(const uint256& id, ChangeType status)>;
+    virtual std::unique_ptr<Handler> handleTokenChanged(TokenChangedFn fn) = 0;
+
     //! Register handler for watchonly changed messages.
     using WatchOnlyChangedFn = std::function<void(bool have_watch_only)>;
     virtual std::unique_ptr<Handler> handleWatchOnlyChanged(WatchOnlyChangedFn fn) = 0;
@@ -316,6 +332,25 @@ public:
     //! Register handler for keypool changed messages.
     using CanGetAddressesChangedFn = std::function<void()>;
     virtual std::unique_ptr<Handler> handleCanGetAddressesChanged(CanGetAddressesChangedFn fn) = 0;
+
+    //! Register handler for contract book changed messages.
+    using ContractBookChangedFn = std::function<void( const std::string& address,
+        const std::string& label,
+        const std::string& abi,
+        ChangeType status)>;
+    virtual std::unique_ptr<Handler> handleContractBookChanged(ContractBookChangedFn fn) = 0;
+
+    //! Register handler for delegation changed messages.
+    using DelegationChangedFn = std::function<void(const uint256& id, ChangeType status)>;
+    virtual std::unique_ptr<Handler> handleDelegationChanged(DelegationChangedFn fn) = 0;
+
+    //! Register handler for super staker changed messages.
+    using SuperStakerChangedFn = std::function<void(const uint256& id, ChangeType status)>;
+    virtual std::unique_ptr<Handler> handleSuperStakerChanged(SuperStakerChangedFn fn) = 0;
+
+    //! Register handler for delegations staker changed messages.
+    using DelegationsStakerChangedFn = std::function<void(const uint160& id, ChangeType status)>;
+    virtual std::unique_ptr<Handler> handleDelegationsStakerChanged(DelegationsStakerChangedFn fn) = 0;
 
     //! Return pointer to internal wallet class, useful for testing.
     virtual wallet::CWallet* wallet() { return nullptr; }
@@ -381,17 +416,19 @@ struct WalletBalances
     CAmount balance = 0;
     CAmount unconfirmed_balance = 0;
     CAmount immature_balance = 0;
+    CAmount stake = 0;
     bool have_watch_only = false;
     CAmount watch_only_balance = 0;
     CAmount unconfirmed_watch_only_balance = 0;
     CAmount immature_watch_only_balance = 0;
+    CAmount watch_only_stake = 0;
 
     bool balanceChanged(const WalletBalances& prev) const
     {
         return balance != prev.balance || unconfirmed_balance != prev.unconfirmed_balance ||
-               immature_balance != prev.immature_balance || watch_only_balance != prev.watch_only_balance ||
+               immature_balance != prev.immature_balance || stake != prev.stake || watch_only_balance != prev.watch_only_balance ||
                unconfirmed_watch_only_balance != prev.unconfirmed_watch_only_balance ||
-               immature_watch_only_balance != prev.immature_watch_only_balance;
+               immature_watch_only_balance != prev.immature_watch_only_balance || watch_only_stake != prev.watch_only_stake;
     }
 };
 
@@ -410,6 +447,13 @@ struct WalletTx
     int64_t time;
     std::map<std::string, std::string> value_map;
     bool is_coinbase;
+    bool is_coinstake;
+    bool is_in_main_chain;
+
+    // Contract tx params
+    bool has_create_or_call;
+    CKeyID tx_sender_key;
+    std::vector<CKeyID> txout_keys;
 
     bool operator<(const WalletTx& a) const { return tx->GetHash() < a.tx->GetHash(); }
 };

@@ -550,6 +550,16 @@ public:
         return MakeSignalHandler(m_wallet->NotifyTransactionChanged.connect(
             [fn](const uint256& txid, ChangeType status) { fn(txid, status); }));
     }
+    std::unique_ptr<Handler> handleTokenTransactionChanged(TokenTransactionChangedFn fn) override
+    {
+        return MakeSignalHandler(m_wallet->NotifyTokenTransactionChanged.connect(
+            [fn](CWallet*, const uint256& id, ChangeType status) { fn(id, status); }));
+    }
+    std::unique_ptr<Handler> handleTokenChanged(TokenChangedFn fn) override
+    {
+        return MakeSignalHandler(m_wallet->NotifyTokenChanged.connect(
+            [fn](CWallet*, const uint256& id, ChangeType status) { fn(id, status); }));
+    }
     std::unique_ptr<Handler> handleWatchOnlyChanged(WatchOnlyChangedFn fn) override
     {
         return MakeSignalHandler(m_wallet->NotifyWatchonlyChanged.connect(fn));
@@ -557,6 +567,27 @@ public:
     std::unique_ptr<Handler> handleCanGetAddressesChanged(CanGetAddressesChangedFn fn) override
     {
         return MakeSignalHandler(m_wallet->NotifyCanGetAddressesChanged.connect(fn));
+    }
+    std::unique_ptr<Handler> handleContractBookChanged(ContractBookChangedFn fn) override
+    {
+        return MakeSignalHandler(m_wallet->NotifyContractBookChanged.connect(
+            [fn](CWallet*, const std::string& address, const std::string& label,
+                const std::string& abi, ChangeType status) { fn(address, label, abi, status); }));
+    }
+    std::unique_ptr<Handler> handleDelegationChanged(DelegationChangedFn fn) override
+    {
+        return MakeSignalHandler(m_wallet->NotifyDelegationChanged.connect(
+            [fn](CWallet*, const uint256& id, ChangeType status) { fn(id, status); }));
+    }
+    std::unique_ptr<Handler> handleSuperStakerChanged(SuperStakerChangedFn fn) override
+    {
+        return MakeSignalHandler(m_wallet->NotifySuperStakerChanged.connect(
+            [fn](CWallet*, const uint256& id, ChangeType status) { fn(id, status); }));
+    }
+    std::unique_ptr<Handler> handleDelegationsStakerChanged(DelegationsStakerChangedFn fn) override
+    {
+        return MakeSignalHandler(m_wallet->NotifyDelegationsStakerChanged.connect(
+            [fn](CWallet*, const uint160& id, ChangeType status) { fn(id, status); }));
     }
     CWallet* wallet() override { return m_wallet.get(); }
 

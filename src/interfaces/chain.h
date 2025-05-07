@@ -9,6 +9,7 @@
 #include <common/settings.h>
 #include <primitives/transaction.h> // For CTransactionRef
 #include <util/result.h>
+#include <netbase.h>                // For ConnectionDirection
 
 #include <functional>
 #include <memory>
@@ -17,6 +18,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <map>
 
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
@@ -37,12 +39,17 @@ struct FeeCalculation;
 namespace node {
 struct NodeContext;
 } // namespace node
+class ChainstateManager;
+class CTxMemPool;
+class CBlockIndex;
+class CCoinsViewCache;
 
 #ifdef ENABLE_WALLET
 namespace wallet {
 class CWallet;
 } // namespace wallet
 #endif
+struct Delegation;
 
 namespace interfaces {
 
@@ -141,6 +148,15 @@ class Chain
 public:
     virtual ~Chain() = default;
 
+    //! Get chain state manager
+    virtual ChainstateManager& chainman() = 0;
+
+    //! Get mempool
+    virtual const CTxMemPool& mempool() = 0;
+
+    //! Get warnings.
+    virtual bilingual_str getWarnings() = 0;
+
     //! Get current chain height, not including genesis block (returns 0 if
     //! chain only contains genesis block, nullopt if chain does not contain
     //! any blocks)
@@ -199,6 +215,9 @@ public:
         const FoundBlock& ancestor_out={},
         const FoundBlock& block1_out={},
         const FoundBlock& block2_out={}) = 0;
+
+    //! Get map of the immature stakes.
+    virtual std::map<COutPoint, uint32_t> getImmatureStakes() = 0;
 
     //! Look up unspent output information. Returns coins in the mempool and in
     //! the current chain UTXO set. Iterates through all the keys in the map and
@@ -404,6 +423,18 @@ public:
     //! accessible across processes.
     virtual node::NodeContext* context() { return nullptr; }
 
+    //! Get chain tip
+    virtual CBlockIndex* getTip() const =  0;
+
+    //! Get unspent outputs associated with a transaction.
+    virtual bool getUnspentOutput(const COutPoint& output, Coin& coin) = 0;
+
+    //! Get coins tip.
+    virtual CCoinsViewCache& getCoinsTip() = 0;
+
+    //! Get number of connections.
+    virtual size_t getNodeCount(ConnectionDirection flags) = 0;
+
     //! Get transaction gas fee.
     virtual CAmount getTxGasFee(const CMutableTransaction& tx) = 0;
 
@@ -413,7 +444,25 @@ public:
 
     //! Stop staking qtums.
     virtual void stopStake(wallet::CWallet& wallet) = 0;
+
+    //! get stake weight.
+    virtual uint64_t getStakeWeight(const wallet::CWallet& wallet, uint64_t* pStakerWeight = nullptr, uint64_t* pDelegateWeight = nullptr) = 0;
+
+    //! refresh delegates.
+    virtual void refreshDelegates(wallet::CWallet *pwallet, bool myDelegates, bool stakerDelegates) = 0;
+
+    //! get contract RPC commands.
+    virtual Span<const CRPCCommand> getContractRPCCommands() = 0;
+
+    //! get mining RPC commands.
+    virtual Span<const CRPCCommand> getMiningRPCCommands() = 0;
 #endif
+
+    //! get delegation for an address.
+    virtual bool getDelegation(const uint160& address, Delegation& delegation) = 0;
+
+    //! verify delegation for an address.
+    virtual bool verifyDelegation(const uint160& address, const Delegation& delegation) = 0;
 };
 
 //! Interface to let node manage chain clients (wallets, or maybe tools for
