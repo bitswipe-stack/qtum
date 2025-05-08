@@ -29,11 +29,15 @@
 #include <wallet/rpc/wallet.h>
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
+#include <key_io.h>
+#include <qtum/delegationutils.h>
+#include <node/miner.h>
 
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 using common::PSBTError;
 using interfaces::Chain;
@@ -50,6 +54,15 @@ using interfaces::WalletTx;
 using interfaces::WalletTxOut;
 using interfaces::WalletTxStatus;
 using interfaces::WalletValueMap;
+using interfaces::TokenInfo;
+using interfaces::TokenTx;
+using interfaces::ContractBookData;
+using interfaces::DelegationInfo;
+using interfaces::DelegationDetails;
+using interfaces::SuperStakerInfo;
+using interfaces::DelegationStakerInfo;
+using interfaces::SuperStakerAddressList;
+using interfaces::SignDelegation;
 
 namespace wallet {
 // All members of the classes in this namespace are intentionally public, as the
@@ -72,7 +85,7 @@ WalletTx MakeWalletTx(CWallet& wallet, const CWalletTx& wtx)
         result.txout_is_mine.emplace_back(wallet.IsMine(txout));
         result.txout_is_change.push_back(OutputIsChange(wallet, txout));
         result.txout_address.emplace_back();
-        result.txout_address_is_mine.emplace_back(ExtractDestination(txout.scriptPubKey, result.txout_address.back()) ?
+        result.txout_address_is_mine.emplace_back(ExtractDestination(txout.scriptPubKey, result.txout_address.back(), nullptr, true) ?
                                                       wallet.IsMine(result.txout_address.back()) :
                                                       ISMINE_NO);
     }
@@ -82,6 +95,21 @@ WalletTx MakeWalletTx(CWallet& wallet, const CWalletTx& wtx)
     result.time = wtx.GetTxTime();
     result.value_map = wtx.mapValue;
     result.is_coinbase = wtx.IsCoinBase();
+    result.is_coinstake = wtx.IsCoinStake();
+    result.is_in_main_chain = wtx.isConfirmed();
+    result.has_create_or_call = wtx.tx->HasCreateOrCall();
+    if(result.has_create_or_call)
+    {
+        CTxDestination tx_sender_address;
+        if(wtx.tx && wtx.tx->vin.size() > 0 && wallet.mapWallet.find(wtx.tx->vin[0].prevout.hash) != wallet.mapWallet.end() &&
+                ExtractDestination(wallet.mapWallet.at(wtx.tx->vin[0].prevout.hash).tx->vout[wtx.tx->vin[0].prevout.n].scriptPubKey, tx_sender_address, nullptr, true)) {
+            result.tx_sender_key = wallet.GetKeyForDestination(tx_sender_address);
+        }
+
+        for(CTxDestination address : result.txout_address) {
+            result.txout_keys.emplace_back(wallet.GetKeyForDestination(address));
+        }
+    }
     return result;
 }
 
@@ -104,6 +132,7 @@ WalletTxStatus MakeWalletTxStatus(const CWallet& wallet, const CWalletTx& wtx)
     result.is_abandoned = wtx.isAbandoned();
     result.is_coinbase = wtx.IsCoinBase();
     result.is_in_main_chain = wtx.isConfirmed();
+    result.is_coinstake = wtx.IsCoinStake();
     return result;
 }
 
@@ -130,6 +159,214 @@ WalletTxOut MakeWalletTxOut(const CWallet& wallet,
     result.depth_in_main_chain = output.depth;
     result.is_spent = wallet.IsSpent(output.outpoint);
     return result;
+}
+
+//! Construct token info.
+CTokenInfo MakeTokenInfo(const TokenInfo& token)
+{
+    CTokenInfo result;
+    result.strContractAddress = token.contract_address;
+    result.strTokenName = token.token_name;
+    result.strTokenSymbol = token.token_symbol;
+    result.nDecimals = token.decimals;
+    result.strSenderAddress = token.sender_address;
+    result.nCreateTime = token.time;
+    result.blockHash = token.block_hash;
+    result.blockNumber = token.block_number;
+    return result;
+}
+
+//! Construct wallet token info.
+TokenInfo MakeWalletTokenInfo(const CTokenInfo& token)
+{
+    TokenInfo result;
+    result.contract_address = token.strContractAddress;
+    result.token_name = token.strTokenName;
+    result.token_symbol = token.strTokenSymbol;
+    result.decimals = token.nDecimals;
+    result.sender_address = token.strSenderAddress;
+    result.time = token.nCreateTime;
+    result.block_hash = token.blockHash;
+    result.block_number = token.blockNumber;
+    result.hash = token.GetHash();
+    return result;
+}
+
+//! Construct token transaction.
+CTokenTx MakeTokenTx(const TokenTx& tokenTx)
+{
+    CTokenTx result;
+    result.strContractAddress = tokenTx.contract_address;
+    result.strSenderAddress = tokenTx.sender_address;
+    result.strReceiverAddress = tokenTx.receiver_address;
+    result.nValue = tokenTx.value;
+    result.transactionHash = tokenTx.tx_hash;
+    result.nCreateTime = tokenTx.time;
+    result.blockHash = tokenTx.block_hash;
+    result.blockNumber = tokenTx.block_number;
+    result.strLabel = tokenTx.label;
+    return result;
+}
+
+//! Construct wallet token transaction.
+TokenTx MakeWalletTokenTx(const CTokenTx& tokenTx)
+{
+    TokenTx result;
+    result.contract_address = tokenTx.strContractAddress;
+    result.sender_address = tokenTx.strSenderAddress;
+    result.receiver_address = tokenTx.strReceiverAddress;
+    result.value = tokenTx.nValue;
+    result.tx_hash = tokenTx.transactionHash;
+    result.time = tokenTx.nCreateTime;
+    result.block_hash = tokenTx.blockHash;
+    result.block_number = tokenTx.blockNumber;
+    result.label = tokenTx.strLabel;
+    result.hash = tokenTx.GetHash();
+    return result;
+}
+
+ContractBookData MakeContractBook(const std::string& id, const CContractBookData& data)
+{
+    ContractBookData result;
+    result.address = id;
+    result.name = data.name;
+    result.abi = data.abi;
+    return result;
+}
+
+uint160 StringToKeyId(const std::string& strAddress)
+{
+    CTxDestination dest = DecodeDestination(strAddress);
+    if(std::holds_alternative<PKHash>(dest))
+    {
+        PKHash keyID = std::get<PKHash>(dest);
+        return uint160(keyID);
+    }
+    return uint160();
+}
+
+std::string KeyIdToString(const uint160& keyID)
+{
+    return EncodeDestination(PKHash(keyID));
+}
+
+std::vector<uint160> StringToKeyIdList(const std::vector<std::string>& listAddress)
+{
+    std::vector<uint160> ret;
+    for(auto address : listAddress)
+    {
+        ret.push_back(StringToKeyId(address));
+    }
+    return ret;
+}
+
+std::vector<std::string> KeyIdToStringList(const std::vector<uint160>& listKeyID)
+{
+    std::vector<std::string> ret;
+    for(auto keyId : listKeyID)
+    {
+        ret.push_back(KeyIdToString(keyId));
+    }
+    return ret;
+}
+
+//! Construct delegation info.
+CDelegationInfo MakeDelegationInfo(const DelegationInfo& delegation)
+{
+    CDelegationInfo result;
+    result.delegateAddress = StringToKeyId(delegation.delegate_address);
+    result.stakerAddress = StringToKeyId(delegation.staker_address);
+    result.strStakerName = delegation.staker_name;
+    result.nFee = delegation.fee;
+    result.nCreateTime = delegation.time;
+    result.blockNumber = delegation.block_number;
+    result.createTxHash = delegation.create_tx_hash;
+    result.removeTxHash = delegation.remove_tx_hash;
+    return result;
+}
+
+//! Construct wallet delegation info.
+DelegationInfo MakeWalletDelegationInfo(const CDelegationInfo& delegation)
+{
+    DelegationInfo result;
+    result.delegate_address = KeyIdToString(delegation.delegateAddress);
+    result.staker_address = KeyIdToString(delegation.stakerAddress);
+    result.staker_name = delegation.strStakerName;
+    result.fee = delegation.nFee;
+    result.time = delegation.nCreateTime;
+    result.block_number = delegation.blockNumber;
+    result.time = delegation.nCreateTime;
+    result.create_tx_hash = delegation.createTxHash;
+    result.remove_tx_hash = delegation.removeTxHash;
+    result.hash = delegation.GetHash();
+    return result;
+}
+
+//! Construct super staker info.
+CSuperStakerInfo MakeSuperStakerInfo(const SuperStakerInfo& superStaker)
+{
+    CSuperStakerInfo result;
+    result.stakerAddress = StringToKeyId(superStaker.staker_address);
+    result.strStakerName = superStaker.staker_name;
+    result.nMinFee = superStaker.min_fee;
+    result.nCreateTime = superStaker.time;
+    result.fCustomConfig = superStaker.custom_config;
+    result.nMinDelegateUtxo = superStaker.min_delegate_utxo;
+    result.delegateAddressList = StringToKeyIdList(superStaker.delegate_address_list);
+    result.nDelegateAddressType = superStaker.delegate_address_type;
+    return result;
+}
+
+//! Construct wallet super staker info.
+SuperStakerInfo MakeWalletSuperStakerInfo(const CSuperStakerInfo& superStaker)
+{
+    SuperStakerInfo result;
+    result.staker_address = KeyIdToString(superStaker.stakerAddress);
+    result.staker_name = superStaker.strStakerName;
+    result.min_fee = superStaker.nMinFee;
+    result.time = superStaker.nCreateTime;
+    result.custom_config = superStaker.fCustomConfig;
+    result.min_delegate_utxo = superStaker.nMinDelegateUtxo;
+    result.delegate_address_list = KeyIdToStringList(superStaker.delegateAddressList);
+    result.delegate_address_type = superStaker.nDelegateAddressType;
+    result.hash = superStaker.GetHash();
+    return result;
+}
+
+//! Construct wallet delegation staker info.
+DelegationStakerInfo MakeWalletDelegationStakerInfo(CWallet& wallet, const uint160& id, const Delegation& delegation)
+{
+    DelegationStakerInfo result;
+    result.delegate_address = EncodeDestination(PKHash(id));
+    result.staker_address = EncodeDestination(PKHash(delegation.staker));
+    result.PoD = HexStr(delegation.PoD);
+    result.fee = delegation.fee;
+    result.time = -1;
+    wallet.chain().findBlock(wallet.chain().getBlockHash(delegation.blockHeight), FoundBlock().time(result.time));
+    result.block_number = delegation.blockHeight;
+    std::map<uint160, CAmount>::iterator it = wallet.m_delegations_weight.find(id);
+    if(it != wallet.m_delegations_weight.end())
+    {
+        result.weight = it->second;
+    }
+    result.hash = id;
+    return result;
+}
+
+bool TokenTxStatus(CWallet& wallet, const uint256& txid, int& block_number, bool& in_mempool, int& num_blocks) EXCLUSIVE_LOCKS_REQUIRED(wallet.cs_wallet)
+{
+    auto mi = wallet.mapTokenTx.find(txid);
+    if (mi == wallet.mapTokenTx.end()) {
+        return false;
+    }
+    block_number = mi->second.blockNumber;
+    auto it = wallet.mapWallet.find(mi->second.transactionHash); 
+    if(it != wallet.mapWallet.end())
+    {
+        in_mempool = it->second.InMempool();
+    }
+    num_blocks = wallet.GetLastBlockHeight();
+    return true;
 }
 
 class WalletImpl : public Wallet
@@ -407,11 +644,13 @@ public:
         result.balance = bal.m_mine_trusted;
         result.unconfirmed_balance = bal.m_mine_untrusted_pending;
         result.immature_balance = bal.m_mine_immature;
+        result.stake = bal.m_mine_stake;
         result.have_watch_only = haveWatchOnly();
         if (result.have_watch_only) {
             result.watch_only_balance = bal.m_watchonly_trusted;
             result.unconfirmed_watch_only_balance = bal.m_watchonly_untrusted_pending;
             result.immature_watch_only_balance = bal.m_watchonly_immature;
+            result.watch_only_stake = bal.m_watchonly_stake;
         }
         return result;
     }
@@ -467,6 +706,101 @@ public:
         LOCK(m_wallet->cs_wallet);
         return OutputGetCredit(*m_wallet, txout, filter);
     }
+    bool isUnspentAddress(const std::string &qtumAddress) override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        std::vector<COutput> vecOutputs = AvailableCoinsListUnspent(*m_wallet).All();
+        for (const COutput& out : vecOutputs)
+        {
+            CTxDestination address;
+            const CScript& scriptPubKey = out.txout.scriptPubKey;
+            bool fValidAddress = ExtractDestination(scriptPubKey, address, nullptr, true);
+
+            if(fValidAddress && EncodeDestination(address) == qtumAddress && out.txout.nValue)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    bool isMineAddress(const std::string &strAddress) override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        CTxDestination address = DecodeDestination(strAddress);
+        if(!IsValidDestination(address) || !m_wallet->IsMine(address))
+        {
+            return false;
+        }
+        return true;
+    }
+    std::vector<std::string> availableAddresses(bool fIncludeZeroValue) EXCLUSIVE_LOCKS_REQUIRED(m_wallet->cs_wallet)
+    {
+        std::vector<std::string> result;
+        std::vector<COutput> vecOutputs;
+        std::map<std::string, bool> mapAddress;
+
+        if(fIncludeZeroValue)
+        {
+            // Get the user created addresses in from the address book and add them if they are mine
+            for (const auto& item : m_wallet->m_address_book) {
+                if(!m_wallet->IsMine(item.first)) continue;
+                if(item.second.purpose != AddressPurpose::RECEIVE) continue;
+                if(item.second.receive_requests.size() == 0) continue;
+
+                std::string strAddress = EncodeDestination(item.first);
+                if (mapAddress.find(strAddress) == mapAddress.end())
+                {
+                    mapAddress[strAddress] = true;
+                    result.push_back(strAddress);
+                }
+            }
+
+            // Get all coins including the 0 values
+            CoinFilterParams params;
+            params.min_amount = 0;
+            vecOutputs = AvailableCoinsListUnspent(*m_wallet, nullptr, params).All();
+        }
+        else
+        {
+            // Get all spendable coins
+            vecOutputs = AvailableCoinsListUnspent(*m_wallet).All();
+        }
+
+        // Extract all coins addresses and add them in the list
+        for (const COutput& out : vecOutputs)
+        {
+            CTxDestination address;
+            const CScript& scriptPubKey = out.txout.scriptPubKey;
+            bool fValidAddress = ExtractDestination(scriptPubKey, address, nullptr, true);
+
+            if (!fValidAddress || !m_wallet->IsMine(address)) continue;
+
+            std::string strAddress = EncodeDestination(address);
+            if (mapAddress.find(strAddress) == mapAddress.end())
+            {
+                mapAddress[strAddress] = true;
+                result.push_back(strAddress);
+            }
+        }
+
+        return result;
+    }
+    bool tryGetAvailableAddresses(std::vector<std::string> &spendableAddresses, std::vector<std::string> &allAddresses, bool &includeZeroValue) override
+    {
+        TRY_LOCK(m_wallet->cs_wallet, locked_wallet);
+        if (!locked_wallet) {
+            return false;
+        }
+
+        spendableAddresses = availableAddresses(false);
+        allAddresses = availableAddresses(true);
+        int num_blocks = m_wallet->GetLastBlockHeight();
+        includeZeroValue = num_blocks >= Params().GetConsensus().QIP5Height;
+
+        return true;
+    }
     CoinsList listCoins() override
     {
         LOCK(m_wallet->cs_wallet);
@@ -520,6 +854,7 @@ public:
         auto spk_man = m_wallet->GetScriptPubKeyMan(OutputType::BECH32M, /*internal=*/false);
         return spk_man != nullptr;
     }
+    bool hasDescriptors() override { return m_wallet->IsWalletFlagSet(WALLET_FLAG_DESCRIPTORS); }
     OutputType getDefaultAddressType() override { return m_wallet->m_default_address_type; }
     CAmount getDefaultMaxTxFee() override { return m_wallet->m_default_max_tx_fee; }
     void remove() override
@@ -527,6 +862,145 @@ public:
         RemoveWallet(m_context, m_wallet, /*load_on_start=*/false);
     }
     bool isLegacy() override { return m_wallet->IsLegacy(); }
+    bool addTokenEntry(const TokenInfo &token) override
+    {
+        return m_wallet->AddTokenEntry(MakeTokenInfo(token), true);
+    }
+    bool addTokenTxEntry(const TokenTx& tokenTx, bool fFlushOnClose) override
+    {
+        return m_wallet->AddTokenTxEntry(MakeTokenTx(tokenTx), fFlushOnClose);
+    }
+    bool existTokenEntry(const TokenInfo &token) override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        uint256 hash = MakeTokenInfo(token).GetHash();
+        std::map<uint256, CTokenInfo>::iterator it = m_wallet->mapToken.find(hash);
+
+        return it != m_wallet->mapToken.end();
+    }
+    bool removeTokenEntry(const std::string &sHash) override
+    {
+        uint256 hash = uint256::FromHex(sHash).value_or(uint256::ZERO);
+        return m_wallet->RemoveTokenEntry(hash, true);
+    }
+    std::vector<TokenInfo> getInvalidTokens() override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        std::vector<TokenInfo> listInvalid;
+        for(auto& info : m_wallet->mapToken)
+        {
+            std::string strAddress = info.second.strSenderAddress;
+            CTxDestination address = DecodeDestination(strAddress);
+            if(!m_wallet->IsMine(address))
+            {
+                listInvalid.push_back(MakeWalletTokenInfo(info.second));
+            }
+        }
+
+        return listInvalid;
+    }
+    TokenTx getTokenTx(const uint256& txid) override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        auto mi = m_wallet->mapTokenTx.find(txid);
+        if (mi != m_wallet->mapTokenTx.end()) {
+            return MakeWalletTokenTx(mi->second);
+        }
+        return {};
+    }
+    std::vector<TokenTx> getTokenTxs() override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        std::vector<TokenTx> result;
+        result.reserve(m_wallet->mapTokenTx.size());
+        for (const auto& entry : m_wallet->mapTokenTx) {
+            result.emplace_back(MakeWalletTokenTx(entry.second));
+        }
+        return result;
+    }
+    TokenInfo getToken(const uint256& id) override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        auto mi = m_wallet->mapToken.find(id);
+        if (mi != m_wallet->mapToken.end()) {
+            return MakeWalletTokenInfo(mi->second);
+        }
+        return {};
+    }
+    std::vector<TokenInfo> getTokens() override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        std::vector<TokenInfo> result;
+        result.reserve(m_wallet->mapToken.size());
+        for (const auto& entry : m_wallet->mapToken) {
+            result.emplace_back(MakeWalletTokenInfo(entry.second));
+        }
+        return result;
+    }
+    bool tryGetTokenTxStatus(const uint256& txid, int& block_number, bool& in_mempool, int& num_blocks) override
+    {
+        TRY_LOCK(m_wallet->cs_wallet, locked_wallet);
+        if (!locked_wallet) {
+            return false;
+        }
+        return TokenTxStatus(*m_wallet, txid, block_number, in_mempool, num_blocks);
+    }
+    bool getTokenTxStatus(const uint256& txid, int& block_number, bool& in_mempool, int& num_blocks) override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        return TokenTxStatus(*m_wallet, txid, block_number, in_mempool, num_blocks);
+    }
+    bool getTokenTxDetails(const TokenTx &wtx, uint256& credit, uint256& debit, std::string& tokenSymbol, uint8_t& decimals) override
+    {
+        return m_wallet->GetTokenTxDetails(MakeTokenTx(wtx), credit, debit, tokenSymbol, decimals);
+    }
+    bool isTokenTxMine(const TokenTx &wtx) override
+    {
+        return m_wallet->IsTokenTxMine(MakeTokenTx(wtx));
+    }
+    ContractBookData getContractBook(const std::string& id) override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        auto mi = m_wallet->mapContractBook.find(id);
+        if (mi != m_wallet->mapContractBook.end()) {
+            return MakeContractBook(id, mi->second);
+        }
+        return {};
+    }
+    std::vector<ContractBookData> getContractBooks() override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        std::vector<ContractBookData> result;
+        result.reserve(m_wallet->mapContractBook.size());
+        for (const auto& entry : m_wallet->mapContractBook) {
+            result.emplace_back(MakeContractBook(entry.first, entry.second));
+        }
+        return result;
+    }
+    bool existContractBook(const std::string& id) override
+    {
+        LOCK(m_wallet->cs_wallet);
+
+        auto mi = m_wallet->mapContractBook.find(id);
+        return mi != m_wallet->mapContractBook.end();
+    }
+    bool delContractBook(const std::string& id) override
+    {
+        return m_wallet->DelContractBook(id);
+    }
+    bool cleanTokenTxEntries() override
+    {
+        return m_wallet->CleanTokenTxEntries();
+    }
     std::unique_ptr<Handler> handleUnload(UnloadFn fn) override
     {
         return MakeSignalHandler(m_wallet->NotifyUnload.connect(fn));
@@ -608,13 +1082,19 @@ public:
     //! ChainClient methods
     void registerRpcs() override
     {
-        for (const CRPCCommand& command : GetWalletRPCCommands()) {
-            m_rpc_commands.emplace_back(command.category, command.name, [this, &command](const JSONRPCRequest& request, UniValue& result, bool last_handler) {
-                JSONRPCRequest wallet_request = request;
-                wallet_request.context = &m_context;
-                return command.actor(wallet_request, result, last_handler);
-            }, command.argNames, command.unique_id);
-            m_rpc_handlers.emplace_back(m_context.chain->handleRpc(m_rpc_commands.back()));
+        std::vector<Span<const CRPCCommand>> commands;
+        commands.push_back(GetWalletRPCCommands());
+        commands.push_back(m_context.chain->getContractRPCCommands());
+        commands.push_back(m_context.chain->getMiningRPCCommands());
+        for(size_t i = 0; i < commands.size(); i++) {
+            for (const CRPCCommand& command : commands[i]) {
+                m_rpc_commands.emplace_back(command.category, command.name, [this, &command](const JSONRPCRequest& request, UniValue& result, bool last_handler) {
+                    JSONRPCRequest& wallet_request = (JSONRPCRequest&)request;
+                    wallet_request.context = &m_context;
+                    return command.actor(wallet_request, result, last_handler);
+                }, command.argNames, command.unique_id);
+                m_rpc_handlers.emplace_back(m_context.chain->handleRpc(m_rpc_commands.back()));
+            }
         }
     }
     bool verify() override { return VerifyWallets(m_context); }

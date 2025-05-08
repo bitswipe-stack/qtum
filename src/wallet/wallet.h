@@ -760,6 +760,7 @@ public:
     bool HasAddressStakeScripts(const uint160& keyId, std::map<uint160, bool>* insertAddressStake = nullptr) const;
     void RefreshAddressStakeCache();
     bool GetSuperStaker(CSuperStakerInfo &info, const uint160& stakerAddress) const;
+    void GetStakerAddressBalance(const PKHash& staker, CAmount& balance, CAmount& stake, CAmount& weight) const;
     void RefreshDelegates(bool myDelegates, bool stakerDelegates);
 
     /** Pass this transaction to node for mempool insertion and relay to peers if flag set to true */

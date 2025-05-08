@@ -246,6 +246,15 @@ public:
     //! Return credit amount if transaction input belongs to wallet.
     virtual CAmount getCredit(const CTxOut& txout, wallet::isminefilter filter) = 0;
 
+    //! Check if address have unspent coins
+    virtual bool isUnspentAddress(const std::string& address) = 0;
+
+    //! Check if address is mine
+    virtual bool isMineAddress(const std::string &strAddress) = 0;
+
+    //! Try get available coins addresses
+    virtual bool tryGetAvailableAddresses(std::vector<std::string> &spendableAddresses, std::vector<std::string> &allAddresses, bool &includeZeroValue) = 0;
+
     //! Return AvailableCoins + LockedCoins grouped by wallet address.
     //! (put change in one group with wallet address)
     using CoinsList = std::map<CTxDestination, std::vector<std::tuple<COutPoint, WalletTxOut>>>;
@@ -281,6 +290,9 @@ public:
     // Return whether wallet uses an external signer.
     virtual bool hasExternalSigner() = 0;
 
+    // Return whether wallet uses descriptors.
+    virtual bool hasDescriptors() = 0;
+
     // Get default address type.
     virtual OutputType getDefaultAddressType() = 0;
 
@@ -292,6 +304,60 @@ public:
 
     //! Return whether is a legacy wallet
     virtual bool isLegacy() = 0;
+
+    //! Add wallet token entry.
+    virtual bool addTokenEntry(const TokenInfo &token) = 0;
+
+    //! Add wallet token transaction entry.
+    virtual bool addTokenTxEntry(const TokenTx& tokenTx, bool fFlushOnClose=true) = 0;
+
+    //! Check if exist wallet token entry.
+    virtual bool existTokenEntry(const TokenInfo &token) = 0;
+
+    //! Remove wallet token entry.
+    virtual bool removeTokenEntry(const std::string &sHash) = 0;
+
+    //! Get invalid wallet tokens
+    virtual std::vector<TokenInfo> getInvalidTokens() = 0;
+
+    //! Get token transaction information.
+    virtual TokenTx getTokenTx(const uint256& txid) = 0;
+
+    //! Get list of all wallet token transactions.
+    virtual std::vector<TokenTx> getTokenTxs() = 0;
+
+    //! Get token information.
+    virtual TokenInfo getToken(const uint256& id) = 0;
+
+    //! Get list of all tokens.
+    virtual std::vector<TokenInfo> getTokens() = 0;
+
+    //! Try to get updated status for a particular token transaction, if possible without blocking.
+    virtual bool tryGetTokenTxStatus(const uint256& txid, int& block_number, bool& in_mempool, int& num_blocks) = 0;
+
+    //! Get updated status for a particular token transaction.
+    virtual bool getTokenTxStatus(const uint256& txid, int& block_number, bool& in_mempool, int& num_blocks) = 0;
+
+    //! Get token transaction details
+    virtual bool getTokenTxDetails(const TokenTx &wtx, uint256& credit, uint256& debit, std::string& tokenSymbol, uint8_t& decimals) = 0;
+
+    //! Clean token transaction entries in the wallet
+    virtual bool cleanTokenTxEntries() = 0;
+
+    //! Check if token transaction is mine
+    virtual bool isTokenTxMine(const TokenTx &wtx) = 0;
+
+    //! Get contract book data.
+    virtual ContractBookData getContractBook(const std::string& address) = 0;
+
+    //! Get list of all contract book data.
+    virtual std::vector<ContractBookData> getContractBooks() = 0;
+
+    //! Check if exist contract book.
+    virtual bool existContractBook(const std::string& address) = 0;
+
+    //! Delete contract book data.
+    virtual bool delContractBook(const std::string& address) = 0;
 
     //! Register handler for unload message.
     using UnloadFn = std::function<void()>;
