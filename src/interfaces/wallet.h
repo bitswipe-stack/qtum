@@ -359,6 +359,111 @@ public:
     //! Delete contract book data.
     virtual bool delContractBook(const std::string& address) = 0;
 
+    //! Set contract book data.
+    virtual bool setContractBook(const std::string& address, const std::string& name, const std::string& abi) = 0;
+
+    //! Restore wallet delegations.
+    virtual uint32_t restoreDelegations() = 0;
+
+    //! Add wallet delegation entry.
+    virtual bool addDelegationEntry(const DelegationInfo &delegation) = 0;
+
+    //! Check if exist wallet delegation entry.
+    virtual bool existDelegationEntry(const DelegationInfo &delegation) = 0;
+
+    //! Get delegation information.
+    virtual DelegationInfo getDelegation(const uint256& id) = 0;
+
+    //! Get delegation information from contract.
+    virtual DelegationInfo getDelegationContract(const std::string &sHash, bool& validated, bool& contractRet) = 0;
+
+    //! Get delegation details for address.
+    virtual DelegationDetails getDelegationDetails(const std::string &sAddress) = 0;
+
+    //! Get list of all delegations.
+    virtual std::vector<DelegationInfo> getDelegations() = 0;
+
+    //! Remove wallet delegation entry.
+    virtual bool removeDelegationEntry(const std::string &sHash) = 0;
+
+    //! Set delegation entry removed.
+    virtual bool setDelegationRemoved(const std::string &sHash, const std::string &sTxid) = 0;
+
+    //! Restore wallet super stakers.
+    virtual uint32_t restoreSuperStakers() = 0;
+
+    //! Exist super staker.
+    virtual bool existSuperStaker(const std::string &sAddress) = 0;
+
+    //! Get super staker information.
+    virtual SuperStakerInfo getSuperStaker(const uint256& id) = 0;
+
+    //! Get super staker recommended config.
+    virtual SuperStakerInfo getSuperStakerRecommendedConfig() = 0;
+
+    //! Get list of all super stakers.
+    virtual std::vector<SuperStakerInfo> getSuperStakers() = 0;
+
+    //! Add wallet super staker entry.
+    virtual bool addSuperStakerEntry(const SuperStakerInfo &superStaker) = 0;
+
+    //! Remove wallet super staker entry.
+    virtual bool removeSuperStakerEntry(const std::string &sHash) = 0;
+
+    //! Get the super staker weight
+    virtual uint64_t getSuperStakerWeight(const uint256& id) = 0;
+
+    //! Is super staker staking
+    virtual bool isSuperStakerStaking(const uint256& id, CAmount& delegationsWeight) = 0;
+
+    //! Try get the stake weight
+    virtual bool tryGetStakeWeight(uint64_t& nWeight) = 0;
+
+    //! Get the stake weight
+    virtual uint64_t getStakeWeight() = 0;
+
+    //! Get last coin stake search interval
+    virtual int64_t getLastCoinStakeSearchInterval() = 0;
+
+    //! Get wallet unlock for staking only
+    virtual bool getWalletUnlockStakingOnly() = 0;
+
+    //! Set wallet unlock for staking only
+    virtual void setWalletUnlockStakingOnly(bool unlock) = 0;
+
+    //! Set wallet enabled for staking
+    virtual void setEnabledStaking(bool enabled) = 0;
+
+    //! Get wallet enabled for staking
+    virtual bool getEnabledStaking() = 0;
+
+    //! Get wallet enabled for super staking
+    virtual bool getEnabledSuperStaking() = 0;
+
+    //! Get a delegation from super staker.
+    virtual DelegationStakerInfo getDelegationStaker(const uint160& id) = 0;
+
+    //! Get list of all delegations for super stakers.
+    virtual std::vector<DelegationStakerInfo> getDelegationsStakers() = 0;
+
+    //! Get staker address balance.
+    virtual bool getStakerAddressBalance(const std::string& staker, CAmount& balance, CAmount& stake, CAmount& weight) = 0;
+
+    //! Get add delegation data to sign.
+    virtual bool getAddDelegationData(const std::string& psbt, std::map<int, SignDelegation>& signData, std::string& error) = 0;
+
+    //! Set signed add delegation data.
+    virtual bool setAddDelegationData(std::string& psbt, const std::map<int, SignDelegation>& signData, std::string& error) = 0;
+
+    //! Set staker ledger id.
+    virtual void setStakerLedgerId(const std::string& ledgerId) = 0;
+
+    //! Get staker ledger id.
+    virtual std::string getStakerLedgerId() = 0;
+
+    //! Get HD key path
+    virtual bool getHDKeyPath(const CTxDestination& dest, std::string& hdkeypath) = 0;
+
     //! Register handler for unload message.
     using UnloadFn = std::function<void()>;
     virtual std::unique_ptr<Handler> handleUnload(UnloadFn fn) = 0;

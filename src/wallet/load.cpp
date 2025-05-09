@@ -169,6 +169,7 @@ void StartWallets(WalletContext& context)
 void FlushWallets(WalletContext& context)
 {
     for (const std::shared_ptr<CWallet>& pwallet : GetWallets(context)) {
+        pwallet->StopStake();
         pwallet->Flush();
     }
 }
