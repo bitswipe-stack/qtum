@@ -54,6 +54,7 @@
 #include <libethereum/ChainParams.h>
 #include <libethereum/LastBlockHashesFace.h>
 #include <libethashseal/GenesisInfo.h>
+#include <script/solver.h>
 #include <qtum/storageresults.h>
 
 
@@ -142,12 +143,20 @@ extern const std::vector<std::string> CHECKLEVEL_DOC;
 /** The set of all seen COutPoint entries for proof of stake. */
 extern std::set<std::pair<COutPoint, unsigned int>> setStakeSeen;
 
+int64_t FutureDrift(uint32_t nTime, int nHeight, const Consensus::Params& consensusParams);
+
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams);
 
 bool FatalError(kernel::Notifications& notifications, BlockValidationState& state, const bilingual_str& message);
 
 /** Prune block files up to a given height */
 void PruneBlockFilesManual(Chainstate& active_chainstate, int nManualPruneHeight);
+
+/** Check if the transaction is confirmed in N previous blocks */
+bool IsConfirmedInNPrevBlocks(const CDiskTxPos& txindex, const CBlockIndex* pindexFrom, int nMaxDepth, int& nActualDepth);
+
+/** Check if the header proof is valid */
+bool CheckHeaderProof(const CBlockHeader& block, const Consensus::Params& consensusParams, Chainstate& chainstate);
 
 /**
 * Validation result for a transaction evaluated by MemPoolAccept (single or package).
@@ -452,6 +461,10 @@ bool CheckIndexProof(const CBlockIndex& block, const Consensus::Params& consensu
 
 /** Context-independent validity checks */
 bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+bool CheckFirstCoinstakeOutput(const CBlock& block);
+bool GetBlockPublicKey(const CBlock& block, std::vector<unsigned char>& vchPubKey);
+bool GetBlockDelegation(const CBlock& block, const uint160& staker, uint160& address, uint8_t& fee, CCoinsViewCache& view, Chainstate& chainstate);
+bool CheckCanonicalBlockSignature(const CBlockHeader* pblock);
 
 /** Check a block is completely valid from start to finish (only works on top of our current best block) */
 bool TestBlockValidity(BlockValidationState& state,
@@ -501,11 +514,116 @@ bool GetSpentCoinFromBlock(const CBlockIndex* pindex, COutPoint prevout, Coin* c
 
 bool GetSpentCoinFromMainChain(const CBlockIndex* pforkPrev, COutPoint prevoutStake, Coin* coin, Chainstate& chainstate);
 
+unsigned int GetContractScriptFlags(int nHeight, const Consensus::Params& consensusparams);
+
 std::vector<ResultExecute> CallContract(const dev::Address& addrContract, std::vector<unsigned char> opcode, Chainstate& chainstate, const dev::Address& sender = dev::Address(), uint64_t gasLimit=0, CAmount nAmount=0);
+
+bool CheckMinGasPrice(std::vector<EthTransactionParams>& etps, const uint64_t& minGasPrice);
 
 void writeVMlog(const std::vector<ResultExecute>& res, CChain& chain, const CTransaction& tx = CTransaction(), const CBlock& block = CBlock());
 
 std::string exceptedMessage(const dev::eth::TransactionException& excepted, const dev::bytes& output);
+
+struct EthTransactionParams{
+    VersionVM version;
+    dev::u256 gasLimit;
+    dev::u256 gasPrice;
+    valtype code;
+    dev::Address receiveAddress;
+
+    bool operator!=(EthTransactionParams etp){
+        if(this->version.toRaw() != etp.version.toRaw() || this->gasLimit != etp.gasLimit ||
+        this->gasPrice != etp.gasPrice || this->code != etp.code ||
+        this->receiveAddress != etp.receiveAddress)
+            return true;
+        return false;
+    }
+};
+
+struct ByteCodeExecResult{
+    uint64_t usedGas = 0;
+    CAmount refundSender = 0;
+    std::vector<CTxOut> refundOutputs;
+    std::vector<CTransaction> valueTransfers;
+};
+
+class QtumTxConverter{
+
+public:
+
+    QtumTxConverter(CTransaction tx, Chainstate& _chainstate, const CTxMemPool* _mempool, CCoinsViewCache* v = NULL, const std::vector<CTransactionRef>* blockTxs = NULL, unsigned int flags = SCRIPT_EXEC_BYTE_CODE) : txBit(tx), view(v), blockTransactions(blockTxs), sender(false), nFlags(flags), chainstate(_chainstate), mempool(_mempool){}
+
+    bool extractionQtumTransactions(ExtractQtumTX& qtumTx);
+
+private:
+
+    bool receiveStack(const CScript& scriptPubKey);
+
+    bool parseEthTXParams(EthTransactionParams& params);
+
+    QtumTransaction createEthTX(const EthTransactionParams& etp, const uint32_t nOut);
+
+    size_t correctedStackSize(size_t size);
+
+    const CTransaction txBit;
+    const CCoinsViewCache* view;
+    std::vector<valtype> stack;
+    opcodetype opcode;
+    const std::vector<CTransactionRef> *blockTransactions;
+    bool sender;
+    dev::Address refundSender;
+    unsigned int nFlags;
+    Chainstate& chainstate;
+    const CTxMemPool* mempool;
+};
+
+class LastHashes: public dev::eth::LastBlockHashesFace
+{
+public:
+    explicit LastHashes();
+
+    void set(CBlockIndex const* tip);
+
+    dev::h256s precedingHashes(dev::h256 const&) const override;
+
+    void clear() override;
+
+private:
+    dev::h256s m_lastHashes;
+};
+
+class ByteCodeExec {
+
+public:
+
+    ByteCodeExec(const CBlock& _block, std::vector<QtumTransaction> _txs, const uint64_t _blockGasLimit, CBlockIndex* _pindex, CChain& _chain) : txs(_txs), block(_block), blockGasLimit(_blockGasLimit), pindex(_pindex), chain(_chain) {}
+
+    bool performByteCode(dev::eth::Permanence type = dev::eth::Permanence::Committed);
+
+    bool processingResults(ByteCodeExecResult& result);
+
+    std::vector<ResultExecute>& getResult(){ return result; }
+
+private:
+
+    dev::eth::EnvInfo BuildEVMEnvironment();
+
+    dev::Address EthAddrFromScript(const CScript& scriptIn);
+
+    std::vector<QtumTransaction> txs;
+
+    std::vector<ResultExecute> result;
+
+    const CBlock& block;
+
+    const uint64_t blockGasLimit;
+
+    CBlockIndex* pindex;
+
+    LastHashes lastHashes;
+
+    CChain& chain;
+};
 
 enum DisconnectResult
 {
@@ -789,6 +907,7 @@ public:
         EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
     bool ConnectBlock(const CBlock& block, BlockValidationState& state, CBlockIndex* pindex,
                       CCoinsViewCache& view, bool fJustCheck = false) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool UpdateHashProof(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, CBlockIndex* pindex, CCoinsViewCache& view);
 
     // Apply the effects of a block disconnection on the UTXO set.
     bool DisconnectTip(BlockValidationState& state, DisconnectedBlockTransactions* disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
@@ -826,6 +945,8 @@ public:
     void PruneBlockIndexCandidates();
 
     void ClearBlockIndexCandidates() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+
+    bool RemoveBlockIndex(CBlockIndex *pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     /** Find the last common block of this chain and a locator. */
     const CBlockIndex* FindForkInGlobalIndex(const CBlockLocator& locator) const EXCLUSIVE_LOCKS_REQUIRED(cs_main);
