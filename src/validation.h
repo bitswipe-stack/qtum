@@ -397,10 +397,13 @@ private:
     bool cacheStore;
     PrecomputedTransactionData *txdata;
     SignatureCache* m_signature_cache;
+    int nOut;
 
 public:
     CScriptCheck(const CTxOut& outIn, const CTransaction& txToIn, SignatureCache& signature_cache, unsigned int nInIn, unsigned int nFlagsIn, bool cacheIn, PrecomputedTransactionData* txdataIn) :
-        m_tx_out(outIn), ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), txdata(txdataIn), m_signature_cache(&signature_cache) { }
+        m_tx_out(outIn), ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), txdata(txdataIn), m_signature_cache(&signature_cache), nOut(-1) { }
+    CScriptCheck(const CTransaction& txToIn, SignatureCache& signature_cache, int nOutIn, unsigned int nFlagsIn, bool cacheIn, PrecomputedTransactionData* txdataIn) :
+        ptxTo(&txToIn), nIn(0), nFlags(nFlagsIn), cacheStore(cacheIn), txdata(txdataIn), m_signature_cache(&signature_cache), nOut(nOutIn){ }
 
     CScriptCheck(const CScriptCheck&) = delete;
     CScriptCheck& operator=(const CScriptCheck&) = delete;
@@ -408,6 +411,8 @@ public:
     CScriptCheck& operator=(CScriptCheck&&) = default;
 
     std::optional<std::pair<ScriptError, std::string>> operator()();
+
+    bool checkOutput() const { return nOut > -1; }
 };
 
 // CScriptCheck is used a lot in std::vector, make sure that's efficient
