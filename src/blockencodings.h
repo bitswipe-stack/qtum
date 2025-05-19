@@ -147,7 +147,7 @@ public:
     using CheckBlockFn = std::function<bool(const CBlock&, BlockValidationState&, const Consensus::Params&, Chainstate& chainstate, bool, bool, bool)>;
     CheckBlockFn m_check_block_mock{nullptr};
 
-    explicit PartiallyDownloadedBlock(CTxMemPool* poolIn) : pool(poolIn) {}
+    explicit PartiallyDownloadedBlock(CTxMemPool* poolIn, ChainstateManager* _chainman) : pool(poolIn), chainman(_chainman) {}
 
     // extra_txn is a list of extra orphan/conflicted/etc transactions to look at
     ReadStatus InitData(const CBlockHeaderAndShortTxIDs& cmpctblock, const std::vector<CTransactionRef>& extra_txn);
