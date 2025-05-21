@@ -11,6 +11,7 @@
 #include <primitives/block.h>
 #include <txmempool.h>
 #include <util/feefrac.h>
+#include <validation.h>
 
 #include <memory>
 #include <optional>
@@ -28,6 +29,9 @@ class CChainParams;
 class CScript;
 class Chainstate;
 class ChainstateManager;
+#ifdef ENABLE_WALLET
+namespace wallet { class CWallet; };
+#endif
 
 namespace Consensus { struct Params; };
 
@@ -127,6 +131,65 @@ struct modifiedentry_iter {
     }
 };
 
+// This related to the calculation in CompareTxMemPoolEntryByAncestorFeeOrGasPrice,
+// except operating on CTxMemPoolModifiedEntry.
+// TODO: refactor to avoid duplication of this logic.
+struct CompareModifiedEntry {
+    bool operator()(const CTxMemPoolModifiedEntry &a, const CTxMemPoolModifiedEntry &b) const
+    {
+        int fAHasCreateOrCall = a.iter->GetTx().GetCreateOrCall();
+        int fBHasCreateOrCall = b.iter->GetTx().GetCreateOrCall();
+
+        // If either of the two entries that we are comparing has a contract scriptPubKey, the comparison here takes precedence
+        if(fAHasCreateOrCall || fBHasCreateOrCall) {
+
+            // Prioritze non-contract txs
+            if((fAHasCreateOrCall > CTransaction::OpNone) != (fBHasCreateOrCall > CTransaction::OpNone)) {
+                return fAHasCreateOrCall > CTransaction::OpNone ? false : true;
+            }
+
+            // Prioritze create contract txs over send to contract txs
+            if((fAHasCreateOrCall > CTransaction::OpNone) && (fBHasCreateOrCall > CTransaction::OpNone) &&
+                    (fAHasCreateOrCall != fBHasCreateOrCall) && (fAHasCreateOrCall == CTransaction::OpCall || fBHasCreateOrCall == CTransaction::OpCall)){
+                return fAHasCreateOrCall == CTransaction::OpCall ? false : true;
+            }
+
+            // Prioritize the contract txs that have the least number of ancestors
+            // The reason for this is that otherwise it is possible to send one tx with a
+            // high gas limit but a low gas price which has a child with a low gas limit but a high gas price
+            // Without this condition that transaction chain would get priority in being included into the block.
+            // The two next checks are to see if all our ancestors have been added.
+            if((int64_t) a.nSizeWithAncestors == a.iter->GetTxSize() && (int64_t) b.nSizeWithAncestors != b.iter->GetTxSize()) {
+                return true;
+            }
+
+            if((int64_t) b.nSizeWithAncestors == b.iter->GetTxSize() && (int64_t) a.nSizeWithAncestors != a.iter->GetTxSize()) {
+                return false;
+            }
+
+            // Otherwise, prioritize the contract tx with the highest (minimum among its outputs) gas price
+            // The reason for using the gas price of the output that sets the minimum gas price is that
+            // otherwise it may be possible to game the prioritization by setting a large gas price in one output
+            // that does no execution, while the real execution has a very low gas price
+            if(a.iter->GetMinGasPrice() != b.iter->GetMinGasPrice()) {
+                return a.iter->GetMinGasPrice() > b.iter->GetMinGasPrice();
+            }
+
+            // Otherwise, prioritize the tx with the min size
+            if(a.iter->GetTxSize() != b.iter->GetTxSize()) {
+                return a.iter->GetTxSize() < b.iter->GetTxSize();
+            }
+
+            // If the txs are identical in their minimum gas prices and tx size
+            // order based on the tx hash for consistency.
+            return CompareIteratorByHash()(a.iter, b.iter);
+        }
+
+        // If neither of the txs we are comparing are contract txs, use the standard comparison based on ancestor fees / ancestor size
+        return CompareTxMemPoolEntryByAncestorFee()(a, b);
+    }
+};
+
 // A comparator that sorts transactions based on number of ancestors.
 // This is sufficient to sort an ancestor package in an order that is valid
 // to appear in a block.
@@ -149,9 +212,9 @@ struct CTxMemPoolModifiedEntry_Indices final : boost::multi_index::indexed_by<
     // sorted by modified ancestor fee rate
     boost::multi_index::ordered_non_unique<
         // Reuse same tag from CTxMemPool's similar index
-        boost::multi_index::tag<ancestor_score>,
+        boost::multi_index::tag<ancestor_score_or_gas_price>,
         boost::multi_index::identity<CTxMemPoolModifiedEntry>,
-        CompareTxMemPoolEntryByAncestorFee
+        CompareModifiedEntry
     >
 >
 {};
@@ -162,7 +225,7 @@ typedef boost::multi_index_container<
 > indexed_modified_transaction_set;
 
 typedef indexed_modified_transaction_set::nth_index<0>::type::iterator modtxiter;
-typedef indexed_modified_transaction_set::index<ancestor_score>::type::iterator modtxscoreiter;
+typedef indexed_modified_transaction_set::index<ancestor_score_or_gas_price>::type::iterator modtxscoreiter;
 
 struct update_for_parent_inclusion
 {
@@ -199,11 +262,14 @@ private:
     const CChainParams& chainparams;
     const CTxMemPool* const m_mempool;
     Chainstate& m_chainstate;
+#ifdef ENABLE_WALLET
+    wallet::CWallet *pwallet = 0;
+#endif
 
 public:
     struct Options : BlockCreateOptions {
         // Configuration parameters for the block size
-        size_t nBlockMaxWeight{DEFAULT_BLOCK_MAX_WEIGHT};
+        mutable size_t nBlockMaxWeight{DEFAULT_BLOCK_MAX_WEIGHT};
         CFeeRate blockMinFeeRate{DEFAULT_BLOCK_MIN_TX_FEE};
         // Whether to call TestBlockValidity() at the end of CreateNewBlock().
         bool test_block_validity{true};
@@ -211,6 +277,20 @@ public:
     };
 
     explicit BlockAssembler(Chainstate& chainstate, const CTxMemPool* mempool, const Options& options);
+
+///////////////////////////////////////////// // qtum
+    ByteCodeExecResult bceResult;
+    uint64_t minGasPrice = 1;
+    uint64_t hardBlockGasLimit;
+    uint64_t softBlockGasLimit;
+    uint64_t txGasLimit;
+/////////////////////////////////////////////
+
+    // The original constructed reward tx (either coinbase or coinstake) without gas refund adjustments
+    CMutableTransaction originalRewardTx; // qtum
+
+    //When GetAdjustedTime() exceeds this, no more transactions will attempt to be added
+    int32_t nTimeLimit;
 
     /** Construct a new block template */
     std::unique_ptr<CBlockTemplate> CreateNewBlock();
@@ -229,6 +309,8 @@ private:
     /** Add a tx to the block */
     void AddToBlock(CTxMemPool::txiter iter);
 
+    bool AttemptToAddContractToBlock(CTxMemPool::txiter iter, uint64_t minGasPrice, CBlock* pblock);
+
     // Methods for how to add transactions to a block.
     /** Add transactions based on feerate including unconfirmed ancestors
       * Increments nPackagesSelected / nDescendantsUpdated with corresponding
@@ -238,6 +320,8 @@ private:
     */
     void addPackageTxs(int& nPackagesSelected, int& nDescendantsUpdated) EXCLUSIVE_LOCKS_REQUIRED(!m_mempool->cs);
 
+    /** Rebuild the coinbase/coinstake transaction to account for new gas refunds **/
+    void RebuildRefundTransaction(CBlock* pblock);
     // helper functions for addPackageTxs()
     /** Remove confirmed (inBlock) entries from given set */
     void onlyUnconfirmed(CTxMemPool::setEntries& testSet);
@@ -251,6 +335,12 @@ private:
     /** Sort the package in an order that is valid to appear in a block */
     void SortForBlock(const CTxMemPool::setEntries& package, std::vector<CTxMemPool::txiter>& sortedEntries);
 };
+
+#ifdef ENABLE_WALLET
+/** Generate a new block, without valid proof-of-work */
+void StakeQtums(bool fStake, wallet::CWallet *pwallet);
+void RefreshDelegates(wallet::CWallet *pwallet, bool myDelegates, bool stakerDelegates);
+#endif
 
 /**
  * Get the minimum time a miner should use in the next block. This always
@@ -266,6 +356,9 @@ void RegenerateCommitments(CBlock& block, ChainstateManager& chainman);
 
 /** Apply -blockmintxfee and -blockmaxweight options from ArgsManager to BlockAssembler options. */
 void ApplyArgsManOptions(const ArgsManager& gArgs, BlockAssembler::Options& options);
+
+/** Check if staking is enabled */
+bool CanStake();
 } // namespace node
 
 #endif // BITCOIN_NODE_MINER_H
