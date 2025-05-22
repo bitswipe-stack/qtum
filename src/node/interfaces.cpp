@@ -434,11 +434,13 @@ public:
     }
     uint64_t getNetworkStakeWeight() override
     {
-        return {};
+        LOCK(::cs_main);
+        return GetPoSKernelPS(chainman());
     }
     double getEstimatedAnnualROI() override
     {
-        return {};
+        LOCK(::cs_main);
+        return GetEstimatedAnnualROI(chainman());
     }
     int64_t getMoneySupply() override
     {
@@ -447,7 +449,7 @@ public:
     }
     double getPoSKernelPS() override
     {
-        return {};
+        return GetPoSKernelPS(chainman());
     }
     std::unique_ptr<Handler> handleInitMessage(InitMessageFn fn) override
     {
@@ -970,7 +972,13 @@ public:
     }
     bool getUnspentOutput(const COutPoint& output, Coin& coin) override
     {
-        return {};
+        LOCK(::cs_main);
+        auto coinIn = chainman().ActiveChainstate().CoinsTip().GetCoin(output);
+        if (coinIn.has_value()) {
+            coin = std::move(*coinIn);
+            return true;
+        }
+        return false;
     }
     CCoinsViewCache& getCoinsTip() override
     {
@@ -983,29 +991,35 @@ public:
     }
     CAmount getTxGasFee(const CMutableTransaction& tx) override
     {
-        return {};
+        return GetTxGasFee(tx, mempool(), chainman().ActiveChainstate());
     }
 #ifdef ENABLE_WALLET
     void startStake(wallet::CWallet& wallet) override
     {
+        if (node::CanStake()) 
+        {
+            StartStake(wallet);
+        }
     }
     void stopStake(wallet::CWallet& wallet) override
     {
+        StopStake(wallet);
     }
     uint64_t getStakeWeight(const wallet::CWallet& wallet, uint64_t* pStakerWeight, uint64_t* pDelegateWeight) override
     {
-        return {};
+        return GetStakeWeight(wallet, pStakerWeight, pDelegateWeight);
     }
     void refreshDelegates(wallet::CWallet *pwallet, bool myDelegates, bool stakerDelegates) override
     {
+        RefreshDelegates(pwallet, myDelegates, stakerDelegates);
     }
     Span<const CRPCCommand> getContractRPCCommands() override
     {
-        return {};
+        return wallet::GetContractRPCCommands();
     }
     Span<const CRPCCommand> getMiningRPCCommands() override
     {
-        return {};
+        return wallet::GetMiningRPCCommands();
     }
 #endif
     bool getDelegation(const uint160& address, Delegation& delegation) override
@@ -1138,7 +1152,7 @@ public:
     {
         BlockAssembler::Options assemble_options{options};
         ApplyArgsManOptions(*Assert(m_node.args), assemble_options);
-        return std::make_unique<BlockTemplateImpl>(BlockAssembler{chainman().ActiveChainstate(), context()->mempool.get(), assemble_options}.CreateNewBlock(), m_node);
+        return std::make_unique<BlockTemplateImpl>(BlockAssembler{chainman().ActiveChainstate(), context()->mempool.get(), assemble_options}.CreateNewBlock(fProofOfStake, pTotalFees, nTime, nTimeLimit), m_node);
     }
 
     NodeContext* context() override { return &m_node; }
