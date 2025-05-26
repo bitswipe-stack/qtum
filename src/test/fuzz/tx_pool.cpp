@@ -20,6 +20,7 @@
 #include <util/translation.h>
 #include <validation.h>
 #include <validationinterface.h>
+#include <chainparams.h>
 
 using node::BlockAssembler;
 using node::NodeContext;
@@ -47,11 +48,12 @@ void initialize_tx_pool()
 
     BlockAssembler::Options options;
     options.coinbase_output_script = P2WSH_OP_TRUE;
+    int coinbaseMaturity = Params().GetConsensus().CoinbaseMaturity(0);
 
-    for (int i = 0; i < 2 * COINBASE_MATURITY; ++i) {
+    for (int i = 0; i < 2 * coinbaseMaturity; ++i) {
         COutPoint prevout{MineBlock(g_setup->m_node, options)};
         // Remember the txids to avoid expensive disk access later on
-        auto& outpoints = i < COINBASE_MATURITY ?
+        auto& outpoints = i < coinbaseMaturity ?
                               g_outpoints_coinbase_init_mature :
                               g_outpoints_coinbase_init_immature;
         outpoints.push_back(prevout);
@@ -98,7 +100,7 @@ void Finish(FuzzedDataProvider& fuzzed_data_provider, MockedTxPool& tx_pool, Cha
     WITH_LOCK(::cs_main, tx_pool.check(chainstate.CoinsTip(), chainstate.m_chain.Height() + 1));
     {
         BlockAssembler::Options options;
-        options.nBlockMaxWeight = fuzzed_data_provider.ConsumeIntegralInRange(0U, MAX_BLOCK_WEIGHT);
+        options.nBlockMaxWeight = fuzzed_data_provider.ConsumeIntegralInRange(0U, dgpMaxBlockWeight);
         options.blockMinFeeRate = CFeeRate{ConsumeMoney(fuzzed_data_provider, /*max=*/COIN)};
         auto assembler = BlockAssembler{chainstate, &tx_pool, options};
         auto block_template = assembler.CreateNewBlock();
@@ -207,7 +209,8 @@ FUZZ_TARGET(tx_pool_standard, .init = initialize_tx_pool)
     outpoints_rbf = outpoints_supply;
 
     // The sum of the values of all spendable outpoints
-    constexpr CAmount SUPPLY_TOTAL{COINBASE_MATURITY * 50 * COIN};
+    int coinbaseMaturity = Params().GetConsensus().CoinbaseMaturity(0);
+    const CAmount SUPPLY_TOTAL{coinbaseMaturity * 50 * COIN};
 
     SetMempoolConstraints(*node.args, fuzzed_data_provider);
     auto tx_pool_{MakeMempool(fuzzed_data_provider, node)};

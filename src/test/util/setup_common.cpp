@@ -229,6 +229,25 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, TestOpts opts)
         m_node.validation_signals = std::make_unique<ValidationSignals>(std::make_unique<SerialTaskRunner>(*m_node.scheduler));
     }
 
+////////////////////////////////////////////////////////////// qtum
+    dev::eth::NoProof::init();		
+    std::filesystem::path pathTemp = fs::temp_directory_path() / strprintf("test_qtum_%lu_%i", (unsigned long)GetTime(), (int)(g_rng_temp_path.randrange<unsigned>(100000)));
+    std::filesystem::create_directories(pathTemp);
+    const dev::h256 hashDB(dev::sha3(dev::rlp("")));
+    globalState = std::unique_ptr<QtumState>(new QtumState(dev::u256(0), QtumState::openDB(pathTemp.string(), hashDB, dev::WithExisting::Trust), pathTemp.string(), dev::eth::BaseState::Empty));
+    dev::eth::ChainParams cp(chainparams.EVMGenesisInfo());
+    cp.EIP150ForkBlock = 0xffffffffffffffff;
+    cp.EIP158ForkBlock = 0xffffffffffffffff;
+    cp.byzantiumForkBlock = 0xffffffffffffffff;
+    cp.constantinopleForkBlock = 0xffffffffffffffff;
+    cp.constantinopleFixForkBlock = 0xffffffffffffffff;
+    globalSealEngine = std::unique_ptr<dev::eth::SealEngineFace>(cp.createSealEngine());
+    globalState->populateFrom(cp.genesisState);
+    globalState->setRootUTXO(uintToh256(chainparams.GenesisBlock().hashUTXORoot));
+    globalState->db().commit();
+    globalState->dbUtxo().commit();
+    pstorageresult.reset(new StorageResults(pathTemp.string()));
+//////////////////////////////////////////////////////////////
 
     bilingual_str error{};
     m_node.mempool = std::make_unique<CTxMemPool>(MemPoolOptionsForTest(m_node), error);
