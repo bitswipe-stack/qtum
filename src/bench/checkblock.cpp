@@ -14,6 +14,7 @@
 #include <streams.h>
 #include <util/chaintype.h>
 #include <validation.h>
+#include <test/util/setup_common.h>
 
 #include <cassert>
 #include <cstddef>
