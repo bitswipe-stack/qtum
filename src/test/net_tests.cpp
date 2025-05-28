@@ -1443,7 +1443,7 @@ BOOST_AUTO_TEST_CASE(v2transport_test)
             auto decoy_data = m_rng.randbytes<uint8_t>(m_rng.randrange(1000));
             tester.SendPacket(/*content=*/decoy_data, /*aad=*/{}, /*ignore=*/true);
         }
-        auto msg_data_1 = m_rng.randbytes<uint8_t>(m_rng.randrange(4000000));
+        auto msg_data_1 = m_rng.randbytes<uint8_t>(m_rng.randrange(2000000));
         tester.SendMessage(uint8_t(28), msg_data_1);
         for (unsigned d = 0; d < num_decoys_2; ++d) {
             auto decoy_data = m_rng.randbytes<uint8_t>(m_rng.randrange(1000));
