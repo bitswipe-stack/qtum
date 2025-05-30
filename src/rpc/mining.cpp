@@ -166,7 +166,8 @@ static UniValue generateBlocks(ChainstateManager& chainman, Mining& miner, const
 {
     UniValue blockHashes(UniValue::VARR);
     while (nGenerate > 0 && !chainman.m_interrupt) {
-        std::unique_ptr<BlockTemplate> block_template(miner.createNewBlock({ .coinbase_output_script = coinbase_output_script }));
+        int32_t nTimeLimit = TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()) + node::POW_MINER_MAX_TIME;
+        std::unique_ptr<BlockTemplate> block_template(miner.createNewBlock({ .coinbase_output_script = coinbase_output_script }, false, nullptr, 0, nTimeLimit));
         CHECK_NONFATAL(block_template);
 
         std::shared_ptr<const CBlock> block_out;
@@ -414,85 +415,33 @@ static RPCHelpMan generateblock()
     };
 }
 
-static RPCHelpMan getmininginfo()
+static RPCHelpMan getsubsidy()
 {
-    return RPCHelpMan{"getmininginfo",
-                "\nReturns a json object containing mining-related information.",
-                {},
+    return RPCHelpMan{"getsubsidy",
+                "\nReturns subsidy value for the specified value of target.",
+                {
+                    {"height", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Specify block height."},
+                },
                 RPCResult{
-                    RPCResult::Type::OBJ, "", "",
-                    {
-                        {RPCResult::Type::NUM, "blocks", "The current block"},
-                        {RPCResult::Type::NUM, "currentblockweight", /*optional=*/true, "The block weight (including reserved weight for block header, txs count and coinbase tx) of the last assembled block (only present if a block was ever assembled)"},
-                        {RPCResult::Type::NUM, "currentblocktx", /*optional=*/true, "The number of block transactions (excluding coinbase) of the last assembled block (only present if a block was ever assembled)"},
-                        {RPCResult::Type::STR_HEX, "bits", "The current nBits, compact representation of the block difficulty target"},
-                        {RPCResult::Type::NUM, "difficulty", "The current difficulty"},
-                        {RPCResult::Type::STR_HEX, "target", "The current target"},
-                        {RPCResult::Type::NUM, "networkhashps", "The network hashes per second"},
-                        {RPCResult::Type::NUM, "pooledtx", "The size of the mempool"},
-                        {RPCResult::Type::STR, "chain", "current network name (" LIST_CHAIN_NAMES ")"},
-                        {RPCResult::Type::STR_HEX, "signet_challenge", /*optional=*/true, "The block challenge (aka. block script), in hexadecimal (only present if the current network is a signet)"},
-                        {RPCResult::Type::OBJ, "next", "The next block",
-                        {
-                            {RPCResult::Type::NUM, "height", "The next height"},
-                            {RPCResult::Type::STR_HEX, "bits", "The next target nBits"},
-                            {RPCResult::Type::NUM, "difficulty", "The next difficulty"},
-                            {RPCResult::Type::STR_HEX, "target", "The next target"}
-                        }},
-                        (IsDeprecatedRPCEnabled("warnings") ?
-                            RPCResult{RPCResult::Type::STR, "warnings", "any network and blockchain warnings (DEPRECATED)"} :
-                            RPCResult{RPCResult::Type::ARR, "warnings", "any network and blockchain warnings (run with `-deprecatedrpc=warnings` to return the latest warning as a single string)",
-                            {
-                                {RPCResult::Type::STR, "", "warning"},
-                            }
-                            }
-                        ),
-                    }},
+                    RPCResult::Type::NUM, "subsidy", "Subsidy value for the specified target"
+                },
                 RPCExamples{
-                    HelpExampleCli("getmininginfo", "")
-            + HelpExampleRpc("getmininginfo", "")
+                    HelpExampleCli("getsubsidy", "")
+            + HelpExampleRpc("getsubsidy", "")
                 },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     NodeContext& node = EnsureAnyNodeContext(request.context);
-    const CTxMemPool& mempool = EnsureMemPool(node);
     ChainstateManager& chainman = EnsureChainman(node);
-    LOCK(cs_main);
-    const CChain& active_chain = chainman.ActiveChain();
-    CBlockIndex& tip{*CHECK_NONFATAL(active_chain.Tip())};
 
-    UniValue obj(UniValue::VOBJ);
-    obj.pushKV("blocks",           active_chain.Height());
-    if (BlockAssembler::m_last_block_weight) obj.pushKV("currentblockweight", *BlockAssembler::m_last_block_weight);
-    if (BlockAssembler::m_last_block_num_txs) obj.pushKV("currentblocktx", *BlockAssembler::m_last_block_num_txs);
-    obj.pushKV("bits", strprintf("%08x", tip.nBits));
-    obj.pushKV("difficulty", GetDifficulty(tip));
-    obj.pushKV("target", GetTarget(tip, chainman.GetConsensus().powLimit).GetHex());
-    obj.pushKV("networkhashps",    getnetworkhashps().HandleRequest(request));
-    obj.pushKV("pooledtx",         (uint64_t)mempool.size());
-    obj.pushKV("chain", chainman.GetParams().GetChainTypeString());
-
-    UniValue next(UniValue::VOBJ);
-    CBlockIndex next_index;
-    NextEmptyBlockIndex(tip, chainman.GetConsensus(), next_index);
-
-    next.pushKV("height", next_index.nHeight);
-    next.pushKV("bits", strprintf("%08x", next_index.nBits));
-    next.pushKV("difficulty", GetDifficulty(next_index));
-    next.pushKV("target", GetTarget(next_index, chainman.GetConsensus().powLimit).GetHex());
-    obj.pushKV("next", next);
-
-    if (chainman.GetParams().GetChainType() == ChainType::SIGNET) {
-        const std::vector<uint8_t>& signet_challenge =
-            chainman.GetConsensus().signet_challenge;
-        obj.pushKV("signet_challenge", HexStr(signet_challenge));
-    }
-    obj.pushKV("warnings", node::GetWarningsForRpc(*CHECK_NONFATAL(node.warnings), IsDeprecatedRPCEnabled("warnings")));
-    return obj;
+    int nTarget = !request.params[0].isNull() ? request.params[0].getInt<int>() : chainman.ActiveChain().Height();
+    if (nTarget < 0)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range");
+    const Consensus::Params& consensusParams = Params().GetConsensus();
+    return (uint64_t)GetBlockSubsidy(nTarget, consensusParams);
 },
     };
 }
-
 
 // NOTE: Unlike wallet RPC (which use BTC values), mining RPCs follow GBT (BIP 22) in using satoshi amounts
 static RPCHelpMan prioritisetransaction()
@@ -849,7 +798,8 @@ static RPCHelpMan getblocktemplate()
         time_start = GetTime();
 
         // Create new block
-        block_template = miner.createNewBlock();
+        bool fProofOfStake = chainman.ActiveChain().Height() >= Params().GetConsensus().nLastPOWBlock ? true : false;
+        block_template = miner.createNewBlock({}, fProofOfStake);
         CHECK_NONFATAL(block_template);
 
 
@@ -1126,12 +1076,12 @@ void RegisterMiningRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[]{
         {"mining", &getnetworkhashps},
-        {"mining", &getmininginfo},
         {"mining", &prioritisetransaction},
         {"mining", &getprioritisedtransactions},
         {"mining", &getblocktemplate},
         {"mining", &submitblock},
         {"mining", &submitheader},
+        {"mining", &getsubsidy},
 
         {"hidden", &generatetoaddress},
         {"hidden", &generatetodescriptor},
