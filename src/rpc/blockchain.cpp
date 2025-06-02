@@ -1216,6 +1216,230 @@ RPCHelpMan callcontract()
     };
 }
 
+class WaitForLogsParams {
+public:
+    int fromBlock;
+    int toBlock;
+
+    int minconf;
+
+    std::set<dev::h160> addresses;
+    std::vector<boost::optional<dev::h256>> topics;
+
+    // bool wait;
+
+    WaitForLogsParams(const UniValue& params) {
+
+        fromBlock = parseBlockHeight(params[0], 1, -1);
+        toBlock = parseBlockHeight(params[1], -1, -1);
+
+        parseFilter(params[2]);
+        minconf = parseUInt(params[3], 6);
+    }
+
+private:
+    void parseFilter(const UniValue& val) {
+        if (val.isNull()) {
+            return;
+        }
+
+        parseParam(val["addresses"], addresses);
+        parseParam(val["topics"], topics);
+    }
+};
+
+RPCHelpMan waitforlogs()
+{
+    return RPCHelpMan{"waitforlogs",
+                "requires -logevents to be enabled\n"
+                "\nWaits for a new logs and return matching log entries. When the call returns, it also specifies the next block number to start waiting for new logs.\n"
+                "By calling waitforlogs repeatedly using the returned `nextBlock` number, a client can receive a stream of up-to-date log entires.\n"
+                "\nThis call is different from the similarly named `searchlogs`. This call returns individual matching log entries, `searchlogs` returns a transaction receipt if one of the log entries of that transaction matches the filter conditions.\n",
+                {
+                    {"fromblock", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "The block number to start looking for logs."},
+                    {"toblock", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "The block number to stop looking for logs. If null, will wait indefinitely into the future."},
+                    {"filter", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "Filter conditions for logs.",
+                    {
+                        {"addresses", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "An address or a list of addresses to only get logs from particular account(s).",
+                            {
+                                {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED, ""},
+                            },
+                        },
+                        {"topics", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "An array of values from which at least one must appear in the log entries. The order is important, if you want to leave topics out use null, e.g. [null, \"0x00...\"].",
+                            {
+                                {"topic", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED, ""},
+                            },
+                        },
+                    }},
+                    {"minconf", RPCArg::Type::NUM, RPCArg::Default{6}, "Minimal number of confirmations before a log is returned"},
+                },
+                RPCResult{
+                    RPCResult::Type::OBJ, "", "",
+                    {
+                        {RPCResult::Type::ARR, "entries", "Array of matchiing log entries. This may be empty if `filter` removed all entries.",
+                            {
+                                {RPCResult::Type::OBJ, "", "",
+                                    {
+                                        {RPCResult::Type::STR_HEX, "blockHash", "The block hash"},
+                                        {RPCResult::Type::NUM, "blockNumber", "The block number"},
+                                        {RPCResult::Type::STR_HEX, "transactionHash", "The transaction hash"},
+                                        {RPCResult::Type::NUM, "transactionIndex", "The transaction index"},
+                                        {RPCResult::Type::NUM, "outputIndex", "The output index"},
+                                        {RPCResult::Type::STR_HEX, "from", "The from address"},
+                                        {RPCResult::Type::STR_HEX, "to", "The to address"},
+                                        {RPCResult::Type::NUM, "cumulativeGasUsed", "The cumulative gas used"},
+                                        {RPCResult::Type::NUM, "gasUsed", "The gas used"},
+                                        {RPCResult::Type::STR_HEX, "contractAddress", "The contract address"},
+                                        {RPCResult::Type::STR, "excepted", "The thrown exception"},
+                                        {RPCResult::Type::STR, "exceptedMessage", "The thrown exception message"},
+                                        {RPCResult::Type::STR_HEX, "bloom", "Bloom filter for light clients to quickly retrieve related logs"},
+                                        {RPCResult::Type::STR_HEX, "stateRoot", "The hash state root"},
+                                        {RPCResult::Type::STR_HEX, "utxoRoot", "The hash UTXO root"},
+                                        {RPCResult::Type::ARR, "topics", "The topic",
+                                            {{RPCResult::Type::STR_HEX, "topic", "The topic"}}},
+                                        {RPCResult::Type::STR_HEX, "data", "The logged data"},
+                                    }
+                                }
+                            }
+                        },
+                        {RPCResult::Type::NUM, "count", "How many log entries are returned"},
+                        {RPCResult::Type::NUM, "nextblock", "To wait for new log entries haven't seen before, use this number as `fromBlock`"},
+                    }
+                },
+                RPCExamples{
+                    HelpExampleCli("waitforlogs", "") + HelpExampleCli("waitforlogs", "600") + HelpExampleCli("waitforlogs", "600 700") + HelpExampleCli("waitforlogs", "null null")
+                    + HelpExampleCli("waitforlogs", "null null '{ \"addresses\": [ \"12ae42729af478ca92c8c66773a3e32115717be4\" ], \"topics\": [ \"b436c2bf863ccd7b8f63171201efd4792066b4ce8e543dde9c3e9e9ab98e216c\"] }'")
+            + HelpExampleRpc("waitforlogs", "") + HelpExampleRpc("waitforlogs", "600") + HelpExampleRpc("waitforlogs", "600 700") + HelpExampleRpc("waitforlogs", "null null")
+            + HelpExampleRpc("waitforlogs", "null null '{ \"addresses\": [ \"12ae42729af478ca92c8c66773a3e32115717be4\" ], \"topics\": [ \"b436c2bf863ccd7b8f63171201efd4792066b4ce8e543dde9c3e9e9ab98e216c\"] }'")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request_) -> UniValue
+{
+
+    if (!fLogEvents)
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Events indexing disabled");
+
+    // this is a long poll function. force cast to non const pointer
+    JSONRPCRequest& request = (JSONRPCRequest&) request_;
+    if(!request.httpreq)
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "HTTP connection not available");
+
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+
+    WaitForLogsParams params(request.params);
+
+    request.PollStart();
+
+    std::vector<std::vector<uint256>> hashesToBlock;
+
+    int curheight = 0;
+
+    auto& addresses = params.addresses;
+    auto& filterTopics = params.topics;
+
+    while (curheight == 0) {
+        {
+            LOCK(cs_main);
+            curheight = chainman.m_blockman.m_block_tree_db->ReadHeightIndex(params.fromBlock, params.toBlock, params.minconf,
+                    hashesToBlock, addresses, chainman);
+        }
+
+        // if curheight >= fromBlock. Blockchain extended with new log entries. Return next block height to client.
+        //    nextBlock = curheight + 1
+        // if curheight == 0. No log entry found in index. Wait for new block then try again.
+        //    nextBlock = fromBlock
+        // if curheight == -1. Incorrect parameters has entered.
+        //
+        // if curheight advanced, but all filtered out, API should return empty array, but advancing the cursor anyway.
+
+        if (curheight > 0) {
+            break;
+        }
+
+        if (curheight == -1) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Incorrect params");
+        }
+
+        // wait for a new block to arrive
+        {
+            while (true) {
+
+                request.PollPing();
+
+                // TODO: maybe just merge `IsRPCRunning` this into PollAlive
+                if (!request.PollAlive() || !IsRPCRunning()) {
+                    LogPrintf("waitforlogs client disconnected\n");
+                    return NullUniValue;
+                }
+            }
+        }
+    }
+
+    LOCK(cs_main);
+
+    UniValue jsonLogs(UniValue::VARR);
+
+    std::set<uint256> dupes;
+
+    for (const auto& txHashes : hashesToBlock) {
+        for (const auto& txHash : txHashes) {
+
+            if(dupes.find(txHash) != dupes.end()) {
+                continue;
+            }
+            dupes.insert(txHash);
+
+            std::vector<TransactionReceiptInfo> receipts = pstorageresult->getResult(
+                    uintToh256(txHash));
+
+            for (const auto& receipt : receipts) {
+                for (const auto& log : receipt.logs) {
+
+                    bool includeLog = true;
+
+                    if (!filterTopics.empty()) {
+                        for (size_t i = 0; i < filterTopics.size(); i++) {
+                            auto filterTopic = filterTopics[i];
+
+                            if (!filterTopic) {
+                                continue;
+                            }
+
+                            auto filterTopicContent = filterTopic.get();
+                            auto topicContent = log.topics[i];
+
+                            if (topicContent != filterTopicContent) {
+                                includeLog = false;
+                                break;
+                            }
+                        }
+                    }
+
+
+                    if (!includeLog) {
+                        continue;
+                    }
+
+                    UniValue jsonLog(UniValue::VOBJ);
+
+                    assignJSON(jsonLog, receipt);
+                    assignJSON(jsonLog, log, false);
+
+                    jsonLogs.push_back(jsonLog);
+                }
+            }
+        }
+    }
+
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("entries", jsonLogs);
+    result.pushKV("count", (int) jsonLogs.size());
+    result.pushKV("nextblock", curheight + 1);
+
+    return result;
+},
+    };
+}
+
 RPCHelpMan searchlogs()
 {
     return RPCHelpMan{"searchlogs",
@@ -4517,6 +4741,7 @@ void RegisterBlockchainRPCCommands(CRPCTable& t)
         {"blockchain", &listcontracts},
         {"blockchain", &gettransactionreceipt},
         {"blockchain", &searchlogs},
+        {"blockchain", &waitforlogs},
         {"blockchain", &getestimatedannualroi},
         {"blockchain", &getdelegationinfoforaddress},
         {"blockchain", &getdelegationsforstaker},

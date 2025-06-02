@@ -1490,6 +1490,7 @@ RPCHelpMan listlabels();
 #ifdef ENABLE_EXTERNAL_SIGNER
 RPCHelpMan walletdisplayaddress();
 #endif // ENABLE_EXTERNAL_SIGNER
+RPCHelpMan createmultisig();
 
 // backup
 RPCHelpMan dumpprivkey();
@@ -1534,6 +1535,9 @@ RPCHelpMan sendall();
 RPCHelpMan walletprocesspsbt();
 RPCHelpMan walletcreatefundedpsbt();
 RPCHelpMan signrawtransactionwithwallet();
+RPCHelpMan sendmanywithdupes();
+RPCHelpMan splitutxosforaddress();
+RPCHelpMan signrawsendertransactionwithwallet();
 
 // signmessage
 RPCHelpMan signmessage();
@@ -1603,13 +1607,16 @@ Span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &rescanblockchain},
         {"wallet", &send},
         {"wallet", &sendmany},
+        {"wallet", &sendmanywithdupes},
         {"wallet", &sendtoaddress},
+        {"wallet", &splitutxosforaddress},
         {"wallet", &sethdseed},
         {"wallet", &setlabel},
         {"wallet", &settxfee},
         {"wallet", &setwalletflag},
         {"wallet", &signmessage},
         {"wallet", &signrawtransactionwithwallet},
+        {"wallet", &signrawsendertransactionwithwallet},
         {"wallet", &simulaterawtransaction},
         {"wallet", &sendall},
         {"wallet", &unloadwallet},
@@ -1627,6 +1634,7 @@ Span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &listsuperstakercustomvalues},
         {"wallet", &listsuperstakervaluesforaddress},
         {"wallet", &removesuperstakervaluesforaddress},
+        {"util",   &createmultisig},
     };
     return commands;
 }
