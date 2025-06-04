@@ -22,9 +22,6 @@ class CRPCCommand;
 class ChainstateManager;
 class HTTPRequest;
 
-/** Query whether RPC is running */
-bool IsRPCRunning();
-
 class JSONRPCRequestLong : public JSONRPCRequest
 {
 public:

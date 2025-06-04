@@ -831,6 +831,12 @@ RPCHelpMan gettransaction()
             }
 
             request.PollPing();
+
+            UninterruptibleSleep(std::chrono::milliseconds{50});
+
+            if (!request.PollAlive() || !IsRPCRunning()) {
+                return NullUniValue;
+            }
         }
     }
 

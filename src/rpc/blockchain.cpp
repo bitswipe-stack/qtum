@@ -1228,10 +1228,11 @@ public:
 
     // bool wait;
 
-    WaitForLogsParams(const UniValue& params) {
+    WaitForLogsParams(const UniValue& params, Mining& miner) {
 
-        fromBlock = parseBlockHeight(params[0], 1, -1);
-        toBlock = parseBlockHeight(params[1], -1, -1);
+        auto latestblock{CHECK_NONFATAL(miner.getTip()).value()};
+        fromBlock = parseBlockHeight(params[0], latestblock.height + 1, latestblock.height);
+        toBlock = parseBlockHeight(params[1], -1, latestblock.height);
 
         parseFilter(params[2]);
         minconf = parseUInt(params[3], 6);
@@ -1323,9 +1324,11 @@ RPCHelpMan waitforlogs()
     if(!request.httpreq)
         throw JSONRPCError(RPC_INTERNAL_ERROR, "HTTP connection not available");
 
-    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    NodeContext& node = EnsureAnyNodeContext(request.context);
+    ChainstateManager& chainman = EnsureChainman(node);
+    Mining& miner = EnsureMining(node);
 
-    WaitForLogsParams params(request.params);
+    WaitForLogsParams params(request.params, miner);
 
     request.PollStart();
 
@@ -1360,10 +1363,14 @@ RPCHelpMan waitforlogs()
         }
 
         // wait for a new block to arrive
+        auto currentblock{CHECK_NONFATAL(miner.getTip()).value()};
         {
             while (true) {
-
                 request.PollPing();
+                auto latestblock = miner.waitTipChanged(currentblock.hash, std::chrono::milliseconds(1000));
+                if (latestblock.height > currentblock.height) {
+                    break;
+                }
 
                 // TODO: maybe just merge `IsRPCRunning` this into PollAlive
                 if (!request.PollAlive() || !IsRPCRunning()) {

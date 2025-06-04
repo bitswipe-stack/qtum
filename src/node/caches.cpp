@@ -9,6 +9,7 @@
 #include <kernel/caches.h>
 #include <logging.h>
 #include <util/byte_units.h>
+#include <validation.h>
 
 #include <algorithm>
 #include <string>
@@ -29,6 +30,10 @@ CacheSizes CalculateCacheSizes(const ArgsManager& args, size_t n_indexes)
         if (*db_cache < 0) db_cache = 0;
         uint64_t db_cache_bytes = SaturatingLeftShift<uint64_t>(*db_cache, 20);
         total_cache = std::max<size_t>(MIN_DB_CACHE, std::min<uint64_t>(db_cache_bytes, std::numeric_limits<size_t>::max()));
+    }
+    if (args.GetBoolArg("-addrindex", DEFAULT_ADDRINDEX)) {
+        // enable 3/4 of the cache if addressindex and/or spentindex is enabled
+        total_cache = total_cache * 3 / 4;
     }
 
     IndexCacheSizes index_sizes;
