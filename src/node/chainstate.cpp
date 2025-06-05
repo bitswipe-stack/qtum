@@ -21,6 +21,8 @@
 #include <util/time.h>
 #include <util/translation.h>
 #include <validation.h>
+#include <chainparams.h>
+#include <common/args.h>
 
 #include <algorithm>
 #include <cassert>
@@ -124,6 +126,49 @@ static ChainstateLoadResult CompleteChainstateInitialization(
             }
             assert(chainstate->m_chain.Tip() != nullptr);
         }
+    }
+
+    /////////////////////////////////////////////////////////// qtum
+    fGettingValuesDGP = options.getting_values_dgp;
+
+    dev::eth::NoProof::init();
+    fs::path qtumStateDir = gArgs.GetDataDirNet() / "stateQtum";
+    bool fStatus = fs::exists(qtumStateDir);
+    const std::string dirQtum = PathToString(qtumStateDir);
+    const dev::h256 hashDB(dev::sha3(dev::rlp("")));
+    dev::eth::BaseState existsQtumstate = fStatus ? dev::eth::BaseState::PreExisting : dev::eth::BaseState::Empty;
+    globalState = std::unique_ptr<QtumState>(new QtumState(dev::u256(0), QtumState::openDB(dirQtum, hashDB, dev::WithExisting::Trust), dirQtum, existsQtumstate));
+    const CChainParams& chainparams = Params();
+    dev::eth::ChainParams cp(chainparams.EVMGenesisInfo());
+    globalSealEngine = std::unique_ptr<dev::eth::SealEngineFace>(cp.createSealEngine());
+
+    {
+        LOCK(cs_main);
+        CChain& active_chain = chainman.ActiveChain();
+        if(active_chain.Tip() != nullptr){
+        globalState->setRoot(uintToh256(active_chain.Tip()->hashStateRoot));
+        globalState->setRootUTXO(uintToh256(active_chain.Tip()->hashUTXORoot));
+        } else {
+            globalState->setRoot(dev::sha3(dev::rlp("")));
+            globalState->setRootUTXO(uintToh256(chainparams.GenesisBlock().hashUTXORoot));
+            globalState->populateFrom(cp.genesisState);
+        }
+        globalState->db().commit();
+        globalState->dbUtxo().commit();
+    }
+
+    fRecordLogOpcodes = options.record_log_opcodes;
+    fIsVMlogFile = fs::exists(gArgs.GetDataDirNet() / "vmExecLogs.json");
+    ///////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////// // qtum
+    if (fAddressIndex != options.addrindex) {
+        return {ChainstateLoadStatus::FAILURE, _("You need to rebuild the database using -reindex to change -addrindex")};
+    }
+    ///////////////////////////////////////////////////////////////
+    // Check for changed -logevents state
+    if (fLogEvents != options.logevents && !fLogEvents) {
+        return {ChainstateLoadStatus::FAILURE, _("You need to rebuild the database using -reindex to enable -logevents")};
     }
 
     auto chainstates{chainman.GetAll()};
@@ -233,6 +278,10 @@ ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman, const C
     };
 
     LOCK(cs_main);
+
+    CChain& active_chain = chainman.ActiveChain();
+    QtumDGP qtumDGP(globalState.get(), chainman.ActiveChainstate(), fGettingValuesDGP);
+    globalSealEngine->setQtumSchedule(qtumDGP.getGasSchedule(active_chain.Height() + (active_chain.Height()+1 >= chainman.GetConsensus().QIP7Height ? 0 : 1) ));
 
     for (Chainstate* chainstate : chainman.GetAll()) {
         if (!is_coinsview_empty(chainstate)) {

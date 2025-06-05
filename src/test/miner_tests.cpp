@@ -543,7 +543,10 @@ void MinerTestingSetup::TestBasicMining(const CScript& scriptPubKey, const std::
             next->BuildSkip();
             m_node.chainman->ActiveChain().SetTip(*next);
         }
-        BOOST_REQUIRE(mining->createNewBlock(options));
+        int blocktimeDownscaleFactor = consensusParams.BlocktimeDownscaleFactor(m_node.chainman->ActiveChain().Tip()->nHeight + 1);
+        auto pblocktemplate = mining->createNewBlock(options, true);
+        BOOST_REQUIRE(pblocktemplate);
+        BOOST_CHECK(calculateReward(pblocktemplate->getBlock(), *m_node.chainman) == 400000000/blocktimeDownscaleFactor);
         // Extend to a 1427004-long block chain.
         while (m_node.chainman->ActiveChain().Tip()->nHeight < 1427004) {
             CBlockIndex* prev = m_node.chainman->ActiveChain().Tip();
@@ -555,7 +558,10 @@ void MinerTestingSetup::TestBasicMining(const CScript& scriptPubKey, const std::
             next->BuildSkip();
             m_node.chainman->ActiveChain().SetTip(*next);
         }
-        BOOST_REQUIRE(mining->createNewBlock(options));
+        blocktimeDownscaleFactor = consensusParams.BlocktimeDownscaleFactor(m_node.chainman->ActiveChain().Tip()->nHeight + 1);
+        pblocktemplate = mining->createNewBlock(options);
+        BOOST_REQUIRE(pblocktemplate);
+        BOOST_CHECK(calculateReward(pblocktemplate->getBlock(), *m_node.chainman) == 200000000/blocktimeDownscaleFactor);
 
         // invalid p2sh txn in tx_mempool, template creation fails
         tx.vin[0].prevout.hash = txFirst[0]->GetHash();
@@ -789,7 +795,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     BOOST_REQUIRE(mining);
 
     // Note that by default, these tests run with size accounting enabled.
-    CScript scriptPubKey = CScript() << "04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f"_hex << OP_CHECKSIG;
+    CScript scriptPubKey = CScript() << "040d61d8653448c98731ee5fffd303c15e71ec2057b77f11ab3601979728cdaff2d68afbba14e4fa0bc44f2072b0b23ef63717f8cdfbe58dcd33f32b6afe98741a"_hex << OP_CHECKSIG;
     BlockAssembler::Options options;
     options.coinbase_output_script = scriptPubKey;
     std::unique_ptr<BlockTemplate> block_template;
@@ -799,6 +805,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     static_assert(std::size(BLOCKINFO) == 550, "Should have 550 blocks to import");
     int baseheight = 0;
     std::vector<CTransactionRef> txFirst;
+    unsigned int i = 0;
     for (const auto& bi : BLOCKINFO) {
         const int current_height{mining->getTip()->height};
 
@@ -810,8 +817,8 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
         CMutableTransaction txCoinbase(*block.vtx[0]);
         {
             LOCK(cs_main);
-            block.nVersion = VERSIONBITS_TOP_BITS;
-            block.nTime = Assert(m_node.chainman)->ActiveChain().Tip()->GetMedianTimePast()+1;
+            block.nVersion = 4; //use version 4 as we enable BIP34, BIP65 and BIP66 since genesis
+            block.nTime = Assert(m_node.chainman)->ActiveChain().Tip()->GetMedianTimePast()+1+i++;
             txCoinbase.version = 1;
             txCoinbase.vin[0].scriptSig = CScript{} << (current_height + 1) << bi.extranonce;
             txCoinbase.vout.resize(1); // Ignore the (optional) segwit commitment added by CreateNewBlock (as the hardcoded nonces don't account for this)
