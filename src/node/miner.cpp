@@ -116,12 +116,12 @@ void RegenerateCommitments(CBlock& block, ChainstateManager& chainman)
 
 static BlockAssembler::Options ClampOptions(BlockAssembler::Options options)
 {
-    Assert(options.block_reserved_weight <= MAX_BLOCK_WEIGHT);
+    Assert(options.block_reserved_weight <= (dgpMaxBlockWeight - 4000));
     Assert(options.block_reserved_weight >= MINIMUM_BLOCK_RESERVED_WEIGHT);
     Assert(options.coinbase_output_max_additional_sigops <= dgpMaxTxSigOps);
-    // Limit weight to between block_reserved_weight and MAX_BLOCK_WEIGHT for sanity:
+    // Limit weight to between block_reserved_weight and dgpMaxBlockWeight-4K for sanity:
     // block_reserved_weight can safely exceed -blockmaxweight, but the rest of the block template will be empty.
-    options.nBlockMaxWeight = std::clamp<size_t>(options.nBlockMaxWeight, options.block_reserved_weight, MAX_BLOCK_WEIGHT);
+    options.nBlockMaxWeight = std::clamp<size_t>(options.nBlockMaxWeight, options.block_reserved_weight, dgpMaxBlockWeight - 4000);
     return options;
 }
 
@@ -152,8 +152,8 @@ static BlockAssembler::Options ConfiguredOptions()
 }
 
 #ifdef ENABLE_WALLET
-BlockAssembler::BlockAssembler(Chainstate& chainstate, const CTxMemPool* mempool, wallet::CWallet *_pwallet)
-    : BlockAssembler(chainstate, mempool, ConfiguredOptions())
+BlockAssembler::BlockAssembler(Chainstate& chainstate, const CTxMemPool* mempool, wallet::CWallet* _pwallet, const Options& options)
+    : BlockAssembler(chainstate, mempool, options)
 {
     pwallet = _pwallet;
 }
@@ -1804,7 +1804,9 @@ protected:
         {
             // Create an empty block. No need to process transactions until we know we can create a block
             d->nTotalFees = 0;
-            d->pblocktemplate = std::unique_ptr<CBlockTemplate>(BlockAssembler(d->pwallet->chain().chainman().ActiveChainstate(), &(d->pwallet->chain().mempool()), d->pwallet).CreateEmptyBlock(true, &d->nTotalFees));
+            BlockAssembler::Options options = ConfiguredOptions();
+            options.coinbase_output_script = CScript();
+            d->pblocktemplate = std::unique_ptr<CBlockTemplate>(BlockAssembler(d->pwallet->chain().chainman().ActiveChainstate(), &(d->pwallet->chain().mempool()), d->pwallet, options).CreateEmptyBlock(true, &d->nTotalFees));
             if (!d->pblocktemplate.get()) {
                 d->fError = true;
                 return false;
@@ -1942,8 +1944,10 @@ protected:
             return false;
 
         // Create a block that's properly populated with transactions
+        BlockAssembler::Options options = ConfiguredOptions();
+        options.coinbase_output_script = d->pblock->vtx[1]->vout[1].scriptPubKey;
         d->pblocktemplatefilled = std::unique_ptr<CBlockTemplate>(
-                BlockAssembler(d->pwallet->chain().chainman().ActiveChainstate(), &(d->pwallet->chain().mempool()), d->pwallet).CreateNewBlock(true, &(d->nTotalFees),
+                BlockAssembler(d->pwallet->chain().chainman().ActiveChainstate(), &(d->pwallet->chain().mempool()), d->pwallet, options).CreateNewBlock(true, &(d->nTotalFees),
                                                         blockTime, FutureDrift(TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()), d->nHeight, d->consensusParams) - nStakeTimeBuffer));
         if (!d->pblocktemplatefilled.get()) {
             d->fError = true;
