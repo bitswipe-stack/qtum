@@ -1,4 +1,4 @@
-#include <config/bitcoin-config.h> // IWYU pragma: keep
+#include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <qt/tokenitemwidget.h>
 #include <qt/platformstyle.h>

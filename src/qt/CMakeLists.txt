@@ -68,6 +68,10 @@ add_library(bitcoinqt STATIC EXCLUDE_FROM_ALL
   clientmodel.h
   csvmodelwriter.cpp
   csvmodelwriter.h
+  delegationitemmodel.cpp
+  delegationitemmodel.h
+  delegationstakeritemmodel.cpp
+  delegationstakeritemmodel.h
   guiutil.cpp
   guiutil.h
   initexecutor.cpp
@@ -82,6 +86,8 @@ add_library(bitcoinqt STATIC EXCLUDE_FROM_ALL
   $<$<PLATFORM_ID:Darwin>:macos_appnap.mm>
   modaloverlay.cpp
   modaloverlay.h
+  navigationbar.cpp
+  navigationbar.h
   networkstyle.cpp
   networkstyle.h
   notificator.cpp
@@ -96,16 +102,42 @@ add_library(bitcoinqt STATIC EXCLUDE_FROM_ALL
   peertablesortproxy.h
   platformstyle.cpp
   platformstyle.h
+  qswitchcontrol.cpp
+  qswitchcontrol.h
   qvalidatedlineedit.cpp
   qvalidatedlineedit.h
+  qvalidatedtextedit.cpp
+  qvalidatedtextedit.h
   qvaluecombobox.cpp
   qvaluecombobox.h
   rpcconsole.cpp
   rpcconsole.h
   splashscreen.cpp
   splashscreen.h
+  styleSheet.cpp
+  styleSheet.h
+  tabbarinfo.cpp
+  tabbarinfo.h
+  titlebar.cpp
+  titlebar.h
+  token.cpp
+  token.h
+  tokenamountfield.cpp
+  tokenamountfield.h
+  tokenitemmodel.cpp
+  tokenitemmodel.h
+  superstakeritemmodel.cpp
+  superstakeritemmodel.h
   trafficgraphwidget.cpp
   trafficgraphwidget.h
+  utilitydialog.cpp
+  utilitydialog.h
+  qtumversionchecker.cpp
+  qtumversionchecker.h
+  qtumpushbutton.cpp
+  qtumpushbutton.h
+  qtumhwitool.cpp
+  qtumhwitool.h
   utilitydialog.cpp
   utilitydialog.h
   $<$<PLATFORM_ID:Windows>:winshutdownmonitor.cpp>
@@ -134,6 +166,9 @@ target_link_libraries(bitcoinqt
     bitcoin_cli
     leveldb
     Boost::headers
+    Boost::filesystem
+    Boost::program_options
+    Boost::thread
     $<TARGET_NAME_IF_EXISTS:QRencode::QRencode>
     $<$<PLATFORM_ID:Darwin>:-framework\ AppKit>
     $<$<CXX_COMPILER_ID:MSVC>:shlwapi>
@@ -142,6 +177,14 @@ target_link_libraries(bitcoinqt
 if(ENABLE_WALLET)
   target_sources(bitcoinqt
     PRIVATE
+      abifunctionfield.cpp
+      abifunctionfield.h
+      abiparam.cpp
+      abiparam.h
+      abiparamitem.cpp
+      abiparamitem.h
+      abiparamsfield.cpp
+      abiparamsfield.h
       addressbookpage.cpp
       addressbookpage.h
       addresstablemodel.cpp
@@ -152,10 +195,32 @@ if(ENABLE_WALLET)
       coincontroldialog.h
       coincontroltreewidget.cpp
       coincontroltreewidget.h
+      contractutil.cpp
+      contractutil.h
+      contractbookpage.cpp
+      contractbookpage.h
+      contractresult.cpp
+      contractresult.h
+      contracttablemodel.cpp
+      contracttablemodel.h
+      delegationfilterproxy.cpp
+      delegationfilterproxy.h
+      delegationitemwidget.cpp
+      delegationitemwidget.h
+      derivationpathdialog.cpp
+      derivationpathdialog.h
+      eventlog.cpp
+      eventlog.h
+      execrpccommand.cpp
+      execrpccommand.h
       createwalletdialog.cpp
       createwalletdialog.h
       editaddressdialog.cpp
       editaddressdialog.h
+      editcontractinfodialog.cpp
+      editcontractinfodialog.h
+      editsuperstakerdialog.cpp
+      editsuperstakerdialog.h
       openuridialog.cpp
       openuridialog.h
       overviewpage.cpp
@@ -170,6 +235,8 @@ if(ENABLE_WALLET)
       receivecoinsdialog.h
       receiverequestdialog.cpp
       receiverequestdialog.h
+      receivetokenpage.cpp
+      receivetokenpage.h
       recentrequeststablemodel.cpp
       recentrequeststablemodel.h
       sendcoinsdialog.cpp
@@ -178,6 +245,16 @@ if(ENABLE_WALLET)
       sendcoinsentry.h
       signverifymessagedialog.cpp
       signverifymessagedialog.h
+      tokendescdialog.cpp
+      tokendescdialog.h
+      tokenfilterproxy.cpp
+      tokenfilterproxy.h
+      tokentransactionrecord.cpp
+      tokentransactionrecord.h
+      tokentransactiontablemodel.cpp
+      tokentransactiontablemodel.h
+      tokentransactiondesc.cpp
+      tokentransactiondesc.h
       transactiondesc.cpp
       transactiondesc.h
       transactiondescdialog.cpp
@@ -192,8 +269,12 @@ if(ENABLE_WALLET)
       transactiontablemodel.h
       transactionview.cpp
       transactionview.h
+      tokenitemwidget.cpp
+      tokenitemwidget.h
       walletcontroller.cpp
       walletcontroller.h
+      waitmessagebox.cpp
+      waitmessagebox.h
       walletframe.cpp
       walletframe.h
       walletmodel.cpp

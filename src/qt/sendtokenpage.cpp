@@ -245,7 +245,7 @@ void SendTokenPage::on_confirmClicked()
                         tokenTx.receiver_address = toAddress;
                         dev::u256 nValue(amountToSend);
                         tokenTx.value = u256Touint(nValue);
-                        tokenTx.tx_hash = uint256S(m_tokenABI->getTxId());
+                        tokenTx.tx_hash = uint256::FromHex(m_tokenABI->getTxId()).value_or(uint256::ZERO);
                         tokenTx.label = label;
                         m_model->wallet().addTokenTxEntry(tokenTx);
                     }
