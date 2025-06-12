@@ -127,7 +127,7 @@ BitcoinGUI::BitcoinGUI(interfaces::Node& node, const PlatformStyle *_platformSty
         Q_EMIT consoleShown(rpcConsole);
     }
 
-    modalOverlay = new ModalOverlay(enableWallet, this->centralWidget());
+    modalOverlay = new ModalOverlay(enableWallet, this);
 
     // Accept D&D of URIs
     setAcceptDrops(true);
