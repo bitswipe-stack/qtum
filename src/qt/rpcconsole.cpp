@@ -25,6 +25,7 @@
 #include <util/string.h>
 #include <util/time.h>
 #include <util/threadnames.h>
+#include <qt/styleSheet.h>
 
 #include <univalue.h>
 
@@ -47,7 +48,7 @@
 #include <QTime>
 #include <QTimer>
 #include <QVariant>
-
+#include <QStyledItemDelegate>
 #include <chrono>
 
 using util::Join;
@@ -60,12 +61,13 @@ const char fontSizeSettingsKey[] = "consoleFontSize";
 const struct {
     const char *url;
     const char *source;
+    PlatformStyle::TableColorType type;
 } ICON_MAPPING[] = {
-    {"cmd-request", ":/icons/tx_input"},
-    {"cmd-reply", ":/icons/tx_output"},
-    {"cmd-error", ":/icons/tx_output"},
-    {"misc", ":/icons/tx_inout"},
-    {nullptr, nullptr}
+    {"cmd-request", ":/icons/tx_input", PlatformStyle::Input},
+    {"cmd-reply", ":/icons/tx_output", PlatformStyle::Output},
+    {"cmd-error", ":/icons/tx_output", PlatformStyle::Error},
+    {"misc", ":/icons/tx_inout", PlatformStyle::Inout},
+    {nullptr, nullptr, PlatformStyle::Inout}
 };
 
 namespace {
@@ -77,6 +79,7 @@ const QStringList historyFilter = QStringList()
     << "sethdseed"
     << "signmessagewithprivkey"
     << "signrawtransactionwithkey"
+    << "signrawsendertransactionwithkey"
     << "walletpassphrase"
     << "walletpassphrasechange"
     << "encryptwallet";
@@ -475,6 +478,15 @@ RPCConsole::RPCConsole(interfaces::Node& node, const PlatformStyle *_platformSty
 {
     ui->setupUi(this);
     QSettings settings;
+    // Set stylesheet
+    SetObjectStyleSheet(ui->promptIcon, StyleSheetNames::ButtonTransparent);
+    SetObjectStyleSheet(ui->clearButton, StyleSheetNames::ButtonTransparent);
+    SetObjectStyleSheet(ui->fontBiggerButton, StyleSheetNames::ButtonTransparent);
+    SetObjectStyleSheet(ui->fontSmallerButton, StyleSheetNames::ButtonTransparent);
+    SetObjectStyleSheet(ui->openDebugLogfileButton, StyleSheetNames::ButtonGray);
+    SetObjectStyleSheet(ui->btnClearTrafficGraph, StyleSheetNames::ButtonGray);
+    SetObjectStyleSheet(ui->peerWidget, StyleSheetNames::TableViewLight);
+    SetObjectStyleSheet(ui->banlistWidget, StyleSheetNames::TableViewLight);
 #ifdef ENABLE_WALLET
     if (WalletModel::isWalletEnabled()) {
         // RPCConsole widget is a window.
@@ -539,23 +551,23 @@ RPCConsole::RPCConsole(interfaces::Node& node, const PlatformStyle *_platformSty
     ui->openDebugLogfileButton->setToolTip(ui->openDebugLogfileButton->toolTip().arg(CLIENT_NAME));
 
     if (platformStyle->getImagesOnButtons()) {
-        ui->openDebugLogfileButton->setIcon(platformStyle->SingleColorIcon(":/icons/export"));
+        ui->openDebugLogfileButton->setIcon(platformStyle->MultiStatesIcon(":/icons/export", PlatformStyle::PushButton));
     }
-    ui->clearButton->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
+    ui->clearButton->setIcon(platformStyle->MultiStatesIcon(":/icons/remove", PlatformStyle::PushButtonIcon));
 
-    ui->fontBiggerButton->setIcon(platformStyle->SingleColorIcon(":/icons/fontbigger"));
+    ui->fontBiggerButton->setIcon(platformStyle->MultiStatesIcon(":/icons/fontbigger", PlatformStyle::PushButtonIcon));
     //: Main shortcut to increase the RPC console font size.
     ui->fontBiggerButton->setShortcut(tr("Ctrl++"));
     //: Secondary shortcut to increase the RPC console font size.
     GUIUtil::AddButtonShortcut(ui->fontBiggerButton, tr("Ctrl+="));
 
-    ui->fontSmallerButton->setIcon(platformStyle->SingleColorIcon(":/icons/fontsmaller"));
+    ui->fontSmallerButton->setIcon(platformStyle->MultiStatesIcon(":/icons/fontsmaller", PlatformStyle::PushButtonIcon));
     //: Main shortcut to decrease the RPC console font size.
     ui->fontSmallerButton->setShortcut(tr("Ctrl+-"));
     //: Secondary shortcut to decrease the RPC console font size.
     GUIUtil::AddButtonShortcut(ui->fontSmallerButton, tr("Ctrl+_"));
 
-    ui->promptIcon->setIcon(platformStyle->SingleColorIcon(QStringLiteral(":/icons/prompticon")));
+    ui->promptIcon->setIcon(platformStyle->MultiStatesIcon(QStringLiteral(":/icons/prompticon"), PlatformStyle::PushButtonIcon));
 
     // Install event filter for up and down arrow
     ui->lineEdit->installEventFilter(this);
@@ -780,6 +792,9 @@ void RPCConsole::setClientModel(ClientModel *model, int bestblock_height, int64_
         ui->lineEdit->setEnabled(true);
         ui->lineEdit->setCompleter(autoCompleter);
         autoCompleter->popup()->installEventFilter(this);
+        autoCompleter->popup()->setItemDelegate(new QStyledItemDelegate(this));
+        autoCompleter->popup()->setObjectName("autoCompleterPopup");
+        SetObjectStyleSheet(autoCompleter->popup(), StyleSheetNames::ScrollBarDark);
         // Start thread to execute RPC commands.
         startExecutor();
     }
@@ -880,7 +895,7 @@ void RPCConsole::clear(bool keep_prompt)
         ui->messagesWidget->document()->addResource(
                     QTextDocument::ImageResource,
                     QUrl(ICON_MAPPING[i].url),
-                    platformStyle->SingleColorImage(ICON_MAPPING[i].source).scaled(QSize(consoleFontSize*2, consoleFontSize*2), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                    platformStyle->TableColorImage(ICON_MAPPING[i].source, ICON_MAPPING[i].type).scaled(QSize(consoleFontSize*2, consoleFontSize*2), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
     }
 
     // Set default style sheet
@@ -936,10 +951,10 @@ void RPCConsole::keyPressEvent(QKeyEvent *event)
 void RPCConsole::changeEvent(QEvent* e)
 {
     if (e->type() == QEvent::PaletteChange) {
-        ui->clearButton->setIcon(platformStyle->SingleColorIcon(QStringLiteral(":/icons/remove")));
-        ui->fontBiggerButton->setIcon(platformStyle->SingleColorIcon(QStringLiteral(":/icons/fontbigger")));
-        ui->fontSmallerButton->setIcon(platformStyle->SingleColorIcon(QStringLiteral(":/icons/fontsmaller")));
-        ui->promptIcon->setIcon(platformStyle->SingleColorIcon(QStringLiteral(":/icons/prompticon")));
+        ui->clearButton->setIcon(platformStyle->MultiStatesIcon(QStringLiteral(":/icons/remove"), PlatformStyle::PushButtonIcon));
+        ui->fontBiggerButton->setIcon(platformStyle->MultiStatesIcon(QStringLiteral(":/icons/fontbigger"), PlatformStyle::PushButtonIcon));
+        ui->fontSmallerButton->setIcon(platformStyle->MultiStatesIcon(QStringLiteral(":/icons/fontsmaller"), PlatformStyle::PushButtonIcon));
+        ui->promptIcon->setIcon(platformStyle->MultiStatesIcon(QStringLiteral(":/icons/prompticon"), PlatformStyle::PushButtonIcon));
 
         for (int i = 0; ICON_MAPPING[i].url; ++i) {
             ui->messagesWidget->document()->addResource(
@@ -1409,6 +1424,14 @@ void RPCConsole::updateAlerts(const QString& warnings)
     this->ui->label_alerts->setText(warnings);
 }
 
+void RPCConsole::activeWalletChanged(int index)
+{
+    int walletId = index + 1;
+    if(ui->WalletSelector->count() > walletId)
+    {
+        ui->WalletSelector->setCurrentIndex(walletId);
+    }
+}
 void RPCConsole::updateWindowTitle()
 {
     const ChainType chain = Params().GetChainType();
