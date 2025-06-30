@@ -609,12 +609,12 @@ public:
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     ///////////////////////////////////////////////////////// // qtum
-    void addAddressIndex(const CTxMemPoolEntry &entry, const CCoinsViewCache &view);
+    void addAddressIndex(const CTransaction& tx, const int64_t nAcceptTime, const CCoinsViewCache &view);
     bool getAddressIndex(std::vector<std::pair<uint256, int> > &addresses,
                          std::vector<std::pair<CMempoolAddressDeltaKey, CMempoolAddressDelta> > &results);
     bool removeAddressIndex(const uint256 txhash);
 
-    void addSpentIndex(const CTxMemPoolEntry &entry, const CCoinsViewCache &view);
+    void addSpentIndex(const CTransaction& tx, const CCoinsViewCache &view);
     bool getSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value) const;
     bool removeSpentIndex(const uint256 txhash);
     /////////////////////////////////////////////////////////

@@ -37,6 +37,10 @@ static ChainstateLoadResult CompleteChainstateInitialization(
     ChainstateManager& chainman,
     const ChainstateLoadOptions& options) EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
 {
+    pstorageresult.reset();
+    globalState.reset();
+    globalSealEngine.reset();
+
     if (chainman.m_interrupt) return {ChainstateLoadStatus::INTERRUPTED, {}};
 
     // LoadBlockIndex will load m_have_pruned if we've ever removed a
@@ -142,6 +146,11 @@ static ChainstateLoadResult CompleteChainstateInitialization(
     dev::eth::ChainParams cp(chainparams.EVMGenesisInfo());
     globalSealEngine = std::unique_ptr<dev::eth::SealEngineFace>(cp.createSealEngine());
 
+    pstorageresult.reset(new StorageResults(PathToString(qtumStateDir)));
+    if (options.wipe_chainstate_db) {
+        pstorageresult->wipeResults();
+    }
+
     {
         LOCK(cs_main);
         CChain& active_chain = chainman.ActiveChain();
@@ -169,6 +178,14 @@ static ChainstateLoadResult CompleteChainstateInitialization(
     // Check for changed -logevents state
     if (fLogEvents != options.logevents && !fLogEvents) {
         return {ChainstateLoadStatus::FAILURE, _("You need to rebuild the database using -reindex to enable -logevents")};
+    }
+
+    if (!options.logevents)
+    {
+        pstorageresult->wipeResults();
+        chainman.m_blockman.m_block_tree_db->WipeHeightIndex();
+        fLogEvents = false;
+        chainman.m_blockman.m_block_tree_db->WriteFlag("logevents", fLogEvents);
     }
 
     auto chainstates{chainman.GetAll()};

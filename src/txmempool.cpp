@@ -1443,10 +1443,9 @@ void CTxMemPool::ChangeSet::Apply()
 }
 
 /////////////////////////////////////////////////////// // qtum
-void CTxMemPool::addAddressIndex(const CTxMemPoolEntry &entry, const CCoinsViewCache &view)
+void CTxMemPool::addAddressIndex(const CTransaction& tx, const int64_t nAcceptTime, const CCoinsViewCache &view)
 {
     LOCK(cs);
-    const CTransaction& tx = entry.GetTx();
     std::vector<CMempoolAddressDeltaKey> inserted;
 
     uint256 txhash = tx.GetHash();
@@ -1464,7 +1463,7 @@ void CTxMemPool::addAddressIndex(const CTxMemPoolEntry &entry, const CCoinsViewC
             std::copy(bytesID.begin(), bytesID.end(), addressBytes.begin());
             int addressIndexType = GetAddressIndexType(dest);
             CMempoolAddressDeltaKey key(addressIndexType, uint256(addressBytes), txhash, j, 1);
-            CMempoolAddressDelta delta(entry.GetTime().count(), prevout.nValue * -1, input.prevout.hash, input.prevout.n);
+            CMempoolAddressDelta delta(nAcceptTime, prevout.nValue * -1, input.prevout.hash, input.prevout.n);
             mapAddress.insert(std::make_pair(key, delta));
             inserted.push_back(key);
         }
@@ -1483,7 +1482,7 @@ void CTxMemPool::addAddressIndex(const CTxMemPoolEntry &entry, const CCoinsViewC
             std::copy(bytesID.begin(), bytesID.end(), addressBytes.begin());
             int addressIndexType = GetAddressIndexType(dest);
             CMempoolAddressDeltaKey key(addressIndexType, uint256(addressBytes), txhash, k, 0);
-            mapAddress.insert(std::make_pair(key, CMempoolAddressDelta(entry.GetTime().count(), out.nValue)));
+            mapAddress.insert(std::make_pair(key, CMempoolAddressDelta(nAcceptTime, out.nValue)));
             inserted.push_back(key);
         }
     }
@@ -1520,11 +1519,10 @@ bool CTxMemPool::removeAddressIndex(const uint256 txhash)
     return true;
 }
 
-void CTxMemPool::addSpentIndex(const CTxMemPoolEntry &entry, const CCoinsViewCache &view)
+void CTxMemPool::addSpentIndex(const CTransaction& tx, const CCoinsViewCache &view)
 {
     LOCK(cs);
 
-    const CTransaction& tx = entry.GetTx();
     std::vector<CSpentIndexKey> inserted;
 
     uint256 txhash = tx.GetHash();

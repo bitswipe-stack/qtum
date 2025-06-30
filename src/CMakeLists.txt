@@ -16,8 +16,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils/ethash/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils/libscrypt)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/leveldb/include)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DQTUM_BUILD")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DQTUM_BUILD")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DQTUM_BUILD -DETH_FATDB=1")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DQTUM_BUILD -DETH_FATDB=1")
 
 #=============================
 # Subprojects

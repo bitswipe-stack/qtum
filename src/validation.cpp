@@ -1504,6 +1504,17 @@ bool MemPoolAccept::SubmitPackage(const ATMPArgs& args, std::vector<Workspace>& 
         return false;
     }
 
+    // Add memory address index
+    if (fAddressIndex)
+    {
+        for (Workspace& ws : workspaces) {
+            const CTransaction& tx = *ws.m_ptx;
+            const int64_t nAcceptTime = args.m_accept_time;
+            m_pool.addAddressIndex(tx, nAcceptTime, m_view);
+            m_pool.addSpentIndex(tx, m_view);
+        }
+    }
+
     std::vector<Wtxid> all_package_wtxids;
     all_package_wtxids.reserve(workspaces.size());
     std::transform(workspaces.cbegin(), workspaces.cend(), std::back_inserter(all_package_wtxids),
@@ -1602,6 +1613,15 @@ MempoolAcceptResult MemPoolAccept::AcceptSingleTransaction(const CTransactionRef
             ws.m_state.Invalid(TxValidationResult::TX_RECONSIDERABLE, "mempool full");
             return MempoolAcceptResult::FeeFailure(ws.m_state, CFeeRate(ws.m_modified_fees, ws.m_vsize), {ws.m_ptx->GetWitnessHash()});
         }
+    }
+
+    // Add memory address index
+    if (fAddressIndex)
+    {
+        const CTransaction& tx = *ws.m_ptx;
+        const int64_t nAcceptTime = args.m_accept_time;
+        m_pool.addAddressIndex(tx, nAcceptTime, m_view);
+        m_pool.addSpentIndex(tx, m_view);
     }
 
     if (m_pool.m_opts.signals) {
