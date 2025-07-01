@@ -287,6 +287,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   eth_client/utils/libscrypt/sha256.c
   eth_client/utils/libscrypt/slowequals.c
 )
+add_dependencies(bitcoin_common evmone)
 
 link_directories(${CMAKE_BINARY_DIR}/lib)
 target_link_libraries(bitcoin_common
