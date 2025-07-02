@@ -14,9 +14,6 @@
 #include <map>
 #include <stdint.h>
 #include <string>
-#include <functional>
-#include <condition_variable>
-#include <mutex>
 
 #include <univalue.h>
 #include <common/system.h>
@@ -24,12 +21,6 @@
 class CRPCCommand;
 class ChainstateManager;
 class HTTPRequest;
-
-namespace RPCServer
-{
-    void OnStarted(std::function<void ()> slot);
-    void OnStopped(std::function<void ()> slot);
-}
 
 class JSONRPCRequestLong : public JSONRPCRequest
 {

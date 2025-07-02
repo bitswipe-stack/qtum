@@ -165,12 +165,12 @@ size_t parseUInt(const UniValue& val, size_t defaultVal) {
     }
 }
 
-int parseBlockHeight(const UniValue& val) {
+int parseBlockHeight(const UniValue& val, int numBlocks) {
     if (val.isStr()) {
         auto blockKey = val.get_str();
 
         if (blockKey == "latest") {
-            return latestblock.height;
+            return numBlocks;
         } else {
             throw JSONRPCError(RPC_INVALID_PARAMS, "invalid block number");
         }
@@ -180,7 +180,7 @@ int parseBlockHeight(const UniValue& val) {
         int blockHeight = val.getInt<int>();
 
         if (blockHeight < 0) {
-            return latestblock.height;
+            return numBlocks;
         }
 
         return blockHeight;
@@ -189,11 +189,11 @@ int parseBlockHeight(const UniValue& val) {
     throw JSONRPCError(RPC_INVALID_PARAMS, "invalid block number");
 }
 
-int parseBlockHeight(const UniValue& val, int defaultVal) {
+int parseBlockHeight(const UniValue& val, int defaultVal, int numBlocks) {
     if (val.isNull()) {
         return defaultVal;
     } else {
-        return parseBlockHeight(val);
+        return parseBlockHeight(val, numBlocks);
     }
 }
 
@@ -275,12 +275,13 @@ public:
     size_t fromBlock;
     size_t toBlock;
     size_t minconf;
+    int numBlocks;
 
     std::set<dev::h160> addresses;
     std::vector<boost::optional<dev::h256>> topics;
 
-    SearchLogsParams(const UniValue& params) {
-        std::unique_lock<std::mutex> lock(cs_blockchange);
+    SearchLogsParams(const UniValue& params, int height) {
+        numBlocks = height;
 
         setFromBlock(params[0]);
         setToBlock(params[1]);
@@ -294,17 +295,17 @@ public:
 private:
     void setFromBlock(const UniValue& val) {
         if (!val.isNull()) {
-            fromBlock = parseBlockHeight(val);
+            fromBlock = parseBlockHeight(val, numBlocks);
         } else {
-            fromBlock = latestblock.height;
+            fromBlock = numBlocks;
         }
     }
 
     void setToBlock(const UniValue& val) {
         if (!val.isNull()) {
-            toBlock = parseBlockHeight(val);
+            toBlock = parseBlockHeight(val, numBlocks);
         } else {
-            toBlock = latestblock.height;
+            toBlock = numBlocks;
         }
     }
 
@@ -319,7 +320,7 @@ UniValue SearchLogs(const UniValue& _params, ChainstateManager &chainman)
 
     LOCK(cs_main);
 
-    SearchLogsParams params(_params);
+    SearchLogsParams params(_params, chainman.ActiveChain().Height());
 
     std::vector<std::vector<uint256>> hashesToBlock;
 
@@ -505,9 +506,9 @@ bool CallToken::execEvents(const int64_t &fromBlock, const int64_t &toBlock, con
                 tokenEvent.receiver = topicsList[2].get_str().substr(24);
                 ToQtumAddress(tokenEvent.receiver, tokenEvent.receiver);
             }
-            tokenEvent.blockHash = uint256S(eventMap["blockHash"].get_str());
+            tokenEvent.blockHash = uint256::FromHex(eventMap["blockHash"].get_str()).value_or(uint256::ZERO);
             tokenEvent.blockNumber = eventMap["blockNumber"].getInt<int64_t>();
-            tokenEvent.transactionHash = uint256S(eventMap["transactionHash"].get_str());
+            tokenEvent.transactionHash = uint256::FromHex(eventMap["transactionHash"].get_str()).value_or(uint256::ZERO);
 
             // Parse data
             std::string data = eventLog["data"].get_str();

@@ -35,7 +35,6 @@ from test_framework.util import (
 )
 
 from test_framework.qtumconfig import COINBASE_MATURITY 
-
 class MempoolWtxidTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 1
@@ -102,13 +101,15 @@ class MempoolWtxidTest(BitcoinTestFramework):
             "txid": child_one_txid,
             "wtxid": child_one_wtxid,
             "allowed": False,
-            "reject-reason": "txn-already-in-mempool"
+            "reject-reason": "txn-already-in-mempool",
+            "reject-details": "txn-already-in-mempool"
         }])
         assert_equal(node.testmempoolaccept([child_two.serialize().hex()])[0], {
             "txid": child_two_txid,
             "wtxid": child_two_wtxid,
             "allowed": False,
-            "reject-reason": "txn-same-nonwitness-data-in-mempool"
+            "reject-reason": "txn-same-nonwitness-data-in-mempool",
+            "reject-details": "txn-same-nonwitness-data-in-mempool"
         })
 
         # sendrawtransaction will not throw but quits early when the exact same transaction is already in mempool

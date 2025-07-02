@@ -84,8 +84,8 @@ class BumpFeeTest(BitcoinTestFramework):
         self.generate(peer_node, COINBASE_MATURITY + 10)
         for _ in range(25):
             peer_node.sendtoaddress(rbf_node_address, 0.1)
-        self.generate(peer_node, 1)
         self.sync_all()
+        self.generate(peer_node, 1)
         assert_equal(rbf_node.getbalance(), Decimal("2.5"))
 
         self.log.info("Running tests")
@@ -271,10 +271,10 @@ class BumpFeeTest(BitcoinTestFramework):
     def test_single_output(self):
         self.log.info("Test that single output txs can be bumped")
         node = self.nodes[1]
-    
+
         node.createwallet("single_out_rbf")
         wallet = node.get_wallet_rpc("single_out_rbf")
-    
+
         addr = wallet.getnewaddress()
         amount = Decimal("0.009")
         # Make 2 UTXOs

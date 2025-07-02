@@ -108,5 +108,4 @@ void UpdateShanghaiHeight(int nHeight);
  * Allows modifying the cancun block height regtest parameter.
  */
 void UpdateCancunHeight(int nHeight);
-
 #endif // BITCOIN_CHAINPARAMS_H

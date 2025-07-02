@@ -881,7 +881,8 @@ public:
     }
     bool removeTokenEntry(const std::string &sHash) override
     {
-        return m_wallet->RemoveTokenEntry(uint256S(sHash), true);
+        uint256 hash = uint256::FromHex(sHash).value_or(uint256::ZERO);
+        return m_wallet->RemoveTokenEntry(hash, true);
     }
     std::vector<TokenInfo> getInvalidTokens() override
     {
@@ -1148,7 +1149,8 @@ public:
     }
     bool removeDelegationEntry(const std::string &sHash) override
     {
-        return m_wallet->RemoveDelegationEntry(uint256S(sHash), true);
+        uint256 hash = uint256::FromHex(sHash).value_or(uint256::ZERO);
+        return m_wallet->RemoveDelegationEntry(hash, true);
     }
     bool setDelegationRemoved(const std::string &sHash, const std::string &sTxid) override
     {
@@ -1289,7 +1291,8 @@ public:
     }
     bool removeSuperStakerEntry(const std::string &sHash) override
     {
-        return m_wallet->RemoveSuperStakerEntry(uint256S(sHash), true);
+        uint256 hash = uint256::FromHex(sHash).value_or(uint256::ZERO);
+        return m_wallet->RemoveSuperStakerEntry(hash, true);
     }
     bool tryGetStakeWeight(uint64_t& nWeight) override
     {

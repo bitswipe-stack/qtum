@@ -124,7 +124,8 @@ public:
     bool restoreWallet(const QString &filename, const QString &param);
     bool getWalletUnlockStakingOnly();
     void setWalletUnlockStakingOnly(bool unlock);
-    // RAI object for unlocking wallet, returned by requestUnlock()
+
+    // RAII object for unlocking wallet, returned by requestUnlock()
     class UnlockContext
     {
     public:

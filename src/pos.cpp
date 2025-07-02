@@ -121,10 +121,19 @@ bool CheckStakeKernelHash(CBlockIndex* pindexPrev, unsigned int nBits, uint32_t 
     return true;
 }
 
+bool ViewGetCoin(CCoinsViewCache& view, const COutPoint &outpoint, Coin &coin) {
+    auto coinIn = view.GetCoin(outpoint);
+    if (coinIn.has_value()) {
+        coin = std::move(*coinIn);
+        return true;
+    }
+    return false;
+}
+
 bool GetStakeCoin(const COutPoint& prevout, Coin& coinPrev, CBlockIndex*& blockFrom, CBlockIndex* pindexPrev, BlockValidationState& state, CCoinsViewCache& view)
 {
     // Get the coin
-    if(!view.GetCoin(prevout, coinPrev)){
+    if(!ViewGetCoin(view, prevout, coinPrev)){
         return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "stake-prevout-not-exist", strprintf("CheckProofOfStake() : Stake prevout does not exist %s", prevout.hash.ToString()));
     }
 
@@ -278,7 +287,7 @@ bool CheckProofOfStake(CBlockIndex* pindexPrev, BlockValidationState& state, con
 bool CheckBlockInputPubKeyMatchesOutputPubKey(const CBlock& block, CCoinsViewCache& view, bool delegateOutputExist) {
 
     Coin coinIn;
-    if(!view.GetCoin(block.prevoutStake, coinIn)) {
+    if(!ViewGetCoin(view, block.prevoutStake, coinIn)) {
         LogError("%s: Could not fetch prevoutStake from UTXO set", __func__);
         return false;
     }
@@ -334,7 +343,7 @@ bool CheckBlockInputPubKeyMatchesOutputPubKey(const CBlock& block, CCoinsViewCac
 
 bool CheckRecoveredPubKeyFromBlockSignature(CBlockIndex* pindexPrev, const CBlockHeader& block, CCoinsViewCache& view, Chainstate& chainstate) {
     Coin coinPrev;
-    if(!view.GetCoin(block.prevoutStake, coinPrev)){
+    if(!ViewGetCoin(view, block.prevoutStake, coinPrev)){
         if(!GetSpentCoinFromMainChain(pindexPrev, block.prevoutStake, &coinPrev, chainstate)) {
             LogError("CheckRecoveredPubKeyFromBlockSignature(): Could not find %s and it was not at the tip", block.prevoutStake.hash.GetHex());
             return false;
@@ -423,7 +432,7 @@ bool CheckKernel(CBlockIndex* pindexPrev, unsigned int nBits, uint32_t nTimeBloc
     if(it == cache.end()) {
         //not found in cache (shouldn't happen during staking, only during verification which does not use cache)
         Coin coinPrev;
-        if(!view.GetCoin(prevout, coinPrev)){
+        if(!ViewGetCoin(view, prevout, coinPrev)){
             if(!GetSpentCoinFromMainChain(pindexPrev, prevout, &coinPrev, chainstate)) {
                 LogError("CheckKernel(): Could not find coin and it was not at the tip");
                 return false;
@@ -479,7 +488,7 @@ void CacheKernel(std::map<COutPoint, CStakeCache>& cache, const COutPoint& prevo
     }
 
     Coin coinPrev;
-    if(!view.GetCoin(prevout, coinPrev)){
+    if(!ViewGetCoin(view, prevout, coinPrev)){
         return;
     }
 
@@ -640,7 +649,7 @@ bool AddMPoSScript(std::vector<BlockScript> &mposScriptList, int nHeight, const 
     CBlockIndex* pblockindex = chain[nHeight];
     if(!pblockindex)
     {
-        LogPrint(BCLog::COINSTAKE, "Block index not found\n");
+        LogDebug(BCLog::COINSTAKE, "Block index not found\n");
         return false;
     }
 
@@ -663,7 +672,7 @@ bool AddMPoSScript(std::vector<BlockScript> &mposScriptList, int nHeight, const 
     {
         if(stakeAddress == uint160())
         {
-            LogPrint(BCLog::COINSTAKE, "Fail to solve script for mpos reward recipient\n");
+            LogDebug(BCLog::COINSTAKE, "Fail to solve script for mpos reward recipient\n");
             //This should never fail, but in case it somehow did we don't want it to bring the network to a halt
             //So, use an OP_RETURN script to burn the coins for the unknown staker
             blockScript = CScript() << OP_RETURN;
@@ -682,7 +691,7 @@ bool AddMPoSScript(std::vector<BlockScript> &mposScriptList, int nHeight, const 
 
             if(delegateAddress == uint160())
             {
-                LogPrint(BCLog::COINSTAKE, "Fail to solve script for mpos delegate reward recipient\n");
+                LogDebug(BCLog::COINSTAKE, "Fail to solve script for mpos delegate reward recipient\n");
                 blockScript.delegateScript = CScript() << OP_RETURN;
             }else{
                 // Make public key hash script
@@ -708,7 +717,7 @@ bool AddMPoSScript(std::vector<BlockScript> &mposScriptList, int nHeight, const 
             return true;
 
         }
-        LogPrint(BCLog::COINSTAKE, "The block is not proof-of-stake\n");
+        LogDebug(BCLog::COINSTAKE, "The block is not proof-of-stake\n");
         return false;
     }
 
@@ -734,7 +743,7 @@ bool GetMPoSOutputs(std::vector<CTxOut>& mposOutputList, int64_t nRewardPiece, i
     std::vector<BlockScript> mposScriptList;
     if(!GetMPoSOutputScripts(mposScriptList, nHeight, consensusParams, chain, blockman))
     {
-        LogPrint(BCLog::COINSTAKE, "Fail to get the list of recipients\n");
+        LogDebug(BCLog::COINSTAKE, "Fail to get the list of recipients\n");
         return false;
     }
 
@@ -747,7 +756,7 @@ bool GetMPoSOutputs(std::vector<CTxOut>& mposOutputList, int64_t nRewardPiece, i
             int64_t nRewardDelegate, nRewardStaker;
             if(!SplitOfflineStakeReward(nRewardPiece, blockScript.fee, nRewardDelegate, nRewardStaker))
             {
-                LogPrint(BCLog::COINSTAKE, "Fail to split the offline staking reward\n");
+                LogDebug(BCLog::COINSTAKE, "Fail to split the offline staking reward\n");
                 return false;
             }
 

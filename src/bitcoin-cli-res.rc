@@ -15,14 +15,14 @@ BEGIN
         BLOCK "040904E4" // U.S. English - multilingual (hex)
         BEGIN
             VALUE "CompanyName",        "Qtum"
-            VALUE "FileDescription",    "qtum-cli (JSON-RPC client for " PACKAGE_NAME ")"
-            VALUE "FileVersion",        PACKAGE_VERSION
+            VALUE "FileDescription",    "qtum-cli (JSON-RPC client for " CLIENT_NAME ")"
+            VALUE "FileVersion",        CLIENT_VERSION_STRING
             VALUE "InternalName",       "qtum-cli"
             VALUE "LegalCopyright",     COPYRIGHT_STR
             VALUE "LegalTrademarks1",   "Distributed under the MIT software license, see the accompanying file COPYING or http://www.opensource.org/licenses/mit-license.php."
             VALUE "OriginalFilename",   "qtum-cli.exe"
             VALUE "ProductName",        "qtum-cli"
-            VALUE "ProductVersion",     PACKAGE_VERSION
+            VALUE "ProductVersion",     CLIENT_VERSION_STRING
         END
     END
 

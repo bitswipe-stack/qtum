@@ -61,7 +61,6 @@ class NULLDUMMYTest(BitcoinTestFramework):
         self.extra_args = [[
             f'-testactivationheight=segwit@{COINBASE_MATURITY + 5}',
             '-addresstype=legacy',
-            '-par=1',  # Use only one script thread to get the exact reject reason for testing
         ]]
 
     def skip_test_if_missing_module(self):

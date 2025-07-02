@@ -1,4 +1,4 @@
-#include <config/bitcoin-config.h> // IWYU pragma: keep
+#include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <qt/delegationsstakerdialog.h>
 #include <qt/forms/ui_delegationsstakerdialog.h>

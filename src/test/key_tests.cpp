@@ -20,6 +20,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+using namespace util::hex_literals;
 using util::ToString;
 
 static const std::string strSecret1 = "5JJsmJUKbBRt2KJvxdSipMMVBueAypioUxWKaPYLJrAYWgybBxB";
@@ -143,19 +144,22 @@ BOOST_AUTO_TEST_CASE(key_test1)
     BOOST_CHECK(key1.Sign(hashMsg, detsig, false));
     BOOST_CHECK(key1C.Sign(hashMsg, detsigc, false));
     BOOST_CHECK(detsig == detsigc);
-    BOOST_CHECK(detsig == ParseHex("3045022100e7d7797d494619d8f6a618fbb6769bb1898fe6e69254d49c9d9ab1635e46008602205ad3b0fd16bf634d5c43e0dc7d6be831d69010a72f82412f3630a59cbf64f18f"));
+    BOOST_CHECK_EQUAL(HexStr(detsig), "3045022100e7d7797d494619d8f6a618fbb6769bb1898fe6e69254d49c9d9ab1635e46008602205ad3b0fd16bf634d5c43e0dc7d6be831d69010a72f82412f3630a59cbf64f18f");
+
     BOOST_CHECK(key2.Sign(hashMsg, detsig, false));
     BOOST_CHECK(key2C.Sign(hashMsg, detsigc, false));
     BOOST_CHECK(detsig == detsigc);
-    BOOST_CHECK(detsig == ParseHex("3045022100ca7ce68eef69a05dc2f58612d107ed2e26536a97db5eafadab9719a7b942a9d30220698007e5b93ba2a51c292c2cd58e9c80eecf3f913168e7e4cd7dd000b6c3a20f"));
+    BOOST_CHECK_EQUAL(HexStr(detsig), "3045022100ca7ce68eef69a05dc2f58612d107ed2e26536a97db5eafadab9719a7b942a9d30220698007e5b93ba2a51c292c2cd58e9c80eecf3f913168e7e4cd7dd000b6c3a20f");
+
     BOOST_CHECK(key1.SignCompact(hashMsg, detsig));
     BOOST_CHECK(key1C.SignCompact(hashMsg, detsigc));
-    BOOST_CHECK(detsig == ParseHex("1ce7d7797d494619d8f6a618fbb6769bb1898fe6e69254d49c9d9ab1635e4600865ad3b0fd16bf634d5c43e0dc7d6be831d69010a72f82412f3630a59cbf64f18f"));
-    BOOST_CHECK(detsigc == ParseHex("20e7d7797d494619d8f6a618fbb6769bb1898fe6e69254d49c9d9ab1635e4600865ad3b0fd16bf634d5c43e0dc7d6be831d69010a72f82412f3630a59cbf64f18f"));
+    BOOST_CHECK_EQUAL(HexStr(detsig), "1ce7d7797d494619d8f6a618fbb6769bb1898fe6e69254d49c9d9ab1635e4600865ad3b0fd16bf634d5c43e0dc7d6be831d69010a72f82412f3630a59cbf64f18f");
+    BOOST_CHECK_EQUAL(HexStr(detsigc), "20e7d7797d494619d8f6a618fbb6769bb1898fe6e69254d49c9d9ab1635e4600865ad3b0fd16bf634d5c43e0dc7d6be831d69010a72f82412f3630a59cbf64f18f");
+
     BOOST_CHECK(key2.SignCompact(hashMsg, detsig));
     BOOST_CHECK(key2C.SignCompact(hashMsg, detsigc));
-    BOOST_CHECK(detsig == ParseHex("1bca7ce68eef69a05dc2f58612d107ed2e26536a97db5eafadab9719a7b942a9d3698007e5b93ba2a51c292c2cd58e9c80eecf3f913168e7e4cd7dd000b6c3a20f"));
-    BOOST_CHECK(detsigc == ParseHex("1fca7ce68eef69a05dc2f58612d107ed2e26536a97db5eafadab9719a7b942a9d3698007e5b93ba2a51c292c2cd58e9c80eecf3f913168e7e4cd7dd000b6c3a20f"));
+    BOOST_CHECK_EQUAL(HexStr(detsig), "1bca7ce68eef69a05dc2f58612d107ed2e26536a97db5eafadab9719a7b942a9d3698007e5b93ba2a51c292c2cd58e9c80eecf3f913168e7e4cd7dd000b6c3a20f");
+    BOOST_CHECK_EQUAL(HexStr(detsigc), "1fca7ce68eef69a05dc2f58612d107ed2e26536a97db5eafadab9719a7b942a9d3698007e5b93ba2a51c292c2cd58e9c80eecf3f913168e7e4cd7dd000b6c3a20f");
 }
 
 BOOST_AUTO_TEST_CASE(key_signature_tests)
@@ -312,11 +316,11 @@ BOOST_AUTO_TEST_CASE(bip340_test_vectors)
         // In iteration i=0 we tweak with empty Merkle tree.
         for (int i = 0; i < 10; ++i) {
             uint256 merkle_root;
-            if (i) merkle_root = InsecureRand256();
+            if (i) merkle_root = m_rng.rand256();
             auto tweaked = pubkey.CreateTapTweak(i ? &merkle_root : nullptr);
             BOOST_CHECK(tweaked);
             XOnlyPubKey tweaked_key = tweaked->first;
-            aux256 = InsecureRand256();
+            aux256 = m_rng.rand256();
             bool ok = key.SignSchnorr(msg256, sig64, &merkle_root, aux256);
             BOOST_CHECK(ok);
             BOOST_CHECK(tweaked_key.VerifySchnorr(msg256, sig64));
@@ -336,7 +340,7 @@ BOOST_AUTO_TEST_CASE(key_ellswift)
         CKey key = DecodeSecret(secret);
         BOOST_CHECK(key.IsValid());
 
-        uint256 ent32 = InsecureRand256();
+        uint256 ent32 = m_rng.rand256();
         auto ellswift = key.EllSwiftCreate(AsBytes(Span{ent32}));
 
         CPubKey decoded_pubkey = ellswift.Decode();
@@ -352,9 +356,9 @@ BOOST_AUTO_TEST_CASE(key_ellswift)
 
 BOOST_AUTO_TEST_CASE(bip341_test_h)
 {
-    std::vector<unsigned char> G_uncompressed = ParseHex("0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8");
+    constexpr auto G_uncompressed{"0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"_hex};
     HashWriter hw;
-    hw.write(MakeByteSpan(G_uncompressed));
+    hw.write(G_uncompressed);
     XOnlyPubKey H{hw.GetSHA256()};
     BOOST_CHECK(XOnlyPubKey::NUMS_H == H);
 }
@@ -366,7 +370,7 @@ BOOST_AUTO_TEST_CASE(key_schnorr_tweak_smoke_test)
 
     CKey key;
     key.MakeNewKey(true);
-    uint256 merkle_root = InsecureRand256();
+    uint256 merkle_root = m_rng.rand256();
 
     // secp256k1 functions
     secp256k1_keypair keypair;

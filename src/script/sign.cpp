@@ -719,36 +719,11 @@ void SignatureData::MergeSignatureData(SignatureData sigdata)
     signatures.insert(std::make_move_iterator(sigdata.signatures.begin()), std::make_move_iterator(sigdata.signatures.end()));
 }
 
-bool SignSignature(const SigningProvider &provider, const CScript& fromPubKey, CMutableTransaction& txTo, unsigned int nIn, const CAmount& amount, int nHashType, SignatureData& sig_data)
-{
-    assert(nIn < txTo.vin.size());
-
-    MutableTransactionSignatureCreator creator(txTo, nIn, amount, nHashType);
-
-    bool ret = ProduceSignature(provider, creator, fromPubKey, sig_data);
-    UpdateInput(txTo.vin.at(nIn), sig_data);
-    return ret;
-}
-
-bool SignSignature(const SigningProvider &provider, const CTransaction& txFrom, CMutableTransaction& txTo, unsigned int nIn, int nHashType, SignatureData& sig_data)
-{
-    assert(nIn < txTo.vin.size());
-    const CTxIn& txin = txTo.vin[nIn];
-    assert(txin.prevout.n < txFrom.vout.size());
-    const CTxOut& txout = txFrom.vout[txin.prevout.n];
-
-    return SignSignature(provider, txout.scriptPubKey, txTo, nIn, txout.nValue, nHashType, sig_data);
-}
-
 bool VerifySignature(const Coin& coin, const uint256 txFromHash, const CTransaction& txTo, unsigned int nIn, unsigned int flags)
 {
     TransactionSignatureChecker checker(&txTo, nIn, 0, MissingDataBehavior::FAIL);
 	
     const CTxIn& txin = txTo.vin[nIn];
-//    if (txin.prevout.n >= txFrom.vout.size())
-//        return false;
-//    const CTxOut& txout = txFrom.vout[txin.prevout.n];
-
     const CTxOut& txout = coin.out;
 
     if (txin.prevout.hash != txFromHash)
@@ -965,7 +940,11 @@ bool SignTransactionStake(CMutableTransaction &mtx, const SigningProvider *provi
         const CTxOut& txout = pcoin.first;
         unsigned int nIn = pcoin.second;
         SignatureData sigdata;
-        if (!SignSignature(*provider, txout.scriptPubKey, mtx, nIn, txout.nValue, SIGHASH_ALL, sigdata))
+        assert(nIn < mtx.vin.size());
+        MutableTransactionSignatureCreator creator(mtx, nIn, txout.nValue, SIGHASH_ALL);
+        bool ret = ProduceSignature(*provider, creator, txout.scriptPubKey, sigdata);
+        UpdateInput(mtx.vin.at(nIn), sigdata);
+        if (!ret)
             return false;
     }
 

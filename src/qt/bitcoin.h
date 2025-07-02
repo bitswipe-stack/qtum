@@ -5,7 +5,7 @@
 #ifndef BITCOIN_QT_BITCOIN_H
 #define BITCOIN_QT_BITCOIN_H
 
-#include <config/bitcoin-config.h> // IWYU pragma: keep
+#include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <interfaces/node.h>
 #include <qt/initexecutor.h>
@@ -65,11 +65,13 @@ public:
 
     /// Setup platform style
     void setupPlatformStyle();
+
     /// Restart wallet if needed
     void restartWallet();
 
     /// Parse parameters
     void parseParameters(int argc, const char* const argv[]);
+
 
     interfaces::Node& node() const { assert(m_node); return *m_node; }
 
@@ -110,6 +112,7 @@ private:
     std::unique_ptr<interfaces::Node> m_node;
 
     void startThread();
+
     void restart(const QString &program, const QStringList &arguments);
 
     QString restorePath;
@@ -117,6 +120,7 @@ private:
     QString restoreName;
     bool restartApp{false};
     QStringList parameters;
+
 };
 
 int GuiMain(int argc, char* argv[]);

@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <config/bitcoin-config.h> // IWYU pragma: keep
+#include <bitcoin-build-config.h> // IWYU pragma: keep
 
 #include <core_io.h>
 #include <key_io.h>
@@ -882,6 +882,7 @@ RPCHelpMan createmultisig()
             // Get the public keys
             const UniValue& keys = request.params[1].get_array();
             std::vector<CPubKey> pubkeys;
+            pubkeys.reserve(keys.size());
             for (unsigned int i = 0; i < keys.size(); ++i) {
                 std::string pubkey;
                 if (getAddressToPubKey(*pwallet, keys[i].get_str(), pubkey)){
@@ -928,5 +929,4 @@ RPCHelpMan createmultisig()
         },
     };
 }
-
 } // namespace wallet

@@ -10,6 +10,7 @@
 
 #include <attributes.h>
 #include <script/script.h>
+#include <span.h>
 
 #include <string>
 #include <optional>
@@ -17,7 +18,6 @@
 #include <vector>
 
 class CPubKey;
-template <typename C> class Span;
 
 //contract executions with less gas than this are not standard
 //Make sure is always equal or greater than MINIMUM_GAS_LIMIT (which we can't reference here due to insane header dependency chains)

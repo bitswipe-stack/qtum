@@ -70,18 +70,25 @@ void updateMinerParams(int nHeight, const Consensus::Params& consensusParams, bo
     }
 }
 
+int64_t GetMinimumTime(const CBlockIndex* pindexPrev, const int64_t difficulty_adjustment_interval)
+{
+    int64_t min_time{pindexPrev->GetMedianTimePast() + 1};
+    // Height of block to be mined.
+    const int height{pindexPrev->nHeight + 1};
+    // Account for BIP94 timewarp rule on all networks. This makes future
+    // activation safer.
+    if (height % difficulty_adjustment_interval == 0) {
+        min_time = std::max<int64_t>(min_time, pindexPrev->GetBlockTime() - MAX_TIMEWARP);
+    }
+    return min_time;
+}
+
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
     int64_t nOldTime = pblock->nTime;
-    int64_t nNewTime{std::max<int64_t>(pindexPrev->GetMedianTimePast() + 1, TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()))};
-
-    if (consensusParams.enforce_BIP94) {
-        // Height of block to be mined.
-        const int height{pindexPrev->nHeight + 1};
-        if (height % consensusParams.DifficultyAdjustmentInterval(height) == 0) {
-            nNewTime = std::max<int64_t>(nNewTime, pindexPrev->GetBlockTime() - MAX_TIMEWARP);
-        }
-    }
+    const int height{pindexPrev->nHeight + 1};
+    int64_t nNewTime{std::max<int64_t>(GetMinimumTime(pindexPrev, consensusParams.DifficultyAdjustmentInterval(height)),
+                                       TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()))};
 
     if (nOldTime < nNewTime) {
         pblock->nTime = nNewTime;
@@ -109,11 +116,12 @@ void RegenerateCommitments(CBlock& block, ChainstateManager& chainman)
 
 static BlockAssembler::Options ClampOptions(BlockAssembler::Options options)
 {
-    Assert(options.coinbase_max_additional_weight <= (dgpMaxBlockWeight - 4000));
-    Assert(options.coinbase_output_max_additional_sigops <= dgpMaxBlockSigOps);
-    // Limit weight to between coinbase_max_additional_weight and dgpMaxBlockWeight-4K for sanity:
-    // Coinbase (reserved) outputs can safely exceed -blockmaxweight, but the rest of the block template will be empty.
-    options.nBlockMaxWeight = std::clamp<size_t>(options.nBlockMaxWeight, options.coinbase_max_additional_weight, dgpMaxBlockWeight - 4000);
+    Assert(options.block_reserved_weight <= (dgpMaxBlockWeight - 4000));
+    Assert(options.block_reserved_weight >= MINIMUM_BLOCK_RESERVED_WEIGHT);
+    Assert(options.coinbase_output_max_additional_sigops <= dgpMaxTxSigOps);
+    // Limit weight to between block_reserved_weight and dgpMaxBlockWeight-4K for sanity:
+    // block_reserved_weight can safely exceed -blockmaxweight, but the rest of the block template will be empty.
+    options.nBlockMaxWeight = std::clamp<size_t>(options.nBlockMaxWeight, options.block_reserved_weight, dgpMaxBlockWeight - 4000);
     return options;
 }
 
@@ -133,6 +141,7 @@ void ApplyArgsManOptions(const ArgsManager& args, BlockAssembler::Options& optio
         if (const auto parsed{ParseMoney(*blockmintxfee)}) options.blockMinFeeRate = CFeeRate{*parsed};
     }
     options.print_modified_fee = args.GetBoolArg("-printpriority", options.print_modified_fee);
+    options.block_reserved_weight = args.GetIntArg("-blockreservedweight", options.block_reserved_weight);
 }
 
 static BlockAssembler::Options ConfiguredOptions()
@@ -143,8 +152,8 @@ static BlockAssembler::Options ConfiguredOptions()
 }
 
 #ifdef ENABLE_WALLET
-BlockAssembler::BlockAssembler(Chainstate& chainstate, const CTxMemPool* mempool, wallet::CWallet *_pwallet)
-    : BlockAssembler(chainstate, mempool, ConfiguredOptions())
+BlockAssembler::BlockAssembler(Chainstate& chainstate, const CTxMemPool* mempool, wallet::CWallet* _pwallet, const Options& options)
+    : BlockAssembler(chainstate, mempool, options)
 {
     pwallet = _pwallet;
 }
@@ -154,8 +163,8 @@ void BlockAssembler::resetBlock()
 {
     inBlock.clear();
 
-    // Reserve space for coinbase tx
-    nBlockWeight = m_options.coinbase_max_additional_weight;
+    // Reserve space for fixed-size block header, txs count, and coinbase tx.
+    nBlockWeight = m_options.block_reserved_weight;
     nBlockSigOpsCost = m_options.coinbase_output_max_additional_sigops;
 
     // These counters do not include coinbase tx
@@ -181,17 +190,13 @@ void BlockAssembler::RebuildRefundTransaction(CBlock* pblock){
     pblock->vtx[refundtx] = MakeTransactionRef(std::move(contrTx));
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fProofOfStake, int64_t* pTotalFees, int32_t txProofTime, int32_t nTimeLimit)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(bool fProofOfStake, int64_t* pTotalFees, int32_t txProofTime, int32_t nTimeLimit)
 {
     const auto time_start{SteadyClock::now()};
 
     resetBlock();
 
     pblocktemplate.reset(new CBlockTemplate());
-
-    if (!pblocktemplate.get()) {
-        return nullptr;
-    }
     CBlock* const pblock = &pblocktemplate->block; // pointer for convenience
 
     this->nTimeLimit = nTimeLimit;
@@ -249,7 +254,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
     else
     {
-        coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
+        coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
         coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
     }
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
@@ -262,7 +267,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         CMutableTransaction coinstakeTx;
         coinstakeTx.vout.resize(2);
         coinstakeTx.vout[0].SetEmpty();
-        coinstakeTx.vout[1].scriptPubKey = scriptPubKeyIn;
+        coinstakeTx.vout[1].scriptPubKey = m_options.coinbase_output_script;
         originalRewardTx = coinstakeTx;
         pblock->vtx[1] = MakeTransactionRef(std::move(coinstakeTx));
 
@@ -299,7 +304,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     int nDescendantsUpdated = 0;
     if (m_mempool) {
         LOCK(m_mempool->cs);
-        addPackageTxs(*m_mempool, nPackagesSelected, nDescendantsUpdated, minGasPrice, pblock);
+        addPackageTxs(nPackagesSelected, nDescendantsUpdated, minGasPrice, pblock);
     }
     pblock->hashStateRoot = uint256(h256Touint(dev::h256(globalState->rootHash())));
     pblock->hashUTXORoot = uint256(h256Touint(dev::h256(globalState->rootHashUTXO())));
@@ -332,7 +337,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
     const auto time_2{SteadyClock::now()};
 
-    LogPrint(BCLog::BENCH, "CreateNewBlock() packages: %.2fms (%d packages, %d updated descendants), validity: %.2fms (total %.2fms)\n",
+    LogDebug(BCLog::BENCH, "CreateNewBlock() packages: %.2fms (%d packages, %d updated descendants), validity: %.2fms (total %.2fms)\n",
              Ticks<MillisecondsDouble>(time_1 - time_start), nPackagesSelected, nDescendantsUpdated,
              Ticks<MillisecondsDouble>(time_2 - time_1),
              Ticks<MillisecondsDouble>(time_2 - time_start));
@@ -340,7 +345,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     return std::move(pblocktemplate);
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(const CScript& scriptPubKeyIn, bool fProofOfStake, int64_t* pTotalFees, int32_t nTime)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(bool fProofOfStake, int64_t* pTotalFees, int32_t nTime)
 {
     resetBlock();
 
@@ -395,7 +400,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(const CScript& 
     }
     else
     {
-        coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
+        coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
         coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
     }
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
@@ -408,7 +413,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(const CScript& 
         CMutableTransaction coinstakeTx;
         coinstakeTx.vout.resize(2);
         coinstakeTx.vout[0].SetEmpty();
-        coinstakeTx.vout[1].scriptPubKey = scriptPubKeyIn;
+        coinstakeTx.vout[1].scriptPubKey = m_options.coinbase_output_script;
         originalRewardTx = coinstakeTx;
         pblock->vtx[1] = MakeTransactionRef(std::move(coinstakeTx));
 
@@ -700,9 +705,10 @@ void BlockAssembler::SortForBlock(const CTxMemPool::setEntries& package, std::ve
 // Each time through the loop, we compare the best transaction in
 // mapModifiedTxs with the next transaction in the mempool to decide what
 // transaction package to work on next.
-void BlockAssembler::addPackageTxs(const CTxMemPool& mempool, int& nPackagesSelected, int& nDescendantsUpdated, uint64_t minGasPrice, CBlock* pblock)
+void BlockAssembler::addPackageTxs(int& nPackagesSelected, int& nDescendantsUpdated, uint64_t minGasPrice, CBlock* pblock)
 {
-    AssertLockHeld(mempool.cs);
+    const auto& mempool{*Assert(m_mempool)};
+    LOCK(mempool.cs);
 
     // mapModifiedTx will store sorted packages after they are modified
     // because some of their txs are already in the block
@@ -802,7 +808,7 @@ void BlockAssembler::addPackageTxs(const CTxMemPool& mempool, int& nPackagesSele
             ++nConsecutiveFailed;
 
             if (nConsecutiveFailed > MAX_CONSECUTIVE_FAILURES && nBlockWeight >
-                    m_options.nBlockMaxWeight - m_options.coinbase_max_additional_weight) {
+                    m_options.nBlockMaxWeight - m_options.block_reserved_weight) {
                 // Give up if we're close to full and haven't succeeded in a while
                 break;
             }
@@ -864,6 +870,7 @@ void BlockAssembler::addPackageTxs(const CTxMemPool& mempool, int& nPackagesSele
         }
 
         ++nPackagesSelected;
+        pblocktemplate->m_package_feerates.emplace_back(packageFees, static_cast<int32_t>(packageSize));
 
         // Update transactions that depend on each of these
         nDescendantsUpdated += UpdatePackagesForAdded(mempool, ancestors, mapModifiedTx);
@@ -942,7 +949,7 @@ public:
             }
             else
             {
-                LogPrint(BCLog::COINSTAKE, "Fail to add %s to stake allow list\n", strAddress);
+                LogDebug(BCLog::COINSTAKE, "Fail to add %s to stake allow list\n", strAddress);
             }
         }
 
@@ -957,7 +964,7 @@ public:
             }
             else
             {
-                LogPrint(BCLog::COINSTAKE, "Fail to add %s to stake exclude list\n", strAddress);
+                LogDebug(BCLog::COINSTAKE, "Fail to add %s to stake exclude list\n", strAddress);
             }
         }
 
@@ -1195,9 +1202,9 @@ bool CheckStake(const std::shared_ptr<const CBlock> pblock, wallet::CWallet& wal
     }
 
     //// debug print
-    LogPrint(BCLog::COINSTAKE, "CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex(), proofHash.GetHex(), hashTarget.GetHex());
-    LogPrint(BCLog::COINSTAKE, "%s\n", pblock->ToString());
-    LogPrint(BCLog::COINSTAKE, "out %s\n", FormatMoney(pblock->vtx[1]->GetValueOut()));
+    LogDebug(BCLog::COINSTAKE, "CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex(), proofHash.GetHex(), hashTarget.GetHex());
+    LogDebug(BCLog::COINSTAKE, "%s\n", pblock->ToString());
+    LogDebug(BCLog::COINSTAKE, "out %s\n", FormatMoney(pblock->vtx[1]->GetValueOut()));
 
     // Found a solution
     {
@@ -1797,7 +1804,9 @@ protected:
         {
             // Create an empty block. No need to process transactions until we know we can create a block
             d->nTotalFees = 0;
-            d->pblocktemplate = std::unique_ptr<CBlockTemplate>(BlockAssembler(d->pwallet->chain().chainman().ActiveChainstate(), &(d->pwallet->chain().mempool()), d->pwallet).CreateEmptyBlock(CScript(), true, &d->nTotalFees));
+            BlockAssembler::Options options = ConfiguredOptions();
+            options.coinbase_output_script = CScript();
+            d->pblocktemplate = std::unique_ptr<CBlockTemplate>(BlockAssembler(d->pwallet->chain().chainman().ActiveChainstate(), &(d->pwallet->chain().mempool()), d->pwallet, options).CreateEmptyBlock(true, &d->nTotalFees));
             if (!d->pblocktemplate.get()) {
                 d->fError = true;
                 return false;
@@ -1935,8 +1944,10 @@ protected:
             return false;
 
         // Create a block that's properly populated with transactions
+        BlockAssembler::Options options = ConfiguredOptions();
+        options.coinbase_output_script = d->pblock->vtx[1]->vout[1].scriptPubKey;
         d->pblocktemplatefilled = std::unique_ptr<CBlockTemplate>(
-                BlockAssembler(d->pwallet->chain().chainman().ActiveChainstate(), &(d->pwallet->chain().mempool()), d->pwallet).CreateNewBlock(d->pblock->vtx[1]->vout[1].scriptPubKey, true, &(d->nTotalFees),
+                BlockAssembler(d->pwallet->chain().chainman().ActiveChainstate(), &(d->pwallet->chain().mempool()), d->pwallet, options).CreateNewBlock(true, &(d->nTotalFees),
                                                         blockTime, FutureDrift(TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()), d->nHeight, d->consensusParams) - nStakeTimeBuffer));
         if (!d->pblocktemplatefilled.get()) {
             d->fError = true;

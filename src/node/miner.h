@@ -10,6 +10,7 @@
 #include <policy/policy.h>
 #include <primitives/block.h>
 #include <txmempool.h>
+#include <util/feefrac.h>
 #include <validation.h>
 
 #include <memory>
@@ -82,6 +83,9 @@ struct CBlockTemplate
     std::vector<CAmount> vTxFees;
     std::vector<int64_t> vTxSigOpsCost;
     std::vector<unsigned char> vchCoinbaseCommitment;
+    /* A vector of package fee rates, ordered by the sequence in which
+     * packages are selected for inclusion in the block template.*/
+    std::vector<FeeFrac> m_package_feerates;
 };
 
 // Container for tracking updates to ancestor feerate as we include (parent)
@@ -274,7 +278,7 @@ public:
 
     explicit BlockAssembler(Chainstate& chainstate, const CTxMemPool* mempool, const Options& options);
 #ifdef ENABLE_WALLET
-    explicit BlockAssembler(Chainstate& chainstate, const CTxMemPool* mempool, wallet::CWallet *pwallet);
+    explicit BlockAssembler(Chainstate& chainstate, const CTxMemPool* mempool, wallet::CWallet *pwallet, const Options& options);
 #endif
 
 ///////////////////////////////////////////// // qtum
@@ -291,11 +295,13 @@ public:
     //When GetAdjustedTime() exceeds this, no more transactions will attempt to be added
     int32_t nTimeLimit;
 
-    /** Construct a new block template with coinbase to scriptPubKeyIn */
-    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fProofOfStake=false, int64_t* pTotalFees = 0, int32_t nTime=0, int32_t nTimeLimit=0);
-    std::unique_ptr<CBlockTemplate> CreateEmptyBlock(const CScript& scriptPubKeyIn, bool fProofOfStake=false, int64_t* pTotalFees = 0, int32_t nTime=0);
+    /** Construct a new block template */
+    std::unique_ptr<CBlockTemplate> CreateNewBlock(bool fProofOfStake=false, int64_t* pTotalFees = 0, int32_t nTime=0, int32_t nTimeLimit=0);
+    std::unique_ptr<CBlockTemplate> CreateEmptyBlock(bool fProofOfStake=false, int64_t* pTotalFees = 0, int32_t nTime=0);
 
+    /** The number of transactions in the last assembled block (excluding coinbase transaction) */
     inline static std::optional<int64_t> m_last_block_num_txs{};
+    /** The weight of the last assembled block (including reserved weight for block header, txs count and coinbase tx) */
     inline static std::optional<int64_t> m_last_block_weight{};
 
 private:
@@ -312,8 +318,11 @@ private:
     // Methods for how to add transactions to a block.
     /** Add transactions based on feerate including unconfirmed ancestors
       * Increments nPackagesSelected / nDescendantsUpdated with corresponding
-      * statistics from the package selection (for logging statistics). */
-    void addPackageTxs(const CTxMemPool& mempool, int& nPackagesSelected, int& nDescendantsUpdated, uint64_t minGasPrice, CBlock* pblock) EXCLUSIVE_LOCKS_REQUIRED(mempool.cs);
+      * statistics from the package selection (for logging statistics).
+      *
+      * @pre BlockAssembler::m_mempool must not be nullptr
+    */
+    void addPackageTxs(int& nPackagesSelected, int& nDescendantsUpdated, uint64_t minGasPrice, CBlock* pblock) EXCLUSIVE_LOCKS_REQUIRED(!m_mempool->cs);
 
     /** Rebuild the coinbase/coinstake transaction to account for new gas refunds **/
     void RebuildRefundTransaction(CBlock* pblock);
@@ -336,6 +345,13 @@ private:
 void StakeQtums(bool fStake, wallet::CWallet *pwallet);
 void RefreshDelegates(wallet::CWallet *pwallet, bool myDelegates, bool stakerDelegates);
 #endif
+
+/**
+ * Get the minimum time a miner should use in the next block. This always
+ * accounts for the BIP94 timewarp rule, so does not necessarily reflect the
+ * consensus limit.
+ */
+int64_t GetMinimumTime(const CBlockIndex* pindexPrev, const int64_t difficulty_adjustment_interval);
 
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
 

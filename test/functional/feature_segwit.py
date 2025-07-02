@@ -522,7 +522,6 @@ class SegWitTest(BitcoinTestFramework):
             # Import a compressed key and an uncompressed key, generate some multisig addresses
             self.nodes[0].importprivkey("927pw6RW8ZekycnXqBQ2JS5nPyo1yRfGNN8oq74HeddWSpafDJH")
             uncompressed_spendable_address = [convert_btc_address_to_qtum("mguN2vNSCEUh6rJaXoAVwY3YZwZvEmf5xi")]
-
             self.nodes[0].importprivkey("cMcrXaaUC48ZKpcyydfFo8PxHAjpsYLhdsp6nmtB3E2ER9UUHWnw")
             compressed_spendable_address = [convert_btc_address_to_qtum("n1UNmpmbVUJ9ytXYXiurmGPQ3TRrXqPWKL")]
 

@@ -51,15 +51,6 @@ static constexpr bool DEFAULT_RPC_DOC_CHECK{
 #endif
 };
 
-struct CUpdatedBlock
-{
-    uint256 hash;
-    int height;
-};
-
-extern GlobalMutex cs_blockchange;
-extern std::condition_variable cond_blockchange;
-extern CUpdatedBlock latestblock GUARDED_BY(cs_blockchange);
 extern std::atomic<bool> g_rpc_running;
 
 /** Query whether RPC is running */
@@ -113,6 +104,17 @@ uint256 ParseHashV(const UniValue& v, std::string_view name);
 uint256 ParseHashO(const UniValue& o, std::string_view strKey);
 std::vector<unsigned char> ParseHexV(const UniValue& v, std::string_view name);
 std::vector<unsigned char> ParseHexO(const UniValue& o, std::string_view strKey);
+
+/**
+ * Parses verbosity from provided UniValue.
+ *
+ * @param[in] arg The verbosity argument as an int (0, 1, 2,...) or bool if allow_bool is set to true
+ * @param[in] default_verbosity The value to return if verbosity argument is null
+ * @param[in] allow_bool If true, allows arg to be a bool and parses it
+ * @returns An integer describing the verbosity level (e.g. 0, 1, 2, etc.)
+ * @throws JSONRPCError if allow_bool is false but arg provided is boolean
+ */
+int ParseVerbosity(const UniValue& arg, int default_verbosity, bool allow_bool);
 
 /**
  * Validate and return a CAmount from a UniValue number or string.
@@ -516,5 +518,17 @@ private:
  */
 void PushWarnings(const UniValue& warnings, UniValue& obj);
 void PushWarnings(const std::vector<bilingual_str>& warnings, UniValue& obj);
+
+std::vector<RPCResult> ScriptPubKeyDoc();
+
+/***
+ * Get the target for a given block index.
+ *
+ * @param[in] blockindex    the block
+ * @param[in] pow_limit     PoW limit (consensus parameter)
+ *
+ * @return  the target
+ */
+uint256 GetTarget(const CBlockIndex& blockindex, const uint256 pow_limit);
 
 #endif // BITCOIN_RPC_UTIL_H

@@ -1906,6 +1906,11 @@ Please make sure to keep an updated antivirus and operating system. We can not r
         <translation>启用区块修剪会显著减小存储交易对磁盘空间的需求。所有的区块仍然会被完整校验。取消这个设置需要重新下载整条区块链。</translation>
     </message>
     <message>
+        <source>Maximum database cache size. Make sure you have enough RAM. A larger cache can contribute to faster sync, after which the benefit is less pronounced for most use cases. Lowering the cache size will reduce memory usage. Unused mempool memory is shared for this cache.</source>
+        <extracomment>Tooltip text for Options window setting that sets the size of the database cache. Explains the corresponding effects of increasing/decreasing this value.</extracomment>
+        <translation type="unfinished">最大数据库缓存大小。确保您的系统有足够的RAM。较大的缓存可以帮助加快同步速度，但在大多数使用场景中，同步完成后其优势不再显著。减少缓存大小将降低内存使用。未使用的内存池内存将共享给此缓存。</translation>
+    </message>
+    <message>
         <source>Size of &amp;database cache</source>
         <translation>数据库缓存大小(&amp;D)</translation>
     </message>
@@ -1916,6 +1921,14 @@ Please make sure to keep an updated antivirus and operating system. We can not r
     <message>
         <source>Full path to a %1 compatible script (e.g. C:\Downloads\hwi.exe or /Users/you/Downloads/hwi.py). Beware: malware can steal your coins!</source>
         <translation type="unfinished">与%1兼容的脚本文件路径（例如 C:\Downloads\hwi.exe 或者 /Users/you/Downloads/hwi.py ）。注意：恶意软件可以偷币！</translation>
+    </message>
+    <message>
+        <source>Automatically open the Qtum client port on the router. This only works when your router supports PCP or NAT-PMP and it is enabled. The external port could be random.</source>
+        <translation type="unfinished">自动在路由器上打开QTUM客户端端口。仅当您的路由器支持PCP或NAT-PMP并且已启用时才有效。外部端口可能是随机的。</translation>
+    </message>
+    <message>
+        <source>Map port using PCP or NA&amp;T-PMP</source>
+        <translation type="unfinished">通过PCP或NA&amp;T-PMP映射端口。</translation>
     </message>
     <message>
         <source>IP address of the proxy (e.g. IPv4: 127.0.0.1 / IPv6: ::1)</source>
@@ -1964,11 +1977,6 @@ Please make sure to keep an updated antivirus and operating system. We can not r
     <message>
         <source>Reverting this setting requires re-downloading the entire blockchain.</source>
         <translation>警告：还原此设置需要重新下载整个区块链。</translation>
-    </message>
-    <message>
-        <source>Maximum database cache size. A larger cache can contribute to faster sync, after which the benefit is less pronounced for most use cases. Lowering the cache size will reduce memory usage. Unused mempool memory is shared for this cache.</source>
-        <extracomment>Tooltip text for Options window setting that sets the size of the database cache. Explains the corresponding effects of increasing/decreasing this value.</extracomment>
-        <translation type="unfinished">数据库缓存的最大大小。加大缓存有助于加快同步，但对于大多数使用场景来说，继续加大后收效会越来越不明显。降低缓存大小将会减小内存使用量。内存池中尚未被使用的那部分内存也会被共享用于这里的数据库缓存。</translation>
     </message>
     <message>
         <source>Set the number of script verification threads. Negative values correspond to the number of cores you want to leave free to the system.</source>
@@ -2036,22 +2044,6 @@ Please make sure to keep an updated antivirus and operating system. We can not r
     <message>
         <source>&amp;External signer script path</source>
         <translation>外部签名器脚本路径(&amp;E)</translation>
-    </message>
-    <message>
-        <source>Automatically open the Qtum client port on the router. This only works when your router supports UPnP and it is enabled.</source>
-        <translation>自动在路由器中打开QTUM端口。只有当您的路由器开启了 UPnP 选项时此功能才有效。</translation>
-    </message>
-    <message>
-        <source>Map port using &amp;UPnP</source>
-        <translation>使用 &amp;UPnP 映射端口</translation>
-    </message>
-    <message>
-        <source>Automatically open the Qtum client port on the router. This only works when your router supports NAT-PMP and it is enabled. The external port could be random.</source>
-        <translation>自动在路由器中为QTUM客户端打开端口。只有当您的路由器支持 NAT-PMP 功能并开启它，这个功能才会正常工作。外边端口可以是随机的。</translation>
-    </message>
-    <message>
-        <source>Map port using NA&amp;T-PMP</source>
-        <translation>使用 NA&amp;T-PMP 映射端口</translation>
     </message>
     <message>
         <source>Accept connections from outside.</source>
@@ -2976,6 +2968,14 @@ If you are receiving this error you should request the merchant provide a BIP21 
         <translation>连接数</translation>
     </message>
     <message>
+        <source>Local Addresses</source>
+        <translation type="unfinished">本地地址</translation>
+    </message>
+    <message>
+        <source>Network addresses that your Qtum node is currently using to communicate with other nodes.</source>
+        <translation type="unfinished">您的QTUM节点正在使用网络地址与其他节点联系。</translation>
+    </message>
+    <message>
         <source>Block chain</source>
         <translation>区块链</translation>
     </message>
@@ -3022,6 +3022,10 @@ If you are receiving this error you should request the merchant provide a BIP21 
     <message>
         <source>Select a peer to view detailed information.</source>
         <translation>选择节点查看详细信息。</translation>
+    </message>
+    <message>
+        <source>Hide Peers Detail</source>
+        <translation type="unfinished">隐藏其他人的详细信息</translation>
     </message>
     <message>
         <source>The transport layer version: %1</source>
@@ -5599,10 +5603,6 @@ Go to File &gt; Open Wallet to load a wallet.
         <translation>无法把钱包版本从%i降级到%i。钱包版本未改变。</translation>
     </message>
     <message>
-        <source>Cannot obtain a lock on data directory %s. %s is probably already running.</source>
-        <translation type="unfinished">无法锁定数据目录 %s。%s 可能已经在运行。</translation>
-    </message>
-    <message>
         <source>Cannot upgrade a non HD split wallet from version %i to version %i without upgrading to support pre-split keypool. Please use version %i or no version specified.</source>
         <translation>无法在不支持“拆分前的密钥池”（pre split keypool）的情况下把“非拆分HD钱包”（non HD split wallet）从版本%i升级到%i。请使用版本号%i，或者压根不要指定版本号。</translation>
     </message>
@@ -5621,6 +5621,10 @@ Go to File &gt; Open Wallet to load a wallet.
     <message>
         <source>Error reading %s! Transaction data may be missing or incorrect. Rescanning wallet.</source>
         <translation type="unfinished">读取%s出错！交易数据可能丢失或有误。重新扫描钱包中。</translation>
+    </message>
+    <message>
+        <source>Error starting/committing db txn for wallet transactions removal process</source>
+        <translation type="unfinished">错误：启动/提交数据库事务时出错，导致钱包交易移除过程失败。</translation>
     </message>
     <message>
         <source>Error: Dumpfile format record is incorrect. Got "%s", expected "format".</source>
@@ -5651,6 +5655,10 @@ Go to File &gt; Open Wallet to load a wallet.
         <translation>没有提供钱包格式。要使用 createfromdump ，必须提供 -format=&lt;format&gt;</translation>
     </message>
     <message>
+        <source>Option '-upnp' is set but UPnP support was dropped in version 29.0. Consider using '-natpmp' instead.</source>
+        <translation type="unfinished">选项‘-upnp’已设置，但UPnP支持在29.0版本中已被移除。建议改用‘-natpmp’选项。</translation>
+    </message>
+    <message>
         <source>%s corrupt. Try using the wallet tool qtum-wallet to salvage or restoring a backup.</source>
         <translation>%s损坏。请尝试用qtum-wallet钱包工具来对其进行急救。或者用一个备份进行还原。</translation>
     </message>
@@ -5677,6 +5685,10 @@ Go to File &gt; Open Wallet to load a wallet.
     <message>
         <source>Invalid or corrupt peers.dat (%s). If you believe this is a bug, please report it to %s. As a workaround, you can move the file (%s) out of the way (rename, move, or delete) to have a new one created on the next start.</source>
         <translation type="unfinished">无效或损坏的peers.dat (%s)。如果你确信这是一个bug，请反馈到%s。作为变通办法，你可以把现有文件 (%s) 移开(重命名、移动或删除)，这样就可以在下次启动时创建一个新文件了。</translation>
+    </message>
+    <message>
+        <source>Invalid value detected for '-wallet' or '-nowallet'. '-wallet' requires a string value, while '-nowallet' accepts only '1' to disable all wallets</source>
+        <translation type="unfinished">检测到‘-wallet’或‘-nowallet’的无效值。‘-wallet’需要一个字符串值，而‘-nowallet’只能接受‘1’来禁用所有钱包。</translation>
     </message>
     <message>
         <source>More than one onion bind address is provided. Using %s for the automatically created Tor onion service.</source>
@@ -5823,16 +5835,16 @@ Go to File &gt; Open Wallet to load a wallet.
         <translation type="unfinished">-maxmempool 最小为%d MB</translation>
     </message>
     <message>
+        <source>Cannot obtain a lock on directory %s. %s is probably already running.</source>
+        <translation type="unfinished">无法锁定目录 %s。%s 可能已经在运行。</translation>
+    </message>
+    <message>
         <source>Cannot downgrade wallet</source>
         <translation type="unfinished">无法降级钱包</translation>
     </message>
     <message>
         <source>Cannot resolve -%s address: &apos;%s&apos;</source>
         <translation type="unfinished">无法解析 - %s 地址： &apos;%s&apos;</translation>
-    </message>
-    <message>
-        <source>Cannot write to data directory &apos;%s&apos;; check permissions.</source>
-        <translation type="unfinished">不能写入到数据目录&apos;%s&apos;；请检查文件权限。</translation>
     </message>
     <message>
         <source>%s is set very high! Fees this large could be paid on a single transaction.</source>
@@ -5957,6 +5969,10 @@ Unable to restore backup of wallet.</source>
         <translation type="unfinished">区块验证已中断</translation>
     </message>
     <message>
+        <source>Cannot write to directory '%s'; check permissions.</source>
+        <translation type="unfinished">无法写入目录“%s”；请检查权限。</translation>
+    </message>
+    <message>
         <source>Config setting for %s only applied on %s network when in [%s] section.</source>
         <translation type="unfinished">对 %s 的配置设置只对 %s 网络生效，如果它位于配置的 [%s] 章节的话</translation>
     </message>
@@ -5969,20 +5985,12 @@ Unable to restore backup of wallet.</source>
         <translation type="unfinished">检测到区块数据库损坏</translation>
     </message>
     <message>
-        <source>Do you want to rebuild the block database now?</source>
-        <translation type="unfinished">你想现在就重建区块数据库吗？</translation>
-    </message>
-    <message>
         <source>Done loading</source>
         <translation type="unfinished">加载完成</translation>
     </message>
     <message>
         <source>Dump file %s does not exist.</source>
         <translation>转储文件 %s 不存在</translation>
-    </message>
-    <message>
-        <source>Error committing db txn for wallet transactions removal</source>
-        <translation type="unfinished">在提交删除钱包交易的数据库事务时出错</translation>
     </message>
     <message>
         <source>Error creating %s</source>
@@ -6017,8 +6025,16 @@ Unable to restore backup of wallet.</source>
         <translation type="unfinished">导入区块数据库出错</translation>
     </message>
     <message>
+        <source>Error loading databases</source>
+        <translation type="unfinished">错误：加载数据库失败。</translation>
+    </message>
+    <message>
         <source>Error opening block database</source>
         <translation type="unfinished">导入区块数据库出错</translation>
+    </message>
+    <message>
+        <source>Error opening coins database</source>
+        <translation type="unfinished">错误：打开币数据库失败。</translation>
     </message>
     <message>
         <source>Error reading configuration file: %s</source>
@@ -6031,10 +6047,6 @@ Unable to restore backup of wallet.</source>
     <message>
         <source>Error reading next record from wallet database</source>
         <translation>从钱包数据库读取下一条记录时出错</translation>
-    </message>
-    <message>
-        <source>Error starting db txn for wallet transactions removal</source>
-        <translation type="unfinished">在开始删除钱包交易的数据库事务时出错</translation>
     </message>
     <message>
         <source>Error: Cannot extract destination from the generated scriptpubkey</source>
@@ -6113,6 +6125,10 @@ Unable to restore backup of wallet.</source>
         <translation type="unfinished">错误：无法移除仅观察地址簿数据</translation>
     </message>
     <message>
+        <source>Error: Unable to write data to disk for wallet %s</source>
+        <translation type="unfinished">错误：无法将数据写入钱包的磁盘%s。</translation>
+    </message>
+    <message>
         <source>Error: Unable to write record to new wallet</source>
         <translation>错误: 无法写入记录到新钱包</translation>
     </message>
@@ -6123,10 +6139,6 @@ Unable to restore backup of wallet.</source>
     <message>
         <source>Error: Unable to write watchonly wallet best block locator record</source>
         <translation type="unfinished">错误：无法写入仅观察钱包最佳区块定位器记录</translation>
-    </message>
-    <message>
-        <source>Error: address book copy failed for wallet %s</source>
-        <translation type="unfinished">错误: 复制钱包%s的地址本时失败</translation>
     </message>
     <message>
         <source>Error: database transaction cannot be executed for wallet %s</source>
@@ -6309,10 +6321,6 @@ Unable to restore backup of wallet.</source>
         <translation type="unfinished">没有可用的地址</translation>
     </message>
     <message>
-        <source>Not enough file descriptors available.</source>
-        <translation type="unfinished">没有足够的文件描述符可用。</translation>
-    </message>
-    <message>
         <source>Not found pre-selected input %s</source>
         <translation type="unfinished">找不到预先选择输入%s</translation>
     </message>
@@ -6392,6 +6400,10 @@ Unable to restore backup of wallet.</source>
     <message>
         <source>The transaction amount is too small to pay the fee</source>
         <translation type="unfinished">交易金额太小，不足以支付交易费</translation>
+    </message>
+    <message>
+        <source>The transactions removal process can only be executed within a db txn</source>
+        <translation type="unfinished">交易移除过程只能在数据库事务内执行。</translation>
     </message>
     <message>
         <source>The wallet will avoid paying less than the minimum relay fee.</source>
@@ -6498,12 +6510,28 @@ Unable to restore backup of wallet.</source>
         <translation type="unfinished">不支持的日志分类 %s=%s.</translation>
     </message>
     <message>
+        <source>Do you want to rebuild the databases now?</source>
+        <translation type="unfinished">你想现在重建数据库吗？</translation>
+    </message>
+    <message>
         <source>Error: Could not add watchonly tx %s to watchonly wallet</source>
         <translation type="unfinished">错误：无法添加仅观察交易%s到仅观察钱包</translation>
     </message>
     <message>
         <source>Error: Could not delete watchonly transactions. </source>
         <translation type="unfinished">错误: 无法删除仅观察交易。</translation>
+    </message>
+    <message>
+        <source>Error: Wallet does not exist</source>
+        <translation type="unfinished">错误：钱包不存在。</translation>
+    </message>
+    <message>
+        <source>Error: cannot remove legacy wallet records</source>
+        <translation type="unfinished">错误：无法删除遗留钱包的记录。</translation>
+    </message>
+    <message>
+        <source>Not enough file descriptors available. %d available, %d required.</source>
+        <translation type="unfinished">没有足够的文件描述符可用。%d可用，%d需要。</translation>
     </message>
     <message>
         <source>User Agent comment (%s) contains unsafe characters.</source>

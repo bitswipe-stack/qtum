@@ -20,8 +20,7 @@ static void mineBlock(const node::NodeContext& node, std::chrono::seconds block_
 {
     auto curr_time = GetTime<std::chrono::seconds>();
     SetMockTime(block_time); // update time so the block is created with it
-    node::BlockAssembler::Options options;
-    CBlock block = node::BlockAssembler{node.chainman->ActiveChainstate(), nullptr, options}.CreateNewBlock(CScript() << OP_TRUE)->block;
+    CBlock block = node::BlockAssembler{node.chainman->ActiveChainstate(), nullptr, {}}.CreateNewBlock()->block;
     node::RegenerateCommitments(block, *Assert(node.chainman)); // Update block.hashMerkleRoot
     while (!CheckProofOfWork(block.GetHash(), block.nBits, node.chainman->GetConsensus())) ++block.nNonce;
     block.fChecked = true; // little speedup

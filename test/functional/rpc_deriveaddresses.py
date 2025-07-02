@@ -30,6 +30,9 @@ class DeriveaddressesTest(BitcoinTestFramework):
         assert_equal(self.nodes[0].deriveaddresses(ranged_descriptor, [1, 2]), [convert_btc_bech32_address_to_qtum("bcrt1qhku5rq7jz8ulufe2y6fkcpnlvpsta7rq4442dy"), convert_btc_bech32_address_to_qtum("bcrt1qpgptk2gvshyl0s9lqshsmx932l9ccsv265tvaq")])
         assert_equal(self.nodes[0].deriveaddresses(ranged_descriptor, 2), [address, convert_btc_bech32_address_to_qtum("bcrt1qhku5rq7jz8ulufe2y6fkcpnlvpsta7rq4442dy"), convert_btc_bech32_address_to_qtum("bcrt1qpgptk2gvshyl0s9lqshsmx932l9ccsv265tvaq")])
 
+        ranged_descriptor = descsum_create("wpkh(tprv8ZgxMBicQKsPd7Uf69XL1XwhmjHopUGep8GuEiJDZmbQz6o58LninorQAfcKZWARbtRtfnLcJ5MQ2AtHcQJCCRUcMRvmDUjyEmNUWwx8UbK/1/<0;1>/*)")
+        assert_equal(self.nodes[0].deriveaddresses(ranged_descriptor, [1, 2]), [[convert_btc_bech32_address_to_qtum("bcrt1q7c8mdmdktrzs8xgpjmqw90tjn65j5a3yj04m3n"), convert_btc_bech32_address_to_qtum("bcrt1qs6n37uzu0v0qfzf0r0csm0dwa7prc0v5uavgy0")], [convert_btc_bech32_address_to_qtum("bcrt1qhku5rq7jz8ulufe2y6fkcpnlvpsta7rq4442dy"), convert_btc_bech32_address_to_qtum("bcrt1qpgptk2gvshyl0s9lqshsmx932l9ccsv265tvaq")]])
+
         assert_raises_rpc_error(-8, "Range should not be specified for an un-ranged descriptor", self.nodes[0].deriveaddresses, descsum_create("wpkh(tprv8ZgxMBicQKsPd7Uf69XL1XwhmjHopUGep8GuEiJDZmbQz6o58LninorQAfcKZWARbtRtfnLcJ5MQ2AtHcQJCCRUcMRvmDUjyEmNUWwx8UbK/1/1/0)"), [0, 2])
 
         assert_raises_rpc_error(-8, "Range must be specified for a ranged descriptor", self.nodes[0].deriveaddresses, descsum_create("wpkh(tprv8ZgxMBicQKsPd7Uf69XL1XwhmjHopUGep8GuEiJDZmbQz6o58LninorQAfcKZWARbtRtfnLcJ5MQ2AtHcQJCCRUcMRvmDUjyEmNUWwx8UbK/1/1/*)"))
@@ -43,7 +46,7 @@ class DeriveaddressesTest(BitcoinTestFramework):
         assert_raises_rpc_error(-8, "Range should be greater or equal than 0", self.nodes[0].deriveaddresses, descsum_create("wpkh(tprv8ZgxMBicQKsPd7Uf69XL1XwhmjHopUGep8GuEiJDZmbQz6o58LninorQAfcKZWARbtRtfnLcJ5MQ2AtHcQJCCRUcMRvmDUjyEmNUWwx8UbK/1/1/*)"), [-1, 0])
 
         combo_descriptor = descsum_create("combo(tprv8ZgxMBicQKsPd7Uf69XL1XwhmjHopUGep8GuEiJDZmbQz6o58LninorQAfcKZWARbtRtfnLcJ5MQ2AtHcQJCCRUcMRvmDUjyEmNUWwx8UbK/1/1/0)")
-        assert_equal(self.nodes[0].deriveaddresses(combo_descriptor), [convert_btc_address_to_qtum("mtfUoUax9L4tzXARpw1oTGxWyoogp52KhJ"), convert_btc_address_to_qtum("mtfUoUax9L4tzXARpw1oTGxWyoogp52KhJ"), address, convert_btc_address_to_qtum("2NDvEwGfpEqJWfybzpKPHF2XH3jwoQV3D7x")])
+        assert_equal(self.nodes[0].deriveaddresses(combo_descriptor), [convert_btc_address_to_qtum("mtfUoUax9L4tzXARpw1oTGxWyoogp52KhJ"), address, convert_btc_address_to_qtum("2NDvEwGfpEqJWfybzpKPHF2XH3jwoQV3D7x")])
 
         # P2PK does not have a valid address
         # assert_raises_rpc_error(-5, "Descriptor does not have a corresponding address", self.nodes[0].deriveaddresses, descsum_create("pk(tprv8ZgxMBicQKsPd7Uf69XL1XwhmjHopUGep8GuEiJDZmbQz6o58LninorQAfcKZWARbtRtfnLcJ5MQ2AtHcQJCCRUcMRvmDUjyEmNUWwx8UbK)"))

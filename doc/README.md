@@ -3,7 +3,7 @@ Qtum Core
 
 Setup
 ---------------------
-Qtum Core is the original Qtum client and it builds the backbone of the network. It downloads and, by default, stores the entire history of Qtum transactions, which requires several gigabytes of disk space. Depending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.
+Qtum Core is the original Qtum client and it builds the backbone of the network. It downloads and, by default, stores the entire history of Qtum transactions, which requires several gigabytes or more of disk space. Depending on the speed of your computer and network connection, the synchronization process can take anywhere from a few hours to a day or more.
 
 To download Qtum Core, visit [qtumcore.org](https://qtumeco.io/wallet).
 
@@ -41,7 +41,7 @@ The following are developer notes on how to build Qtum Core on your native platf
 - [Dependencies](dependencies.md)
 - [macOS Build Notes](build-osx.md)
 - [Unix Build Notes](build-unix.md)
-- [Windows Build Notes](build-windows.md)
+- [Windows Build Notes](build-windows-msvc.md)
 - [FreeBSD Build Notes](build-freebsd.md)
 - [OpenBSD Build Notes](build-openbsd.md)
 - [NetBSD Build Notes](build-netbsd.md)
@@ -69,7 +69,7 @@ The Qtum repo's [root README](/README.md) contains relevant information on the d
 
 ### Miscellaneous
 - [Assets Attribution](assets-attribution.md)
-- [qtum.conf Configuration File](qtum-conf.md)
+- [qtum.conf Configuration File](bitcoin-conf.md)
 - [CJDNS Support](cjdns.md)
 - [Files](files.md)
 - [Fuzz-testing](fuzzing.md)

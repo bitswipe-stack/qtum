@@ -74,7 +74,7 @@ private Q_SLOTS:
             return;
 
         // Initialize variables
-        uint256 tokenHash = uint256S(hash.toStdString());
+        uint256 tokenHash = uint256::FromHex(hash.toStdString()).value_or(uint256::ZERO);
         int64_t fromBlock = 0;
         int64_t toBlock = -1;
         interfaces::TokenInfo tokenInfo;

@@ -14,7 +14,7 @@ from test_framework.util import (
 from test_framework.blocktools import (
     TIME_GENESIS_BLOCK,
 )
-from test_framework.qtumconfig import COINBASE_MATURITY 
+from test_framework.qtumconfig import COINBASE_MATURITY
 
 
 class CreateTxWalletTest(BitcoinTestFramework):
@@ -31,7 +31,7 @@ class CreateTxWalletTest(BitcoinTestFramework):
     def run_test(self):
         self.log.info('Create some old blocks')
         self.nodes[0].setmocktime(TIME_GENESIS_BLOCK)
-        self.nodes[0].generate(COINBASE_MATURITY+100)
+        self.generate(self.nodes[0], COINBASE_MATURITY+100)
         self.nodes[0].setmocktime(0)
 
         self.test_anti_fee_sniping()

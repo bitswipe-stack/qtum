@@ -263,17 +263,6 @@ static std::vector<RPCResult> DecodeExpanded(bool isExpanded, bool isVin)
     return {};
 }
 
-static std::vector<RPCResult> ScriptPubKeyDoc() {
-    return
-         {
-             {RPCResult::Type::STR, "asm", "Disassembly of the output script"},
-             {RPCResult::Type::STR, "desc", "Inferred descriptor for the output"},
-             {RPCResult::Type::STR_HEX, "hex", "The raw output script bytes, hex-encoded"},
-             {RPCResult::Type::STR, "address", /*optional=*/true, "The Bitcoin address (only if a well-defined address exists)"},
-             {RPCResult::Type::STR, "type", "The type (one of: " + GetAllOutputTypes() + ")"},
-         };
-}
-
 static std::vector<RPCResult> DecodeTxDoc(const std::string& txid_field_doc, bool isExpanded = false)
 {
     return {
@@ -547,15 +536,7 @@ static RPCHelpMan getrawtransaction()
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "The genesis block coinbase is not considered an ordinary transaction and cannot be retrieved");
     }
 
-    // Accept either a bool (true) or a num (>=0) to indicate verbosity.
-    int verbosity{0};
-    if (!request.params[1].isNull()) {
-        if (request.params[1].isBool()) {
-            verbosity = request.params[1].get_bool();
-        } else {
-            verbosity = request.params[1].getInt<int>();
-        }
-    }
+    int verbosity{ParseVerbosity(request.params[1], /*default_verbosity=*/0, /*allow_bool=*/true)};
 
     if (!request.params[2].isNull()) {
         LOCK(cs_main);
@@ -618,7 +599,6 @@ static RPCHelpMan getrawtransaction()
     }
     ////////////////////////////////////////////////////////
 
-
     UniValue result(UniValue::VOBJ);
     if (blockindex) {
         LOCK(cs_main);
@@ -638,11 +618,16 @@ static RPCHelpMan getrawtransaction()
     CBlockUndo blockUndo;
     CBlock block;
 
-    if (tx->IsCoinBase() || !blockindex || WITH_LOCK(::cs_main, return chainman.m_blockman.IsBlockPruned(*blockindex)) ||
-        !(chainman.m_blockman.UndoReadFromDisk(blockUndo, *blockindex) && chainman.m_blockman.ReadBlockFromDisk(block, *blockindex))) {
+    if (tx->IsCoinBase() || !blockindex || WITH_LOCK(::cs_main, return !(blockindex->nStatus & BLOCK_HAVE_MASK))) {
         TxToJSON(*tx, hash_block, result, chainman.ActiveChainstate());
         if (fAddressIndex) TxToJSONExpanded(*tx, hash_block, result, mempool, chainman.m_blockman, nHeight, nConfirmations, nBlockTime);
         return result;
+    }
+    if (!chainman.m_blockman.ReadBlockUndo(blockUndo, *blockindex)) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Undo data expected but can't be read. This could be due to disk corruption or a conflict with a pruning event.");
+    }
+    if (!chainman.m_blockman.ReadBlock(block, *blockindex)) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Block data expected but can't be read. This could be due to disk corruption or a conflict with a pruning event.");
     }
 
     CTxUndo* undoTX {nullptr};

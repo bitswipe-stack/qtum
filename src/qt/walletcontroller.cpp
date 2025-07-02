@@ -33,6 +33,7 @@
 #include <QTimer>
 #include <QWindow>
 #include <QFile>
+
 using util::Join;
 using wallet::WALLET_FLAG_BLANK_WALLET;
 using wallet::WALLET_FLAG_DESCRIPTORS;
@@ -294,6 +295,7 @@ void CreateWalletActivity::askDevice()
         Q_EMIT finished();
     }
 }
+
 void CreateWalletActivity::createWallet()
 {
     showProgressDialog(
@@ -489,6 +491,7 @@ void WalletController::getRestoreData(QString &restorePath, QString &restorePara
         }
     }
 }
+
 RestoreWalletActivity::RestoreWalletActivity(WalletController* wallet_controller, QWidget* parent_widget)
     : WalletControllerActivity(wallet_controller, parent_widget)
 {
