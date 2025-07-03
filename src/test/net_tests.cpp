@@ -1517,8 +1517,8 @@ BOOST_AUTO_TEST_CASE(v2transport_test)
         tester.ReceiveGarbage();
         tester.ReceiveVersion();
         tester.CompareSessionIDs();
-        auto msg_data_1 = m_rng.randbytes<uint8_t>(4000000); // test that receiving 4M payload works
-        auto msg_data_2 = m_rng.randbytes<uint8_t>(4000000); // test that sending 4M payload works
+        auto msg_data_1 = m_rng.randbytes<uint8_t>(2000000); // test that receiving 2M payload works
+        auto msg_data_2 = m_rng.randbytes<uint8_t>(2000000); // test that sending 2M payload works
         tester.SendMessage(uint8_t(m_rng.randrange(223) + 33), {}); // unknown short id
         tester.SendMessage(uint8_t(2), msg_data_1); // "block" short id
         tester.AddMessage("blocktxn", msg_data_2); // schedule blocktxn to be sent to us

@@ -589,7 +589,7 @@ BOOST_AUTO_TEST_CASE(descriptor_test)
                 {{"210379e45b3cf75f9c5f9befd8e9506fb962f6a9d185ac87001ec44a8d3df8d4a9e3ac"}},
                 {{"21034f8d02282ac6786737d0f37f0df7655f49daa24843bc7de3f4ea88603d26d10aac"}},
             },
-            std::nullopt,
+            OutputType::LEGACY,
             {
                 {{0}},
                 {{1}},
