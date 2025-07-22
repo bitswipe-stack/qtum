@@ -150,19 +150,38 @@ set(CURVE ALT_BN128 CACHE STRING "" FORCE)
 add_subdirectory(libff)
 cmake_policy(POP)
 
-# Add evmone library
-ExternalProject_Add(evmone
-    PREFIX ${CMAKE_BINARY_DIR}/src/evmone
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}/src/evmone
-    CMAKE_ARGS 
-        -DBUILD_SHARED_LIBS=OFF
-        -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} 
-        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-        -DCMAKE_LINKER=${CMAKE_LINKER}
-        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-        -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
+# Add blst library
+add_subdirectory(blst)
+
+# Add ethash library
+add_library(ethash STATIC EXCLUDE_FROM_ALL
+  eth_client/utils/ethash/lib/ethash/ethash.cpp
+  eth_client/utils/ethash/lib/ethash/primes.c
+  eth_client/utils/ethash/lib/global_context/global_context.cpp
+  eth_client/utils/ethash/lib/keccak/keccak.c
 )
+
+# Add evmone library
+add_library(evmone STATIC EXCLUDE_FROM_ALL
+  evmone/evmc/lib/instructions/instruction_metrics.c
+  evmone/evmc/lib/instructions/instruction_names.c
+  evmone/lib/evmone/advanced_analysis.cpp
+  evmone/lib/evmone/advanced_execution.cpp
+  evmone/lib/evmone/advanced_instructions.cpp
+  evmone/lib/evmone/baseline_analysis.cpp
+  evmone/lib/evmone/baseline_execution.cpp
+  evmone/lib/evmone/baseline_instruction_table.cpp
+  evmone/lib/evmone/eof.cpp
+  evmone/lib/evmone/instructions_calls.cpp
+  evmone/lib/evmone/instructions_storage.cpp
+  evmone/lib/evmone/tracing.cpp
+  evmone/lib/evmone/vm.cpp
+  evmone/lib/evmone_precompiles/bls.cpp
+  evmone/lib/evmone_precompiles/kzg.cpp
+  evmone/lib/evmone_precompiles/sha256.cpp
+)
+target_link_libraries(evmone PRIVATE blst ethash)
+target_compile_definitions(evmone PRIVATE PROJECT_VERSION="\\\"0.13.0\\\"")
 
 # Home for common functionality shared by different executables and libraries.
 # Similar to `bitcoin_util` library, but higher-level.
@@ -270,10 +289,6 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   eth_client/libevm/EVMC.cpp
   eth_client/libevm/ExtVMFace.cpp
   eth_client/libevm/VMFactory.cpp
-  eth_client/utils/ethash/lib/ethash/ethash.cpp
-  eth_client/utils/ethash/lib/ethash/primes.c
-  eth_client/utils/ethash/lib/global_context/global_context.cpp
-  eth_client/utils/ethash/lib/keccak/keccak.c
   eth_client/utils/json_spirit/json_spirit_reader.cpp
   eth_client/utils/json_spirit/json_spirit_value.cpp
   eth_client/utils/json_spirit/json_spirit_writer.cpp
@@ -287,7 +302,6 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   eth_client/utils/libscrypt/sha256.c
   eth_client/utils/libscrypt/slowequals.c
 )
-add_dependencies(bitcoin_common evmone)
 
 link_directories(${CMAKE_BINARY_DIR}/lib)
 target_link_libraries(bitcoin_common
@@ -306,8 +320,7 @@ target_link_libraries(bitcoin_common
     Boost::filesystem
     Boost::program_options
     Boost::thread
-    evmone_precompiles-standalone
-    evmone-standalone
+    evmone
     OpenSSL::SSL
     OpenSSL::Crypto
 )
