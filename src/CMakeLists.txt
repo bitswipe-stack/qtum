@@ -548,6 +548,7 @@ if(BUILD_TX)
     bitcoin_common
     bitcoin_util
     univalue
+    Boost::headers
   )
   install_binary_component(qtum-tx HAS_MANPAGE)
 endif()
@@ -560,6 +561,7 @@ if(BUILD_UTIL)
     core_interface
     bitcoin_common
     bitcoin_util
+    Boost::headers
   )
   install_binary_component(qtum-util HAS_MANPAGE)
 endif()
