@@ -107,7 +107,7 @@ UniValue CallToContract(const UniValue& params, ChainstateManager &chainman)
             throw JSONRPCError(RPC_INVALID_PARAMS, "Incorrect block number");
         }
     } else {
-        blockNum = latestblock.height;
+        blockNum = active_chain.Height();
     }
 
     dev::Address addrAccount;

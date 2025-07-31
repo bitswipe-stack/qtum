@@ -1693,7 +1693,7 @@ RPCHelpMan getblocktransactionreceipts()
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Incorrect hash");
     }
 
-    uint256 hash(uint256S(hashTemp));
+    uint256 hash = uint256::FromHex(hashTemp).value_or(uint256::ZERO);
 
     ChainstateManager& chainman = EnsureAnyChainman(request.context);
     LOCK(cs_main);
