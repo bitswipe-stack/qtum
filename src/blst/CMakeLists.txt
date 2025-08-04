@@ -4,10 +4,16 @@ project(blst_wrapper NONE) # Language is externally handled via script
 # Determine build script and output location
 if(MSVC)
     set(BLST_BUILD_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build.bat")
-    set(BLST_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/blst.lib")
+    set(BLST_OUTPUT_TEMP "${CMAKE_CURRENT_SOURCE_DIR}/blst.lib")
+    set(BLST_OUTPUT "${CMAKE_BINARY_DIR}/lib/blst.lib")
 else()
     # Build CC invocation with optional macOS flags
-    set(BLST_CC "${CMAKE_C_COMPILER}")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+        string(REPLACE ";" " " CC "${CMAKE_C_COMPILER}")
+        set(BLST_CC "${CC}")
+    else()
+        set(BLST_CC "${CMAKE_C_COMPILER}")
+    endif()
 
     if(CMAKE_OSX_SYSROOT)
         set(BLST_CC "${BLST_CC} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
@@ -22,7 +28,8 @@ else()
     endif()
 
     set(BLST_BUILD_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build.sh")
-    set(BLST_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/libblst.a")
+    set(BLST_OUTPUT_TEMP "${CMAKE_CURRENT_SOURCE_DIR}/libblst.a")
+    set(BLST_OUTPUT "${CMAKE_BINARY_DIR}/lib/libblst.a")
 endif()
 
 # Shared build flags
@@ -32,7 +39,7 @@ set(BLST_BUILD_SCRIPT_FLAGS "-D__BLST_PORTABLE__")
 if(MSVC)
     # Windows: run batch script directly
     add_custom_command(
-        OUTPUT ${BLST_OUTPUT}
+        OUTPUT ${BLST_OUTPUT_TEMP}
         COMMAND ${CMAKE_COMMAND} -E echo "[+] building blst via build.bat"
         COMMAND ${BLST_BUILD_SCRIPT} ${BLST_BUILD_SCRIPT_FLAGS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -41,7 +48,7 @@ if(MSVC)
 else()
     # Unix-like: use env to set CC and AR
     add_custom_command(
-        OUTPUT ${BLST_OUTPUT}
+        OUTPUT ${BLST_OUTPUT_TEMP}
         COMMAND ${CMAKE_COMMAND} -E echo "[+] building blst via build.sh"
         COMMAND ${CMAKE_COMMAND} -E env
                 CC=${BLST_CC}
@@ -51,6 +58,15 @@ else()
         DEPENDS ${BLST_BUILD_SCRIPT}
     )
 endif()
+
+# Moving blst to install libdir
+add_custom_command(
+    OUTPUT ${BLST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E rename
+        ${BLST_OUTPUT_TEMP}
+        ${BLST_OUTPUT}
+    DEPENDS ${BLST_OUTPUT_TEMP}
+)
 
 # Trigger the build step
 add_custom_target(blst_build ALL DEPENDS ${BLST_OUTPUT})
