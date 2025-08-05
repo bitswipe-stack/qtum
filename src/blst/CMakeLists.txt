@@ -8,12 +8,11 @@ if(MSVC)
     set(BLST_OUTPUT "${CMAKE_BINARY_DIR}/lib/blst.lib")
 else()
     # Build CC invocation with optional macOS flags
-    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
-        string(REPLACE ";" " " CC "${CMAKE_C_COMPILER}")
-        set(BLST_CC "${CC}")
-    else()
-        set(BLST_CC "${CMAKE_C_COMPILER}")
-    endif()
+
+    # cmake pack the compiler and its flags into a list separated by semicolons
+    # replace the semicolons with empty space to produce compiler path with flags
+    string(REPLACE ";" " " CC "${CMAKE_C_COMPILER}")
+    set(BLST_CC "${CC}")
 
     if(CMAKE_OSX_SYSROOT)
         set(BLST_CC "${BLST_CC} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
