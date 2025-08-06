@@ -364,7 +364,7 @@ BOOST_FIXTURE_TEST_CASE(improves_feerate, TestChain100Setup)
     // low feerate parent with normal feerate child
     const auto tx1 = make_tx(/*inputs=*/ {m_coinbase_txns[0], m_coinbase_txns[1]}, /*output_values=*/ {10 * COIN});
     AddToMempool(pool, entry.Fee(low_fee).FromTx(tx1));
-    const auto tx2 = make_tx(/*inputs=*/ {tx1}, /*output_values=*/ {995 * CENT});
+    const auto tx2 = make_tx(/*inputs=*/ {tx1}, /*output_values=*/ {985 * CENT});
     AddToMempool(pool, entry.Fee(normal_fee).FromTx(tx2));
 
     const auto entry1 = pool.GetIter(tx1->GetHash()).value();
@@ -374,7 +374,7 @@ BOOST_FIXTURE_TEST_CASE(improves_feerate, TestChain100Setup)
 
     // conflicting transactions
     const auto tx1_conflict = make_tx(/*inputs=*/ {m_coinbase_txns[0], m_coinbase_txns[2]}, /*output_values=*/ {10 * COIN});
-    const auto tx3 = make_tx(/*inputs=*/ {tx1_conflict}, /*output_values=*/ {995 * CENT});
+    const auto tx3 = make_tx(/*inputs=*/ {tx1_conflict}, /*output_values=*/ {985 * CENT});
     auto entry3 = entry.FromTx(tx3);
 
     // Now test ImprovesFeerateDiagram with various levels of "package rbf" feerates
@@ -428,7 +428,7 @@ BOOST_FIXTURE_TEST_CASE(improves_feerate, TestChain100Setup)
     changeset.reset();
 
     // Adding a grandchild makes the cluster size 3, which is uncalculable
-    const auto tx5 = make_tx(/*inputs=*/ {tx2}, /*output_values=*/ {995 * CENT});
+    const auto tx5 = make_tx(/*inputs=*/ {tx2}, /*output_values=*/ {985 * CENT});
     AddToMempool(pool, entry.Fee(normal_fee).FromTx(tx5));
     const auto entry5 = pool.GetIter(tx5->GetHash()).value();
 
@@ -623,7 +623,8 @@ BOOST_FIXTURE_TEST_CASE(calc_feerate_diagram_rbf, TestChain100Setup)
         const auto replace_cluster_size_3{changeset->CalculateChunksForRBF()};
 
         BOOST_CHECK(!replace_cluster_size_3.has_value());
-        BOOST_CHECK_EQUAL(util::ErrorString(replace_cluster_size_3).original, strprintf("%s has both ancestor and descendant, exceeding cluster limit of 2", conflict_1_child->GetHash().GetHex()));
+        BOOST_CHECK_EQUAL(util::ErrorString(replace_cluster_size_3).original, strprintf("%s has 2 descendants, max 1 allowed", conflict_1->GetHash().GetHex()));
+        // CheckConflictTopology generated the error message from the first conflict in direct_conflicts list ordered by hash
     }
 }
 
