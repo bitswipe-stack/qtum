@@ -55,10 +55,10 @@ class QtumBitcoreTest(BitcoinTestFramework):
         node = self.nodes[0]
         t = int(time.time())-10000
         node.setmocktime(t)
-        node.generate(3990)
+        self.generate(node, 3990)
         for i in range(10):
             node.setmocktime(t+9900+i)
-            node.generate(1)
+            self.generate(node, 1)
         node.setmocktime(0)
 
         node.setmocktime(0)
@@ -70,7 +70,7 @@ class QtumBitcoreTest(BitcoinTestFramework):
         for i in range(10):
             expected_address_txids.append(node.sendtoaddress(confirmed_address, 10))
         time.sleep(0.1)
-        node.generate(1)
+        self.generate(node, 1)
         mempool_txid = node.sendtoaddress(mempool_address, 19999)
 
         # check dgp info

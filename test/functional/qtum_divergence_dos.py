@@ -87,7 +87,7 @@ class QtumDivergenceDosTest(BitcoinTestFramework):
 
     def run_test(self):
         self.node = self.nodes[0]
-        self.node.generate(500+COINBASE_MATURITY)
+        self.generate(self.node, 500+COINBASE_MATURITY)
         """
         pragma solidity ^0.4.24;
         contract Ballot {
@@ -98,7 +98,7 @@ class QtumDivergenceDosTest(BitcoinTestFramework):
         """
         bytecode = "6080604052348015600f57600080fd5b50603d80601d6000396000f30060806040525b600115600f576005565b0000a165627a7a72305820046fe704d7206dd7bd828449504709b4786e72b5b8cb47633add96fec4d343410029"
         self.contract_address = self.node.createcontract(bytecode)['address']
-        self.node.generate(1)
+        self.generate(self.node, 1)
         self.too_few_txs_test()
         self.different_but_same_number_aal_txs_test()
         self.too_many_txs_test()

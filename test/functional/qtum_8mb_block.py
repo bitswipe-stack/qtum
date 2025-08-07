@@ -25,7 +25,7 @@ class Qtum8MBBlock(BitcoinTestFramework):
         self.connect_nodes(0, 1)
         # Make sure that segwit is activated
         generatesynchronized(self.node, COINBASE_MATURITY, None, self.nodes)
-        self.node.generate(10)
+        self.generate(self.node, 10)
         self.sync_blocks()
 
         tx = CTransaction()
@@ -34,7 +34,7 @@ class Qtum8MBBlock(BitcoinTestFramework):
         tx.rehash()
         tx_hex = self.node.signrawtransactionwithwallet(bytes_to_hex_str(tx.serialize()))['hex']
         txid = self.node.sendrawtransaction(tx_hex)
-        self.node.generate(1)
+        self.generate(self.node, 1)
         self.sync_all()
 
 

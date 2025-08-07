@@ -80,14 +80,14 @@ class WalletTest(BitcoinTestFramework):
             assert 'watchonly' not in self.nodes[1].getbalances()
 
         self.log.info("Mining blocks ...")
-        blockhash = self.nodes[2].generate(1)[0]
+        blockhash = self.generate(self.nodes[2], 1)[0]
         self.nodes[0].submitblock(self.nodes[2].getblock(blockhash, False))
         self.nodes[1].submitblock(self.nodes[2].getblock(blockhash, False))
         self.sync_blocks()
         generatesynchronized(self.nodes[2], COINBASE_MATURITY, self.nodes[2].getnewaddress(), self.nodes)
         self.sync_blocks()
         self.nodes[2].sendmany("", {self.nodes[0].getnewaddress(): 50, self.nodes[1].getnewaddress(): 50})
-        self.nodes[2].generatetoaddress(1, self.nodes[2].getnewaddress())
+        self.generatetoaddress(self.nodes[2], 1, self.nodes[2].getnewaddress())
         self.sync_all()
 
         # Verify listunspent returns immature coinbase if 'include_immature_coinbase' is set
