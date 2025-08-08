@@ -204,7 +204,7 @@ class MiniWallet:
 
     def generate(self, num_blocks, **kwargs):
         """Generate blocks with coinbase outputs to the internal address, and call rescan_utxos"""
-        blocks = self._test_node.generatetodescriptor(num_blocks, self.get_descriptor(), **kwargs, called_by_framework=True)
+        blocks = self._test_node.generatetodescriptor(num_blocks, self.get_descriptor(), **kwargs)
         # Calling rescan_utxos here makes sure that after a generate the utxo
         # set is in a clean state. For example, the wallet will update
         # - if the caller consumed utxos, but never used them

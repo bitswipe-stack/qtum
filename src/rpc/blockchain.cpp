@@ -1254,6 +1254,18 @@ RPCHelpMan callcontract()
                                         }
                                     }
                                 },
+                                {RPCResult::Type::ARR, "createdContracts", "The created contracts",
+                                    {
+                                        {RPCResult::Type::OBJ, "", "",
+                                            {
+                                                {RPCResult::Type::STR_HEX, "address", "The contract address"},
+                                                {RPCResult::Type::STR_HEX, "code", "The contract code"},
+                                            }
+                                        }
+                                    }
+                                },
+                                {RPCResult::Type::ARR, "destructedContracts", "The destructed contracts",
+                                    {{RPCResult::Type::STR_HEX, "", "The contract"}}},
 
                             }},
                     }},
@@ -1354,6 +1366,18 @@ RPCHelpMan waitforlogs()
                                         {RPCResult::Type::ARR, "topics", "The topic",
                                             {{RPCResult::Type::STR_HEX, "topic", "The topic"}}},
                                         {RPCResult::Type::STR_HEX, "data", "The logged data"},
+                                        {RPCResult::Type::ARR, "createdContracts", "The created contracts",
+                                            {
+                                                {RPCResult::Type::OBJ, "", "",
+                                                    {
+                                                        {RPCResult::Type::STR_HEX, "address", "The contract address"},
+                                                        {RPCResult::Type::STR_HEX, "code", "The contract code"},
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {RPCResult::Type::ARR, "destructedContracts", "The destructed contracts",
+                                            {{RPCResult::Type::STR_HEX, "", "The contract"}}},
                                     }
                                 }
                             }
@@ -1559,6 +1583,18 @@ RPCHelpMan searchlogs()
                                     }
                                 }
                             },
+                            {RPCResult::Type::ARR, "createdContracts", "The created contracts",
+                                {
+                                    {RPCResult::Type::OBJ, "", "",
+                                        {
+                                            {RPCResult::Type::STR_HEX, "address", "The contract address"},
+                                            {RPCResult::Type::STR_HEX, "code", "The contract code"},
+                                        }
+                                    }
+                                }
+                            },
+                            {RPCResult::Type::ARR, "destructedContracts", "The destructed contracts",
+                                {{RPCResult::Type::STR_HEX, "", "The contract"}}},
                         }}
                 }},
                 RPCExamples{
@@ -1612,6 +1648,18 @@ RPCHelpMan gettransactionreceipt()
                                     }
                                 }
                             },
+                            {RPCResult::Type::ARR, "createdContracts", "The created contracts",
+                                {
+                                    {RPCResult::Type::OBJ, "", "",
+                                        {
+                                            {RPCResult::Type::STR_HEX, "address", "The contract address"},
+                                            {RPCResult::Type::STR_HEX, "code", "The contract code"},
+                                        }
+                                    }
+                                }
+                            },
+                            {RPCResult::Type::ARR, "destructedContracts", "The destructed contracts",
+                                {{RPCResult::Type::STR_HEX, "", "The contract"}}},
                         }}
                 }},
                 RPCExamples{
@@ -1676,6 +1724,18 @@ RPCHelpMan getblocktransactionreceipts()
                                         {{RPCResult::Type::STR_HEX, "topic", "The topic"}}},
                                     {RPCResult::Type::STR_HEX, "data", "The logged data"},
                                 }},
+                            {RPCResult::Type::ARR, "createdContracts", "The created contracts",
+                                {
+                                    {RPCResult::Type::OBJ, "", "",
+                                        {
+                                            {RPCResult::Type::STR_HEX, "address", "The contract address"},
+                                            {RPCResult::Type::STR_HEX, "code", "The contract code"},
+                                        }
+                                    }
+                                }
+                            },
+                            {RPCResult::Type::ARR, "destructedContracts", "The destructed contracts",
+                                {{RPCResult::Type::STR_HEX, "", "The contract"}}},
                         }}
                 }},
                 RPCExamples{
