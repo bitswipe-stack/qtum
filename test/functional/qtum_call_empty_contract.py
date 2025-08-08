@@ -29,11 +29,11 @@ class QtumCallContractStateNotRevertedTest(BitcoinTestFramework):
         generatesynchronized(self.nodes[1], COINBASE_MATURITY+100, None, self.nodes)
         self.sync_all()
         contract_address = self.nodes[0].createcontract("00")['address']
-        self.nodes[0].generate(1)
+        self.generate(self.nodes[0], 1)
         self.sync_all()
         self.nodes[0].callcontract(contract_address, "00")
         self.nodes[1].createcontract("00")
-        self.nodes[1].generate(1)
+        self.generate(self.nodes[1], 1)
         time.sleep(1)
         assert_equal(self.nodes[0].getblockcount(), self.nodes[1].getblockcount())
         assert_equal(self.nodes[0].listcontracts(), self.nodes[1].listcontracts())

@@ -2025,7 +2025,7 @@ class SegWitTest(BitcoinTestFramework):
             def serialize(self):
                 return serialize_with_bogus_witness(self.tx)
 
-        self.wallet.generate(2100)
+        self.generate(self.wallet, 2100)
         tx = self.wallet.create_self_transfer()['tx']
         assert_raises_rpc_error(-22, "TX decode failed", self.nodes[0].decoderawtransaction, hexstring=serialize_with_bogus_witness(tx).hex(), iswitness=True)
         with self.nodes[0].assert_debug_log(['Unknown transaction optional data']):

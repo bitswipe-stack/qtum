@@ -147,7 +147,7 @@ class WalletBackupTest(BitcoinTestFramework):
         node = self.nodes[3]
         self.restart_node(3, ["-prune=1", "-fastprune=1"])
         # Ensure the chain tip is at height 214, because this test assume it is.
-        assert_equal(node.getchaintips()[0]["height"], 214)
+        assert_equal(node.getchaintips()[0]["height"], 4014)
         # We need a few more blocks so we can actually get above an realistic
         # minimal prune height
         self.generate(node, 50, sync_fun=self.no_op)

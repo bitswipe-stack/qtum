@@ -35,7 +35,7 @@ class QtumEVMGlobalsTest(BitcoinTestFramework):
         sender = self.node.getnewaddress()
         sender_pkh = p2pkh_to_hex_hash(sender)
         self.node.sendtoaddress(sender, 1)
-        self.node.generate(1)
+        self.generate(self.node, 1)
         """
         Function signatures:
         
@@ -73,7 +73,7 @@ class QtumEVMGlobalsTest(BitcoinTestFramework):
             blockhash = self.node.getblockhash(blockcount+1)
             authorTxIndexAndVoutIndex = 1
         else:
-            blockhash = self.node.generate(1)[0]
+            blockhash = self.generate(self.node, 1)[0]
             authorTxIndexAndVoutIndex = 0
         
 

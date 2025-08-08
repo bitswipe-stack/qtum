@@ -36,7 +36,7 @@ class QtumIgnoreMPOSParticipantRewardTest(BitcoinTestFramework):
 
         self.node = self.nodes[0]
         self.node.setmocktime(int(time.time()) - 1000000)
-        self.node.generatetoaddress(10 + COINBASE_MATURITY, "qSrM9K6FMhZ29Vkp8Rdk8Jp66bbfpjFETq")
+        self.generatetoaddress(self.node, 10 + COINBASE_MATURITY, "qSrM9K6FMhZ29Vkp8Rdk8Jp66bbfpjFETq")
 
         """
         pragma solidity ^0.4.12;
