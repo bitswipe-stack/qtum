@@ -85,6 +85,7 @@ target_link_libraries(bitcoinkernel
     core_interface
     bitcoin_clientversion
     bitcoin_crypto
+    univalue
     leveldb
     secp256k1
     $<TARGET_NAME_IF_EXISTS:USDT::headers>

@@ -14,12 +14,16 @@ else()
     string(REPLACE ";" " " CC "${CMAKE_C_COMPILER}")
     set(BLST_CC "${CC}")
 
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        set(BLST_CC "${BLST_CC} -Wno-unused-command-line-argument")
+    endif()
+
     if(CMAKE_OSX_SYSROOT)
-        set(BLST_CC "${BLST_CC} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
+        set(BLST_CC "${BLST_CC} -isysroot ${CMAKE_OSX_SYSROOT}")
     endif()
 
     if(CMAKE_OSX_DEPLOYMENT_TARGET)
-        set(BLST_CC "${BLST_CC} ${CMAKE_C_OSX_DEPLOYMENT_TARGET_FLAG}${CMAKE_OSX_DEPLOYMENT_TARGET}")
+        set(BLST_CC "${BLST_CC} -mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
     endif()
 
     if(CMAKE_C_FLAGS)

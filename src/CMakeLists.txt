@@ -478,6 +478,7 @@ if(BUILD_DAEMON)
     core_interface
     bitcoin_node
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
+    Boost::headers
   )
   install_binary_component(qtumd HAS_MANPAGE)
 endif()
@@ -491,6 +492,7 @@ if(WITH_MULTIPROCESS AND BUILD_DAEMON)
     bitcoin_node
     bitcoin_ipc
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
+    Boost::headers
   )
   install_binary_component(qtum-node)
 endif()

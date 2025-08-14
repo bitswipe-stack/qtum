@@ -368,6 +368,7 @@ target_link_libraries(qtum-qt
   core_interface
   bitcoinqt
   bitcoin_node
+  Boost::headers
 )
 
 import_plugins(qtum-qt)
@@ -386,6 +387,7 @@ if(WITH_MULTIPROCESS)
     bitcoinqt
     bitcoin_node
     bitcoin_ipc
+    Boost::headers
   )
   import_plugins(qtum-gui)
   install_binary_component(qtum-gui)

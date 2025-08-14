@@ -112,7 +112,7 @@ class RawTransactionsTest(BitcoinTestFramework):
 
         self.generate(self.nodes[2], 1)
         self.sync_all()
-        self.nodes[0].generate(COINBASE_MATURITY+121)
+        self.generate(self.nodes[0], COINBASE_MATURITY+121)
         self.sync_all()
 
         self.test_add_inputs_default_value()
