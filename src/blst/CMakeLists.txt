@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(blst_wrapper NONE) # Language is externally handled via script
+project(blst_wrapper C) # Language is externally handled via script
 
 # Determine build script and output location
 if(MSVC)
