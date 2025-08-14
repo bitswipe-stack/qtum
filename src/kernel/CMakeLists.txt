@@ -85,6 +85,7 @@ target_link_libraries(bitcoinkernel
     core_interface
     bitcoin_clientversion
     bitcoin_crypto
+    bitcoin_node
     univalue
     leveldb
     secp256k1
