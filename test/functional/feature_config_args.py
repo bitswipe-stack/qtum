@@ -101,7 +101,7 @@ class ConfArgsTest(BitcoinTestFramework):
         self.log.info('Test config file parser')
 
         # Check that startup fails if conf= is set in bitcoin.conf or in an included conf file
-        bad_conf_file_path = self.nodes[0].datadir_path / "bitcoin_bad.conf"
+        bad_conf_file_path = self.nodes[0].datadir_path / "qtum_bad.conf"
         util.write_config(bad_conf_file_path, n=0, chain='', extra_config='conf=some.conf\n')
         conf_in_config_file_err = 'Error: Error reading configuration file: conf cannot be set in the configuration file; use includeconf= if you want to include additional config files'
         self.nodes[0].assert_start_raises_init_error(
@@ -144,7 +144,7 @@ class ConfArgsTest(BitcoinTestFramework):
                 conf.write("wallet=foo\n")
             self.nodes[0].assert_start_raises_init_error(expected_msg=f'Error: Config setting for -wallet only applied on {self.chain} network when in [{self.chain}] section.')
 
-        main_conf_file_path = self.nodes[0].datadir_path / "bitcoin_main.conf"
+        main_conf_file_path = self.nodes[0].datadir_path / "qtum_main.conf"
         util.write_config(main_conf_file_path, n=0, chain='', extra_config=f'includeconf={inc_conf_file_path}\n')
         with open(inc_conf_file_path, 'w', encoding='utf-8') as conf:
             conf.write('acceptnonstdtxn=1\n')
@@ -414,7 +414,7 @@ class ConfArgsTest(BitcoinTestFramework):
         self.stop_node(0)
 
     def test_ignored_conf(self):
-        self.log.info('Test error is triggered when the datadir in use contains a bitcoin.conf file that would be ignored '
+        self.log.info('Test error is triggered when the datadir in use contains a qtum.conf file that would be ignored '
                       'because a conflicting -conf file argument is passed.')
         node = self.nodes[0]
         with tempfile.NamedTemporaryFile(dir=self.options.tmpdir, mode="wt", delete=False) as temp_conf:
@@ -436,8 +436,8 @@ class ConfArgsTest(BitcoinTestFramework):
         if platform.system() == "Windows":
             return
 
-        self.log.info('Test error is triggered when bitcoin.conf in the default data directory sets another datadir '
-                      'and it contains a different bitcoin.conf file that would be ignored')
+        self.log.info('Test error is triggered when qtum.conf in the default data directory sets another datadir '
+                      'and it contains a different qtum.conf file that would be ignored')
 
         # Create a temporary directory that will be treated as the default data
         # directory by bitcoind.
@@ -533,7 +533,7 @@ class ConfArgsTest(BitcoinTestFramework):
         self.nodes[0].assert_start_raises_init_error([f'-conf={conf_file}'], f'Error: Error reading configuration file: specified data directory "{new_data_dir}" does not exist.')
 
         # Check that an explicitly specified config file that cannot be opened fails
-        none_existent_conf_file = default_data_dir / "none_existent_bitcoin.conf"
+        none_existent_conf_file = default_data_dir / "none_existent_qtum.conf"
         self.nodes[0].assert_start_raises_init_error(['-conf=' + f'{none_existent_conf_file}'], 'Error: Error reading configuration file: specified config file "' + f'{none_existent_conf_file}' + '" could not be opened.')
 
         # Create the directory and ensure the config file now works
