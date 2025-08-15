@@ -167,11 +167,10 @@ This is a quick start script for compiling Qtum on Ubuntu
     libtool --finish depends/x86_64-pc-linux-gnu/lib 
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/x86_64-pc-linux-gnu/lib
     
-    # Note: autogen will prompt to install some more dependencies if needed
+    # Note: cmake will prompt to install some more dependencies if needed
     ./contrib/install_db4.sh `pwd`
-    ./autogen.sh
-    ./configure --prefix=`pwd`/depends/x86_64-pc-linux-gnu
-    make -j$(nproc)
+    cmake -B build --toolchain `pwd`/depends/x86_64-pc-linux-gnu/toolchain.cmake
+    cmake --build build -j$(nproc)
 ```
 
 ### Build on CentOS
@@ -182,14 +181,14 @@ Here is a brief description for compiling Qtum on CentOS, for more details pleas
     sudo yum install python-devel bzip2-devel
     git clone https://github.com/boostorg/boost.git
     cd boost
-    git checkout boost-1.66.0
+    git checkout boost-1.73.0
     git submodule update --init --recursive
     ./bootstrap.sh --prefix=/usr --libdir=/usr/lib64
     ./b2 headers
     sudo ./b2 -j4 install
     
     # Installing Dependencies for Qtum
-    sudo yum install epel-release
+    sudo yum install epel-release cmake
     sudo yum install libtool libdb4-cxx-devel openssl-devel libevent-devel gmp-devel
     
     # If you want to build the Qt GUI:
@@ -198,9 +197,8 @@ Here is a brief description for compiling Qtum on CentOS, for more details pleas
     # Building Qtum
     git clone --recursive https://github.com/qtumproject/qtum.git
     cd qtum
-    ./autogen.sh
-    ./configure
-    make -j4
+    cmake -DBUILD_GUI=ON -B build
+    cmake --build build -j4
 
 ### Build on Mac OS
 
@@ -223,7 +221,7 @@ Then install [Homebrew](https://brew.sh).
 
 NOTE: This will work for building on Intel Macs and Apple Silicon Macs
 
-NOTE: Building with Qt4 is still supported, however, could result in a broken UI. Building with Qt5 is recommended.
+NOTE: Building may fail if Qt 6 is installed (`qt` or `qt@6`). Building with Qt 5 is recommended.
 
 #### Build Qtum Core
 
@@ -236,15 +234,14 @@ NOTE: Building with Qt4 is still supported, however, could result in a broken UI
 
     Configure and build the headless qtum binaries as well as the GUI (if Qt is found).
 
-    You can disable the GUI build by passing `--without-gui` to configure.
+    You can disable the GUI build by passing `-DBUILD_GUI=OFF` to configure.
 
-        ./autogen.sh
-        ./configure
-        make
+        cmake -DBUILD_GUI=ON -B build
+        cmake --build build
 
 3.  It is recommended to build and run the unit tests:
 
-        make check
+        ctest --test-dir build
 
 ### Run
 

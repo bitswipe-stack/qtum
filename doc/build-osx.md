@@ -48,12 +48,12 @@ See [dependencies.md](dependencies.md) for a complete overview.
 To install, run the following from your terminal:
 
 ``` bash
-brew install cmake boost@1.76 pkgconf libevent berkeley-db@4 miniupnpc openssl protobuf qt@5 imagemagick librsvg qrencode gmp
+brew install cmake boost@1.86 pkgconf libevent berkeley-db@4 miniupnpc openssl protobuf qt@5 imagemagick librsvg qrencode gmp
 ```
 
 Link the specific boost version:
 ``` bash
-brew link boost@1.76
+brew link boost@1.86
 ```
 
 ### 4. Clone Qtum repository
