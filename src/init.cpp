@@ -676,6 +676,7 @@ void SetupServerArgs(ArgsManager& argsman, bool can_listen_ipc)
     argsman.AddArg("-taprootheight=<n>", "Use given block height to check taproot (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
     argsman.AddArg("-shanghaiheight=<n>", "Use given block height to check contracts with EVM Shanghai (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
     argsman.AddArg("-cancunheight=<n>", "Use given block height to check contracts with EVM Cancun (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
+    argsman.AddArg("-pectraheight=<n>", "Use given block height to check contracts with EVM Pectra (regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);
 
     SetupChainParamsBaseOptions(argsman);
 
@@ -1420,6 +1421,20 @@ bool AppInitParameterInteraction(const ArgsManager& args)
         {
             UpdateCancunHeight(cancunheight);
             LogPrintf("Activate EVM Cancun at block height %d\n.", cancunheight);
+        }
+    }
+
+    if (args.IsArgSet("-pectraheight")) {
+        // Allow overriding EVM Pectra block height for testing
+        if (!chainparams.MineBlocksOnDemand()) {
+            return InitError(Untranslated("Short EVM Pectra height may only be overridden on regtest."));
+        }
+
+        int pectraheight = args.GetIntArg("-pectraheight", 0);
+        if(pectraheight >= 0)
+        {
+            UpdatePectraHeight(pectraheight);
+            LogPrintf("Activate EVM Pectra at block height %d\n.", pectraheight);
         }
     }
 

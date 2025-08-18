@@ -220,3 +220,8 @@ void UpdateCancunHeight(int nHeight)
 {
     const_cast<CChainParams*>(globalChainParams.get())->UpdateCancunHeight(nHeight);
 }
+
+void UpdatePectraHeight(int nHeight)
+{
+    const_cast<CChainParams*>(globalChainParams.get())->UpdatePectraHeight(nHeight);
+}
