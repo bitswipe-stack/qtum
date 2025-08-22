@@ -11,7 +11,11 @@ else()
 
     # cmake pack the compiler and its flags into a list separated by semicolons
     # replace the semicolons with empty space to produce compiler path with flags
-    string(REPLACE ";" " " CC "${CMAKE_C_COMPILER}")
+    if(NOT DEFINED BLST_CC)
+        set(BLST_CC "${CMAKE_C_COMPILER}")
+    endif()
+
+    string(REPLACE ";" " " CC "${BLST_CC}")
     set(BLST_CC "${CC}")
 
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
