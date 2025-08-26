@@ -270,6 +270,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   eth_client/libdevcrypto/Common.cpp
   eth_client/libdevcrypto/CryptoPP.cpp
   eth_client/libdevcrypto/Hash.cpp
+  eth_client/libdevcrypto/LibBls.cpp
   eth_client/libdevcrypto/LibSnark.cpp
   eth_client/libdevcrypto/LibKzg.cpp
   eth_client/libethashseal/GenesisInfo.cpp
