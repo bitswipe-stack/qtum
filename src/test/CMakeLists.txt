@@ -159,6 +159,12 @@ target_json_data_sources(test_qtum
   qtumtests/data/fail_mul_G1_bls.json
   qtumtests/data/msm_G1_bls.json
   qtumtests/data/fail_msm_G1_bls.json
+  qtumtests/data/add_G2_bls.json
+  qtumtests/data/fail_add_G2_bls.json
+  qtumtests/data/mul_G2_bls.json
+  qtumtests/data/fail_mul_G2_bls.json
+  qtumtests/data/msm_G2_bls.json
+  qtumtests/data/fail_msm_G2_bls.json
   data/base58_encode_decode.json
   data/bip341_wallet_vectors.json
   data/blockfilters.json
