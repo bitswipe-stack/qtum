@@ -122,10 +122,36 @@ add_executable(test_qtum
   validation_tests.cpp
   validationinterface_tests.cpp
   versionbits_tests.cpp
+  qtumtests/qtumtxconverter_tests.cpp
+  qtumtests/bytecodeexec_tests.cpp
+  qtumtests/condensingtransaction_tests.cpp
+  qtumtests/dgp_tests.cpp
+  qtumtests/constantinoplefork_tests.cpp
+  qtumtests/btcecrecoverfork_tests.cpp
+  qtumtests/delegations_tests.cpp
+  qtumtests/istanbulfork_tests.cpp
+  qtumtests/londonfork_tests.cpp
+  qtumtests/evmone_tests.cpp
+  qtumtests/shanghaifork_tests.cpp
+  qtumtests/cancunfork_tests.cpp
+  qtumtests/kzg_tests.cpp
 )
 
 include(TargetDataSources)
 target_json_data_sources(test_qtum
+  qtumtests/data/btc_ecrecover.json
+  qtumtests/data/ecrecover.json
+  qtumtests/data/sha256.json
+  qtumtests/data/ripemd160.json
+  qtumtests/data/identity.json
+  qtumtests/data/modexp.json
+  qtumtests/data/modexp_eip2565.json
+  qtumtests/data/alt_bn128_G1_add.json
+  qtumtests/data/alt_bn128_G1_mul.json
+  qtumtests/data/alt_bn128_pairing_product.json
+  qtumtests/data/blake2_compression.json
+  qtumtests/data/blake2_compression.json
+  qtumtests/data/point_evaluation.json
   data/base58_encode_decode.json
   data/bip341_wallet_vectors.json
   data/blockfilters.json
