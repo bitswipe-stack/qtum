@@ -135,6 +135,7 @@ add_executable(test_qtum
   qtumtests/shanghaifork_tests.cpp
   qtumtests/cancunfork_tests.cpp
   qtumtests/kzg_tests.cpp
+  qtumtests/bls_tests.cpp
 )
 
 include(TargetDataSources)
@@ -152,6 +153,12 @@ target_json_data_sources(test_qtum
   qtumtests/data/blake2_compression.json
   qtumtests/data/blake2_compression.json
   qtumtests/data/point_evaluation.json
+  qtumtests/data/add_G1_bls.json
+  qtumtests/data/fail_add_G1_bls.json
+  qtumtests/data/mul_G1_bls.json
+  qtumtests/data/fail_mul_G1_bls.json
+  qtumtests/data/msm_G1_bls.json
+  qtumtests/data/fail_msm_G1_bls.json
   data/base58_encode_decode.json
   data/bip341_wallet_vectors.json
   data/blockfilters.json

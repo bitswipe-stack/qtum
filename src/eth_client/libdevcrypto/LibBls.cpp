@@ -38,7 +38,7 @@ pair<bool, bytes> dev::crypto::msm_G1_bls(dev::bytesConstRef input)
     size_t output_size = output.size();
     size_t input_size = input.size();
     assert(output_size >= 128);
-    if (input_size % SINGLE_ENTRY_SIZE_MSM_G1 != 0)
+    if (input_size == 0 || input_size % SINGLE_ENTRY_SIZE_MSM_G1 != 0)
         return {false, bytes{}};
 
     uint8_t _rx[64];
@@ -88,7 +88,7 @@ pair<bool, bytes> dev::crypto::msm_G2_bls(dev::bytesConstRef input)
     size_t output_size = output.size();
     size_t input_size = input.size();
     assert(output_size >= 256);
-    if (input_size % SINGLE_ENTRY_SIZE_MSM_G2 != 0)
+    if (input_size == 0 || input_size % SINGLE_ENTRY_SIZE_MSM_G2 != 0)
         return {false, bytes{}};
 
     uint8_t _rx[128];
