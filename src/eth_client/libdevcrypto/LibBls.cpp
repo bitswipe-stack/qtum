@@ -112,7 +112,7 @@ pair<bool, bytes> dev::crypto::pairing_check_bls(dev::bytesConstRef input)
     size_t output_size = output.size();
     size_t input_size = input.size();
     assert(output_size >= 32);
-    if (input_size % PAIR_SIZE_G1_G2 != 0)
+    if (input_size == 0 || input_size % PAIR_SIZE_G1_G2 != 0)
         return {false, bytes{}};
 
     uint8_t _r[32];

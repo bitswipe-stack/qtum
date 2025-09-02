@@ -165,6 +165,12 @@ target_json_data_sources(test_qtum
   qtumtests/data/fail_mul_G2_bls.json
   qtumtests/data/msm_G2_bls.json
   qtumtests/data/fail_msm_G2_bls.json
+  qtumtests/data/pairing_check_bls.json
+  qtumtests/data/fail_pairing_check_bls.json
+  qtumtests/data/map_fp_to_G1_bls.json
+  qtumtests/data/fail_map_fp_to_G1_bls.json
+  qtumtests/data/map_fp2_to_G2_bls.json
+  qtumtests/data/fail_map_fp2_to_G2_bls.json
   data/base58_encode_decode.json
   data/bip341_wallet_vectors.json
   data/blockfilters.json
