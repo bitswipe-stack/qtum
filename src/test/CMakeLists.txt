@@ -136,6 +136,7 @@ add_executable(test_qtum
   qtumtests/cancunfork_tests.cpp
   qtumtests/kzg_tests.cpp
   qtumtests/bls_tests.cpp
+  qtumtests/pectrafork_tests.cpp
 )
 
 include(TargetDataSources)
