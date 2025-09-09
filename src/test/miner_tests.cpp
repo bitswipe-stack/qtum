@@ -13,6 +13,7 @@
 #include <node/miner.h>
 #include <policy/policy.h>
 #include <test/util/random.h>
+#include <test/util/transaction_utils.h>
 #include <test/util/txmempool.h>
 #include <txmempool.h>
 #include <uint256.h>
@@ -365,7 +366,7 @@ void MinerTestingSetup::TestPackageSelection(const CScript& scriptPubKey, const 
 CAmount calculateReward(const CBlock& block, ChainstateManager& chainman){
     LOCK(cs_main);
     CAmount sumVout = 0, fee = 0;
-    for(const CTransactionRef t : block.vtx){
+    for(const CTransactionRef& t : block.vtx){
         fee += chainman.ActiveChainstate().CoinsTip().GetValueIn(*t);
         sumVout += t->GetValueOut();
     }
