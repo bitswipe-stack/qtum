@@ -873,7 +873,7 @@ The migration process will create a backup of the wallet before migrating. This 
         <translation type="unfinished">स्थानीय पते</translation>
     </message>
     <message>
-        <source>Network addresses that your Bitcoin node is currently using to communicate with other nodes.</source>
+        <source>Network addresses that your Qtum node is currently using to communicate with other nodes.</source>
         <translation type="unfinished">नेटवर्क पते जो आपका बिटकॉइन नोड वर्तमान में अन्य नोड्स के साथ संचार करने के लिए उपयोग कर रहा है।</translation>
     </message>
     <message>
