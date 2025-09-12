@@ -69,7 +69,7 @@ The Qtum repo's [root README](/README.md) contains relevant information on the d
 
 ### Miscellaneous
 - [Assets Attribution](assets-attribution.md)
-- [qtum.conf Configuration File](bitcoin-conf.md)
+- [qtum.conf Configuration File](qtum-conf.md)
 - [CJDNS Support](cjdns.md)
 - [Files](files.md)
 - [Fuzz-testing](fuzzing.md)
