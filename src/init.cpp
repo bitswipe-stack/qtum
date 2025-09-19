@@ -1610,6 +1610,9 @@ static ChainstateLoadResult InitAndLoadChainstate(
     // the blocks tree db, and wipes existing block files in case of a reindex.
     // The coinsdb is opened at a later point on LoadChainstate.
     try {
+        if (node.chainman) {
+            node.chainman.reset();
+        }
         node.chainman = std::make_unique<ChainstateManager>(*Assert(node.shutdown_signal), chainman_opts, blockman_opts);
     } catch (dbwrapper_error& e) {
         LogError("%s", e.what());

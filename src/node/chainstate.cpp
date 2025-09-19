@@ -64,6 +64,16 @@ static ChainstateLoadResult CompleteChainstateInitialization(
         return {ChainstateLoadStatus::FAILURE, _("You need to rebuild the database using -reindex to go back to unpruned mode.  This will redownload the entire blockchain")};
     }
 
+    // Check for changed -addrindex state
+    if (fAddressIndex != options.addrindex) {
+        return {ChainstateLoadStatus::FAILURE, _("You need to rebuild the database using -reindex to change -addrindex")};
+    }
+
+    // Check for changed -logevents state
+    if (fLogEvents != options.logevents && !fLogEvents) {
+        return {ChainstateLoadStatus::FAILURE, _("You need to rebuild the database using -reindex to enable -logevents")};
+    }
+
     // At this point blocktree args are consistent with what's on disk.
     // If we're not mid-reindex (based on disk + args), add a genesis block on disk
     // (otherwise we use the one already on disk).
@@ -169,16 +179,6 @@ static ChainstateLoadResult CompleteChainstateInitialization(
     fRecordLogOpcodes = options.record_log_opcodes;
     fIsVMlogFile = fs::exists(gArgs.GetDataDirNet() / "vmExecLogs.json");
     ///////////////////////////////////////////////////////////
-
-    /////////////////////////////////////////////////////////////// // qtum
-    if (fAddressIndex != options.addrindex) {
-        return {ChainstateLoadStatus::FAILURE, _("You need to rebuild the database using -reindex to change -addrindex")};
-    }
-    ///////////////////////////////////////////////////////////////
-    // Check for changed -logevents state
-    if (fLogEvents != options.logevents && !fLogEvents) {
-        return {ChainstateLoadStatus::FAILURE, _("You need to rebuild the database using -reindex to enable -logevents")};
-    }
 
     if (!options.logevents)
     {
