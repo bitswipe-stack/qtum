@@ -74,9 +74,9 @@ void base_blob<BITS>::SetReverseHex(const std::string_view str)
     unsigned char* pend = p1 + WIDTH;
     size_t num_digits = digits;
     while (digits > 0 && p1 < pend) {
-        *p1 = ::HexDigit(trimmed[num_digits - digits--]);
+        *p1 = (::HexDigit(trimmed[num_digits - digits--]) << 4);
         if (digits > 0) {
-            *p1 |= ((unsigned char)::HexDigit(trimmed[num_digits - digits--]) << 4);
+            *p1 |= (unsigned char)::HexDigit(trimmed[num_digits - digits--]);
             p1++;
         }
     }
