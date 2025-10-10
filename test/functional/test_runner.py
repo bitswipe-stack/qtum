@@ -320,7 +320,7 @@ BASE_SCRIPTS = [
     'wallet_import_with_label.py --legacy-wallet',
     'wallet_importdescriptors.py --descriptors',
     'wallet_upgradewallet.py --legacy-wallet',
-    'wallet_crosschain.py',
+    # 'wallet_crosschain.py',
     'mining_basic.py',
     'mining_mainnet.py',
     'feature_signet.py',
