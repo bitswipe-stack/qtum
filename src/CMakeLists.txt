@@ -6,10 +6,22 @@ include(AddWindowsResources)
 
 configure_file(${PROJECT_SOURCE_DIR}/cmake/bitcoin-build-config.h.in bitcoin-build-config.h USE_SOURCE_PERMISSIONS @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libff/libff)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/evmone/evmc/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/evmone/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/evmone/lib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils/ethash/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/eth_client/utils/libscrypt)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/leveldb/include)
 
 #=============================
 # Subprojects
 #=============================
+# Add blst library
+add_subdirectory(blst)
+
 # Subprojects include subdirectories that do or could have tests
 # and/or benchmark binaries, such as all subtrees and univalue.
 # These need to be included before CMAKE_*_OUTPUT_DIRECTORY variables
@@ -23,6 +35,8 @@ if (ENABLE_IPC AND NOT WITH_EXTERNAL_LIBMULTIPROCESS)
   include(../cmake/libmultiprocess.cmake)
   add_libmultiprocess(ipc/libmultiprocess)
 endif()
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DQTUM_BUILD -DETH_FATDB=1")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DQTUM_BUILD -DETH_FATDB=1")
 include(../cmake/secp256k1.cmake)
 add_secp256k1(secp256k1)
 
@@ -60,6 +74,7 @@ endif()
 
 add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   arith_uint256.cpp
+  consensus/consensus.cpp
   consensus/merkle.cpp
   consensus/tx_check.cpp
   hash.cpp
@@ -81,6 +96,54 @@ target_link_libraries(bitcoin_consensus
 if(WITH_ZMQ)
   add_subdirectory(zmq)
 endif()
+
+# Add cryptopp library
+add_subdirectory(cryptopp)
+
+# Add libff library
+cmake_policy(PUSH)
+set(WITH_PROCPS OFF CACHE BOOL "" FORCE)
+set(IS_LIBFF_PARENT OFF CACHE BOOL "" FORCE)
+set(USE_ASM OFF CACHE BOOL "" FORCE)
+set(CURVE ALT_BN128 CACHE STRING "" FORCE)
+add_subdirectory(libff)
+cmake_policy(POP)
+
+# Add ethash library
+add_library(ethash STATIC EXCLUDE_FROM_ALL
+  eth_client/utils/ethash/lib/ethash/ethash.cpp
+  eth_client/utils/ethash/lib/ethash/primes.c
+  eth_client/utils/ethash/lib/global_context/global_context.cpp
+  eth_client/utils/ethash/lib/keccak/keccak.c
+)
+
+# Add evmone library
+add_library(evmone STATIC EXCLUDE_FROM_ALL
+  evmone/evmc/lib/instructions/instruction_metrics.c
+  evmone/evmc/lib/instructions/instruction_names.c
+  evmone/lib/evmone/advanced_analysis.cpp
+  evmone/lib/evmone/advanced_execution.cpp
+  evmone/lib/evmone/advanced_instructions.cpp
+  evmone/lib/evmone/baseline_analysis.cpp
+  evmone/lib/evmone/baseline_execution.cpp
+  evmone/lib/evmone/baseline_instruction_table.cpp
+  evmone/lib/evmone/delegation.cpp
+  evmone/lib/evmone/eof.cpp
+  evmone/lib/evmone/instructions_calls.cpp
+  evmone/lib/evmone/instructions_storage.cpp
+  evmone/lib/evmone/tracing.cpp
+  evmone/lib/evmone/vm.cpp
+  evmone/lib/evmone_precompiles/blake2b.cpp
+  evmone/lib/evmone_precompiles/bls.cpp
+  evmone/lib/evmone_precompiles/bn254.cpp
+  evmone/lib/evmone_precompiles/kzg.cpp
+  evmone/lib/evmone_precompiles/ripemd160.cpp
+  evmone/lib/evmone_precompiles/secp256k1.cpp
+  evmone/lib/evmone_precompiles/sha256.cpp
+  evmone/lib/evmone_precompiles/pairing/bn254/pairing.cpp
+)
+target_link_libraries(evmone PRIVATE blst ethash)
+target_compile_definitions(evmone PRIVATE PROJECT_VERSION="\\\"0.16.0\\\"")
 
 # Home for common functionality shared by different executables and libraries.
 # Similar to `bitcoin_util` library, but higher-level.
@@ -136,6 +199,67 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   script/sign.cpp
   script/signingprovider.cpp
   script/solver.cpp
+  qtum/qtumutils.cpp
+  qtum/delegationutils.cpp
+  util/contractabi.cpp
+  util/tokenstr.cpp
+  eth_client/libdevcore/Address.cpp
+  eth_client/libdevcore/Common.cpp
+  eth_client/libdevcore/CommonData.cpp
+  eth_client/libdevcore/CommonIO.cpp
+  eth_client/libdevcore/DBFactory.cpp
+  eth_client/libdevcore/FileSystem.cpp
+  eth_client/libdevcore/FixedHash.cpp
+  eth_client/libdevcore/JsonUtils.cpp
+  eth_client/libdevcore/LevelDB.cpp
+  eth_client/libdevcore/Log.cpp
+  eth_client/libdevcore/OverlayDB.cpp
+  eth_client/libdevcore/RLP.cpp
+  eth_client/libdevcore/SHA3.cpp
+  eth_client/libdevcore/StateCacheDB.cpp
+  eth_client/libdevcore/TrieCommon.cpp
+  eth_client/libdevcore/TrieHash.cpp
+  eth_client/libdevcrypto/Blake2.cpp
+  eth_client/libdevcrypto/Common.cpp
+  eth_client/libdevcrypto/CryptoPP.cpp
+  eth_client/libdevcrypto/Hash.cpp
+  eth_client/libdevcrypto/LibBls.cpp
+  eth_client/libdevcrypto/LibSnark.cpp
+  eth_client/libdevcrypto/LibKzg.cpp
+  eth_client/libethashseal/GenesisInfo.cpp
+  eth_client/libethashseal/genesis/qtumNetwork.cpp
+  eth_client/libethcore/BlockHeader.cpp
+  eth_client/libethcore/ChainOperationParams.cpp
+  eth_client/libethcore/Common.cpp
+  eth_client/libethcore/EVMSchedule.cpp
+  eth_client/libethcore/LogEntry.cpp
+  eth_client/libethcore/Precompiled.cpp
+  eth_client/libethcore/SealEngine.cpp
+  eth_client/libethcore/TransactionBase.cpp
+  eth_client/libethereum/Account.cpp
+  eth_client/libethereum/ChainParams.cpp
+  eth_client/libethereum/DatabasePaths.cpp
+  eth_client/libethereum/Executive.cpp
+  eth_client/libethereum/ExtVM.cpp
+  eth_client/libethereum/State.cpp
+  eth_client/libethereum/Transaction.cpp
+  eth_client/libethereum/TransactionReceipt.cpp
+  eth_client/libethereum/ValidationSchemes.cpp
+  eth_client/libevm/EVMC.cpp
+  eth_client/libevm/ExtVMFace.cpp
+  eth_client/libevm/VMFactory.cpp
+  eth_client/utils/json_spirit/json_spirit_reader.cpp
+  eth_client/utils/json_spirit/json_spirit_value.cpp
+  eth_client/utils/json_spirit/json_spirit_writer.cpp
+  eth_client/utils/libscrypt/b64.c
+  eth_client/utils/libscrypt/crypto-mcf.c
+  eth_client/utils/libscrypt/crypto-scrypt-saltgen.c
+  eth_client/utils/libscrypt/crypto_scrypt-check.c
+  eth_client/utils/libscrypt/crypto_scrypt-hash.c
+  eth_client/utils/libscrypt/crypto_scrypt-hexconvert.c
+  eth_client/utils/libscrypt/crypto_scrypt-nosse.c
+  eth_client/utils/libscrypt/sha256.c
+  eth_client/utils/libscrypt/slowequals.c
 )
 
 link_directories(${CMAKE_BINARY_DIR}/lib)
@@ -149,9 +273,13 @@ target_link_libraries(bitcoin_common
     Boost::headers
     $<TARGET_NAME_IF_EXISTS:USDT::headers>
     $<$<PLATFORM_ID:Windows>:ws2_32>
+    leveldb
+    ff
+    cryptopp
     Boost::filesystem
     Boost::program_options
     Boost::thread
+    evmone
     OpenSSL::SSL
     OpenSSL::Crypto
 )
@@ -315,6 +443,7 @@ if(BUILD_DAEMON)
     core_interface
     bitcoin_node
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
+    Boost::headers
   )
   install_binary_component(qtumd HAS_MANPAGE)
 endif()
@@ -328,6 +457,7 @@ if(ENABLE_IPC AND BUILD_DAEMON)
     bitcoin_node
     bitcoin_ipc
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
+    Boost::headers
   )
   install_binary_component(qtum-node INTERNAL)
 endif()
@@ -386,6 +516,7 @@ if(BUILD_TX)
     bitcoin_common
     bitcoin_util
     univalue
+    Boost::headers
   )
   install_binary_component(qtum-tx HAS_MANPAGE)
 endif()
@@ -399,6 +530,7 @@ if(BUILD_UTIL)
     core_interface
     bitcoin_common
     bitcoin_util
+    Boost::headers
   )
   install_binary_component(qtum-util HAS_MANPAGE)
 endif()
