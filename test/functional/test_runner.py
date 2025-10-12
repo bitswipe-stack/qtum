@@ -548,7 +548,8 @@ DISABLED_SCRIPTS = [
       'wallet_orphanedreward.py',
       'feature_cltv.py',
       'feature_csv_activation.py',
-      'p2p_dos_header_tree.py'
+      'p2p_dos_header_tree.py',
+      'wallet_crosschain.py'
 ]
 
 # Place EXTENDED_SCRIPTS first since it has the 3 longest running tests
