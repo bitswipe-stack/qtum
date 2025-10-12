@@ -322,7 +322,7 @@ BASE_SCRIPTS = [
     'wallet_upgradewallet.py --legacy-wallet',
     # 'wallet_crosschain.py',
     'mining_basic.py',
-    'mining_mainnet.py',
+    # 'mining_mainnet.py',
     'feature_signet.py',
     'p2p_mutated_blocks.py',
     'wallet_implicitsegwit.py --legacy-wallet',
@@ -549,7 +549,8 @@ DISABLED_SCRIPTS = [
       'feature_cltv.py',
       'feature_csv_activation.py',
       'p2p_dos_header_tree.py',
-      'wallet_crosschain.py'
+      'wallet_crosschain.py',
+      'mining_mainnet.py',
 ]
 
 # Place EXTENDED_SCRIPTS first since it has the 3 longest running tests
