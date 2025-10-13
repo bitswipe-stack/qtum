@@ -83,10 +83,10 @@ TEST_FRAMEWORK_UNIT_TESTS = 'feature_framework_unit_tests.py'
 EXTENDED_SCRIPTS = [
     # These tests are not run by default.
     # Longest test should go first, to favor running tests in parallel
-    'qtum_evm_london_activation.py',
-    'qtum_evm_shanghai_activation.py',
-    'qtum_evm_cancun_activation.py',
-    'qtum_evm_pectra_activation.py',
+    'qtum_evm_london_activation.py --legacy-wallet',
+    'qtum_evm_shanghai_activation.py --legacy-wallet',
+    'qtum_evm_cancun_activation.py --legacy-wallet',
+    'qtum_evm_pectra_activation.py --legacy-wallet',
     'feature_pruning.py',
     'feature_dbcrash.py',
     'wallet_pruning.py --legacy-wallet',
@@ -537,6 +537,8 @@ BASE_SCRIPTS = [
     'qtum_evm_constantinople_precompiles.py --descriptors',
     'qtum_evm_constantinople_opcodes.py --legacy-wallet',
     'qtum_evm_constantinople_opcodes.py --descriptors',
+    'qtum_evm_pectra_precompiles.py --legacy-wallet',
+    'qtum_evm_pectra_precompiles.py --descriptors',
     'qtum_block_index_cleanup.py --legacy-wallet',
     'qtum_block_index_cleanup.py --descriptors',
     'qtum_pod.py --legacy-wallet',
