@@ -116,11 +116,11 @@ public:
         consensus.nLondonHeight = 2080512;
         consensus.nShanghaiHeight = 3385122;
         consensus.nCancunHeight = 4590000;
-        consensus.nPectraHeight = 0x7fffffff;
+        consensus.nPectraHeight = 5483000;
         consensus.powLimit = uint256{"0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
         consensus.posLimit = uint256{"00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
         consensus.QIP9PosLimit = uint256{"0000000000001fffffffffffffffffffffffffffffffffffffffffffffffffff"}; // The new POS-limit activated after QIP9
-        consensus.RBTPosLimit = uint256{"0000000000003fffffffffffffffffffffffffffffffffffffffffffffffffff"};        consensus.nPowTargetTimespan = 16 * 60; // 16 minutes
+        consensus.RBTPosLimit = uint256{"0000000000003fffffffffffffffffffffffffffffffffffffffffffffffffff"};
         consensus.nPowTargetTimespan = 16 * 60; // 16 minutes
         consensus.nPowTargetTimespanV2 = 4000;
         consensus.nRBTPowTargetTimespan = 1000;
@@ -277,7 +277,7 @@ public:
         consensus.nLondonHeight = 1967616;
         consensus.nShanghaiHeight = 3298892;
         consensus.nCancunHeight = 4510000;
-        consensus.nPectraHeight = 0x7fffffff;
+        consensus.nPectraHeight = 5442000;
         consensus.powLimit = uint256{"0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
         consensus.posLimit = uint256{"0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"};
         consensus.QIP9PosLimit = uint256{"0000000000001fffffffffffffffffffffffffffffffffffffffffffffffffff"}; // The new POS-limit activated after QIP9
