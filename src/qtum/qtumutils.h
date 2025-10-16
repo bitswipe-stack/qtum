@@ -50,14 +50,47 @@ int eth_getChainId(int blockHeight);
 class HistoricalHashes
 {
 public:
+    /**
+     * @brief instance Get instance from the historical hashages storage
+     * @return Instance of the storage
+     */
     static HistoricalHashes& instance();
+
+    /**
+     * @brief set Set the most recent block index
+     * @param tip Block index for the tip
+     */
     void set(CBlockIndex* tip);
+
+    /**
+     * @brief get Get the block hash from the history window
+     * @param blockHeight Input block height
+     * @param hash Output hash
+     * @return true if found the hash, false if not found
+     */
     bool get(const dev::u256& blockHeight, dev::h256& hash);
 
-public:
+private:
+    // Private constructor, copy constructor and operator equal for singleton
     HistoricalHashes();
+    HistoricalHashes(const HistoricalHashes&) = delete;
+    HistoricalHashes& operator=(const HistoricalHashes&) = delete;
+
+private:
+    /**
+     * @brief clear Clear the hashes
+     */
     void clear();
+
+    /**
+     * @brief update Update the hashes from the tip
+     */
     void update();
+
+    /**
+     * @brief needUpdate Check if update is needed
+     * @return true if needed, otherwise false
+     */
     bool needUpdate();
 
 private:

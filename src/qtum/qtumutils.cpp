@@ -78,6 +78,7 @@ int qtumutils::eth_getChainId(int blockHeight)
 
 qtumutils::HistoricalHashes &qtumutils::HistoricalHashes::instance()
 {
+    // Get instance
     static qtumutils::HistoricalHashes _instance;
     return _instance;
 }
@@ -89,13 +90,16 @@ void qtumutils::HistoricalHashes::set(CBlockIndex *tip)
 
 bool qtumutils::HistoricalHashes::get(const dev::u256 &blockHeight, dev::h256 &hash)
 {
+    // Check the tip
     if (!m_tip)
         return false;
     if (blockHeight > (dev::h256) m_tip->nHeight)
         return false;
 
+    // Update the list of hashes
     update();
 
+    // Get the hash from the list
     int height = (int) blockHeight;
     if (m_hashes.contains(height)) {
         hash = m_hashes[height];
@@ -116,12 +120,15 @@ void qtumutils::HistoricalHashes::clear() {
 
 void qtumutils::HistoricalHashes::update()
 {
+    // Check if update is needed
     if (needUpdate()) {
         clear();
 
+        // Get Pectra fork height
         const CChainParams& params = Params();
         int pectraHeight = params.GetConsensus().nPectraHeight;
 
+        // Add the last 8191 hashes, or until Pectra fork is reached, or not enough blocks
         const CBlockIndex *tip = m_tip;
         for(int i = 0; i < m_historyWindow; i++){
             if(!tip)
@@ -136,6 +143,7 @@ void qtumutils::HistoricalHashes::update()
 
 bool qtumutils::HistoricalHashes::needUpdate()
 {
+    // Update if the tip hash is changed
     bool ret = true;
     if (m_tip && m_hashes.contains(m_tip->nHeight) && uintToh256(*m_tip->phashBlock) == m_hashes[m_tip->nHeight]) {
         ret = false;
