@@ -3,6 +3,7 @@
 #include <pubkey.h>
 #include <util/convert.h>
 #include <chainparams.h>
+#include <chain.h>
 
 using namespace dev;
 
@@ -73,4 +74,71 @@ int qtumutils::eth_getChainId(int blockHeight)
     }
 
     return blockHeight < shanghaiHeight ? idCache.beforeShanghaiChainId : idCache.afterShanghaiChainId;
+}
+
+qtumutils::HistoricalHashes &qtumutils::HistoricalHashes::instance()
+{
+    static qtumutils::HistoricalHashes _instance;
+    return _instance;
+}
+
+void qtumutils::HistoricalHashes::set(CBlockIndex *tip)
+{
+    m_tip = tip;
+}
+
+bool qtumutils::HistoricalHashes::get(const dev::u256 &blockHeight, dev::h256 &hash)
+{
+    if (!m_tip)
+        return false;
+    if (blockHeight > (dev::h256) m_tip->nHeight)
+        return false;
+
+    update();
+
+    int height = (int) blockHeight;
+    if (m_hashes.contains(height)) {
+        hash = m_hashes[height];
+        return true;
+    }
+
+    return false;
+}
+
+qtumutils::HistoricalHashes::HistoricalHashes()
+{
+    clear();
+}
+
+void qtumutils::HistoricalHashes::clear() {
+    m_hashes.clear();
+}
+
+void qtumutils::HistoricalHashes::update()
+{
+    if (needUpdate()) {
+        clear();
+
+        const CChainParams& params = Params();
+        int pectraHeight = params.GetConsensus().nPectraHeight;
+
+        const CBlockIndex *tip = m_tip;
+        for(int i = 0; i < m_historyWindow; i++){
+            if(!tip)
+                break;
+            if(tip->nHeight < pectraHeight)
+                break;
+            m_hashes[tip->nHeight] = uintToh256(*tip->phashBlock);
+            tip = tip->pprev;
+        }
+    }
+}
+
+bool qtumutils::HistoricalHashes::needUpdate()
+{
+    bool ret = true;
+    if (m_tip && m_hashes.contains(m_tip->nHeight) && uintToh256(*m_tip->phashBlock) == m_hashes[m_tip->nHeight]) {
+        ret = false;
+    }
+    return ret;
 }

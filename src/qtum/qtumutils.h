@@ -5,6 +5,8 @@
 #include <libdevcore/FixedHash.h>
 #include <util/chaintype.h>
 
+class CBlockIndex;
+
 /**
  * qtumutils Provides utility functions to EVM for functionalities that already exist in qtum
  */
@@ -41,6 +43,28 @@ int eth_getChainId(int blockHeight, int shanghaiHeight, const ChainType& chain);
  * @return chain id
  */
 int eth_getChainId(int blockHeight);
+
+/**
+ * @brief The HistoricalHashes class Store the historical hashes
+ */
+class HistoricalHashes
+{
+public:
+    static HistoricalHashes& instance();
+    void set(CBlockIndex* tip);
+    bool get(const dev::u256& blockHeight, dev::h256& hash);
+
+public:
+    HistoricalHashes();
+    void clear();
+    void update();
+    bool needUpdate();
+
+private:
+    const static int m_historyWindow = 8191;
+    std::map<int, dev::h256> m_hashes;
+    CBlockIndex* m_tip = 0;
+};
 
 }
 

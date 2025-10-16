@@ -451,4 +451,29 @@ ETH_REGISTER_PRECOMPILED(map_fp2_to_G2_bls)(bytesConstRef _in)
 {
     return dev::crypto::map_fp2_to_G2_bls(_in);
 }
+
+ETH_REGISTER_PRECOMPILED_PRICER(historical_hashes)
+(bytesConstRef /*_in*/, ChainOperationParams const& /*_chainParams*/, u256 const& /*_blockNumber*/)
+{
+    return 20;
+}
+
+ETH_REGISTER_PRECOMPILED(historical_hashes)(bytesConstRef input)
+{
+    size_t input_size = input.size();
+    if (input_size != 32)
+        return {false, bytes{}};
+
+    try 
+    {
+        h256 in;
+        memcpy(&in, input.data(), input_size);
+        u256 blockNumber = (u256) in;
+        h256 hash;
+        if (qtumutils::HistoricalHashes::instance().get(blockNumber, hash))
+            return {true, hash.asBytes()};
+    }
+    catch (...) {}
+    return {false, {}};
+}
 }
