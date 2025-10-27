@@ -76,6 +76,14 @@ int qtumutils::eth_getChainId(int blockHeight)
     return blockHeight < shanghaiHeight ? idCache.beforeShanghaiChainId : idCache.afterShanghaiChainId;
 }
 
+dev::Address qtumutils::eth_getHistoryStorageAddress()
+{
+
+    const CChainParams& chainparams = Params();
+    dev::Address addr = uintToh160(chainparams.GetConsensus().historyStorageAddress);
+    return addr;
+}
+
 qtumutils::HistoricalHashes &qtumutils::HistoricalHashes::instance()
 {
     // Get instance

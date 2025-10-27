@@ -3,6 +3,7 @@
 
 #include <libdevcore/Common.h>
 #include <libdevcore/FixedHash.h>
+#include <libdevcore/Address.h>
 #include <util/chaintype.h>
 
 class CBlockIndex;
@@ -43,6 +44,12 @@ int eth_getChainId(int blockHeight, int shanghaiHeight, const ChainType& chain);
  * @return chain id
  */
 int eth_getChainId(int blockHeight);
+
+/**
+ * @brief eth_getHistoryStorageAddress Get eth history storage address
+ * @return Return history storage address
+ */
+dev::Address eth_getHistoryStorageAddress();
 
 /**
  * @brief The HistoricalHashes class Store the historical hashes

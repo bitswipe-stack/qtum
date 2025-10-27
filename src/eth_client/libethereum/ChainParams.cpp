@@ -14,6 +14,7 @@
 #include <libethcore/Precompiled.h>
 #include <libethcore/SealEngine.h>
 #include <boost/algorithm/string.hpp>
+#include <qtum/qtumutils.h>
 
 using namespace std;
 using namespace dev;
@@ -187,7 +188,7 @@ void ChainParams::loadConfig(
     precompiled.insert({Address{0x85}, PrecompiledContract{"btc_ecrecover", qip6ForkBlock}});
     // 0x86 used for Delegation Contract
     precompiled.insert(
-        {Address{0x87}, PrecompiledContract{"historical_hashes", pectraForkBlock + 1}});
+        {qtumutils::eth_getHistoryStorageAddress(), PrecompiledContract{"historical_hashes", pectraForkBlock + 1}});
 
     stateRoot = _stateRoot ? _stateRoot : calculateStateRoot(true);
 }
