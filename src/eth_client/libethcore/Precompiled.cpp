@@ -455,7 +455,7 @@ ETH_REGISTER_PRECOMPILED(map_fp2_to_G2_bls)(bytesConstRef _in)
 ETH_REGISTER_PRECOMPILED_PRICER(historical_hashes)
 (bytesConstRef /*_in*/, ChainOperationParams const& /*_chainParams*/, u256 const& /*_blockNumber*/)
 {
-    return 20;
+    return 4725;
 }
 
 ETH_REGISTER_PRECOMPILED(historical_hashes)(bytesConstRef input)
