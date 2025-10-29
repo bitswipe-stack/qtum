@@ -93,6 +93,10 @@ qtumutils::HistoricalHashes &qtumutils::HistoricalHashes::instance()
 
 void qtumutils::HistoricalHashes::set(CBlockIndex *tip)
 {
+    if (m_tip != tip)
+    {
+        clear();
+    }
     m_tip = tip;
 }
 
