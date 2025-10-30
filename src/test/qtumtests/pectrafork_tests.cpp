@@ -754,6 +754,141 @@ BOOST_AUTO_TEST_CASE(checking_historical_precompile_contract_edges){
     BOOST_CHECK(dev::h256(result.first[3].execRes.output) == dev::h256(0));
 }
 
+BOOST_AUTO_TEST_CASE(checking_historical_precompile_reorganize_blocks){
+
+    /* -------------------------------
+     * 1. Mine 9000 blocks
+     * -------------------------------*/
+
+    genesisLoading();
+    createNewBlocks(this, 9000);
+    dev::h256 hashTx(HASHTX);
+
+    /* -------------------------------
+     * 2. Check historical contract
+     * -------------------------------*/
+
+    // Create a contract that use the history precompile contract
+    std::vector<QtumTransaction> txCreateBlockHash;
+    txCreateBlockHash.push_back(createQtumTransaction(getCode(CodeID::blockHashContract), 0, GASLIMIT, dev::u256(1), ++hashTx, dev::Address()));
+    auto result = executeBC(txCreateBlockHash, *m_node.chainman);
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+
+    // Get tip height and expected value
+    dev::h256 nHeightTip;
+    dev::h256 oldExpectedValue;
+    {
+        LOCK(::cs_main);
+        CBlockIndex* pindex = m_node.chainman->ActiveChain().Tip();
+        BOOST_CHECK(pindex != 0);
+        nHeightTip = (dev::h256) dev::u256(pindex->nHeight);
+        oldExpectedValue = uintToh256(*pindex->phashBlock);
+    }
+
+    // Get the history block hash for the tip
+    dev::Address proxy = createQtumAddress(txCreateBlockHash[0].getHashWith(), txCreateBlockHash[0].getNVout());
+    std::vector<QtumTransaction> txGetBlockHash;
+    txGetBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightTip), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    result = executeBC(txGetBlockHash, *m_node.chainman);
+
+    // Check tip block hash value is present and expected
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[0].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[0].execRes.output) == oldExpectedValue);
+    BOOST_CHECK(result.first[0].execRes.gasUsed == 27379);
+
+    /* -------------------------------
+     * 3. Remove 10 blocks
+     * -------------------------------*/
+
+    const CChain& active{*WITH_LOCK(Assert(m_node.chainman)->GetMutex(), return &Assert(m_node.chainman)->ActiveChain())};
+    auto* orig_tip = active.Tip();
+    for (int i = 0; i < 10; ++i) {
+        BlockValidationState state;
+        m_node.chainman->ActiveChainstate().InvalidateBlock(state, active.Tip());
+    }
+    BOOST_CHECK_EQUAL(active.Height(), orig_tip->nHeight - 10);
+
+    /* -------------------------------
+     * 4. Check historical contract
+     * -------------------------------*/
+
+    // Call the contract that use the history storage after invalidate
+    std::vector<QtumTransaction> txAfterInvalidate;
+    txAfterInvalidate.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightTip), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    result = executeBC(txGetBlockHash, *m_node.chainman);
+
+    // Check that the contract does not exist
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::Unknown);
+
+    // Re-create the contract that use the history precompile contract
+    result = executeBC(txCreateBlockHash, *m_node.chainman);
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+
+    // Get the height of the last stored block hash and the height of the not stored
+    dev::h256 expectedLast;
+    dev::h256 nHeightLast;
+    dev::h256 nHeightBeforeLast;
+    {
+        LOCK(::cs_main);
+        CBlockIndex* pindex = m_node.chainman->ActiveChain().Tip();
+        int nHeight = pindex->nHeight;
+        pindex = m_node.chainman->ActiveChain()[nHeight - HISTORY_SERVE_WINDOW + 1];
+        BOOST_CHECK(pindex != 0);
+        nHeightLast = (dev::h256) dev::u256(pindex->nHeight);
+        expectedLast = uintToh256(*pindex->phashBlock);
+        nHeightBeforeLast = (dev::h256) dev::u256(nHeight - HISTORY_SERVE_WINDOW);
+    }
+
+    // Get the last history block hash
+    std::vector<QtumTransaction> txLastBlockHash;
+    txLastBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightLast), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    txLastBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightBeforeLast), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    result = executeBC(txLastBlockHash, *m_node.chainman);
+
+    // Check last block hash value is present and expected
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[0].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[0].execRes.output) == expectedLast);
+    BOOST_CHECK(result.first[0].execRes.gasUsed == 27379);
+
+    // Check the block hash is not stored due to buffer max size
+    BOOST_CHECK(result.first[1].execRes.excepted == dev::eth::TransactionException::RevertInstruction);
+    BOOST_CHECK(dev::h256(result.first[1].execRes.output) == dev::h256(0));
+
+    /* -------------------------------
+     * 5. Mine 20 blocks
+     * -------------------------------*/
+
+    SetMockTime(orig_tip->nTime + 1);
+    createNewBlocks(this, 20);
+
+    /* -------------------------------
+     * 6. Check historical contract
+     * -------------------------------*/
+
+    // Get the new tip value
+    dev::h256 newExpectedValue;
+    {
+        LOCK(::cs_main);
+        CBlockIndex* pindex = m_node.chainman->ActiveChain()[orig_tip->nHeight];
+        BOOST_CHECK(pindex != 0);
+        newExpectedValue = uintToh256(*pindex->phashBlock);
+    }
+
+    // Execute the get block hash transaction
+    result = executeBC(txGetBlockHash, *m_node.chainman);
+
+    // Check block hash value is present and expected
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[0].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[0].execRes.output) == newExpectedValue);
+    BOOST_CHECK(result.first[0].execRes.gasUsed == 27379);
+
+    // Check that the old value is different then the new value
+    BOOST_CHECK(oldExpectedValue != newExpectedValue);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
