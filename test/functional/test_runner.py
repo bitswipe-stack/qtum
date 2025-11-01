@@ -87,6 +87,7 @@ EXTENDED_SCRIPTS = [
     'qtum_evm_shanghai_activation.py --legacy-wallet',
     'qtum_evm_cancun_activation.py --legacy-wallet',
     'qtum_evm_pectra_activation.py --legacy-wallet',
+    'qtum_evm_pectra_historical_data.py',
     'feature_pruning.py',
     'feature_dbcrash.py',
     'wallet_pruning.py --legacy-wallet',

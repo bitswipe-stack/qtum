@@ -3319,6 +3319,7 @@ dev::eth::EnvInfo ByteCodeExec::BuildEVMEnvironment(){
     header.setGasLimit(blockGasLimit);
 
     lastHashes.set(tip);
+    qtumutils::HistoricalHashes::instance().set(tip);
 
     if(block.IsProofOfStake()){
         header.setAuthor(EthAddrFromScript(block.vtx[1]->vout[1].scriptPubKey));

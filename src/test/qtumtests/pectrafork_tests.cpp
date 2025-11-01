@@ -7,6 +7,18 @@ namespace PectraTest{
 
 const dev::u256 GASLIMIT = dev::u256(500000);
 const dev::h256 HASHTX = dev::h256(ParseHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+int HISTORY_SERVE_WINDOW = 8191;
+
+std::vector<unsigned char> concat(
+    const std::vector<unsigned char>& a,
+    const std::vector<unsigned char>& b)
+{
+    std::vector<unsigned char> result;
+    result.reserve(a.size() + b.size());
+    result.insert(result.end(), a.begin(), a.end());
+    result.insert(result.end(), b.begin(), b.end());
+    return result;
+}
 
 // Codes used to check that pectra fork
 const std::vector<valtype> CODE = {
@@ -79,6 +91,31 @@ const std::vector<valtype> CODE = {
     valtype(ParseHex("979c3bb100000000000000000000000000000000000000000000000000000000000000110000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000007355d25caf6e7f2f0cb2812ca0e513bd026ed09dda65b177500fa31714e09ea0ded3a078b526bed3307f804d4b93b040000000000000000000000000000000002829ce3c021339ccb5caf3e187f6370e1e2a311dec9b75363117063ab2015603ff52c3d3b98f19c2f65575e99e8b78c00000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000e7f4568a82b4b7dc1f14c6aaa055edf51502319c723c4dc2688c7fe5944c213f510328082396515734b6612c4e7bb700000000000000000000000000000000126b855e9e69b1f691f816e48ac6977664d24d99f8724868a184186469ddfd4617367e94527d4b74fc86413483afb35b000000000000000000000000000000000caead0fd7b6176c01436833c79d305c78be307da5f6af6c133c47311def6ff1e0babf57a0fb5539fce7ee12407b0a42000000000000000000000000000000001498aadcf7ae2b345243e281ae076df6de84455d766ab6fcdaad71fab60abb2e8b980a440043cd305db09d283c895e3d")),
     //verifyCallFail map_fp2_to_G2
     valtype(ParseHex("889f55c900000000000000000000000000000000000000000000000000000000000000110000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000007f0000000000000000000000000000000007355d25caf6e7f2f0cb2812ca0e513bd026ed09dda65b177500fa31714e09ea0ded3a078b526bed3307f804d4b93b040000000000000000000000000000000002829ce3c021339ccb5caf3e187f6370e1e2a311dec9b75363117063ab2015603ff52c3d3b98f19c2f65575e99e8b700")),
+    // EIP-2935
+    /*
+    pragma solidity ^0.8.0;
+
+    contract BlockHashChecks {
+        address constant HISTORY_STORAGE_ADDRESS = 0x0000F90827F1C53a10cb7A02335B175320002935;
+		function getBlockHash(uint256 blockNumber) external view (bytes32 hash) {
+		    return blockhash(blockNumber);
+		}
+
+		function getHistoricalBlockHash(uint256 blockNumber) external returns (bytes32 hash) {
+			bytes memory data = abi.encode(blockNumber);
+			(bool success, bytes memory result) = HISTORY_STORAGE_ADDRESS.call(data);
+			require(success && result.length == 32, "Fallback call failed or invalid response");
+			assembly {
+				hash := mload(add(result, 32))
+			}
+		}
+    }
+    */
+valtype(ParseHex("6080604052348015600e575f5ffd5b506103958061001c5f395ff3fe608060405234801561000f575f5ffd5b5060043610610034575f3560e01c8063ee82ac5e14610038578063f2e8410c14610068575b5f5ffd5b610052600480360381019061004d91906101d5565b610098565b60405161005f9190610218565b60405180910390f35b610082600480360381019061007d91906101d5565b6100a2565b60405161008f9190610218565b60405180910390f35b5f81409050919050565b5f5f826040516020016100b59190610240565b60405160208183030381529060405290505f5f71f90827f1c53a10cb7a02335b17532000293573ffffffffffffffffffffffffffffffffffffffff16836040516100ff91906102ab565b5f604051808303815f865af19150503d805f8114610138576040519150601f19603f3d011682016040523d82523d5f602084013e61013d565b606091505b5091509150818015610150575060208151145b61018f576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161018690610341565b60405180910390fd5b60208101519350505050919050565b5f5ffd5b5f819050919050565b6101b4816101a2565b81146101be575f5ffd5b50565b5f813590506101cf816101ab565b92915050565b5f602082840312156101ea576101e961019e565b5b5f6101f7848285016101c1565b91505092915050565b5f819050919050565b61021281610200565b82525050565b5f60208201905061022b5f830184610209565b92915050565b61023a816101a2565b82525050565b5f6020820190506102535f830184610231565b92915050565b5f81519050919050565b5f81905092915050565b8281835e5f83830152505050565b5f61028582610259565b61028f8185610263565b935061029f81856020860161026d565b80840191505092915050565b5f6102b6828461027b565b915081905092915050565b5f82825260208201905092915050565b7f46616c6c6261636b2063616c6c206661696c6564206f7220696e76616c6964205f8201527f726573706f6e7365000000000000000000000000000000000000000000000000602082015250565b5f61032b6028836102c1565b9150610336826102d1565b604082019050919050565b5f6020820190508181035f8301526103588161031f565b905091905056fea2646970667358221220b971cd37d9ac7018cf9560dc047cbeb980b2b57244e740b7b2974f72f006b7bd64736f6c634300081e0033")),
+    //getBlockHash
+valtype(ParseHex("ee82ac5e")),
+    //getHistoricalBlockHash
+valtype(ParseHex("f2e8410c")),
 };
 
 // Codes IDs used to check that pectra fork is present
@@ -99,12 +136,23 @@ enum class CodeID
     verifyCallFailMapFpToG1,
     verifyCallSuccessMapFp2ToG2,
     verifyCallFailMapFp2ToG2,
+    blockHashContract,
+    getBlockHash,
+    getHistoricalBlockHash,
 };
 
 // Get the code identified by the ID
 valtype getCode(CodeID id)
 {
     return CODE[(int)id];
+}
+
+// Get the code identified by the ID
+valtype getCode(CodeID id, dev::h256 nHeight)
+{
+    valtype vCode = CODE[(int)id];
+    valtype vHeight = nHeight.asBytes();
+    return concat(vCode, vHeight);
 }
 
 void genesisLoading(){
@@ -559,6 +607,286 @@ BOOST_AUTO_TEST_CASE(checking_map_fp2_to_G2_bls_before_fork){
     BOOST_CHECK(result.first[1].execRes.gasUsed == 27023);
     BOOST_CHECK(result.first[1].execRes.output.size() == 32);
     BOOST_CHECK(dev::h256(result.first[1].execRes.output) == dev::h256(0));
+}
+
+BOOST_AUTO_TEST_CASE(checking_opcode_blockhash_and_history_blockhash_value){
+    genesisLoading();
+    createNewBlocks(this, 499);
+    dev::h256 hashTx(HASHTX);
+
+    // Create contract
+    std::vector<QtumTransaction> txs;
+    txs.push_back(createQtumTransaction(getCode(CodeID::blockHashContract), 0, GASLIMIT, dev::u256(1), ++hashTx, dev::Address()));
+    auto result = executeBC(txs, *m_node.chainman);
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+
+    // Prepare variables
+    dev::h256 expectedResult;
+    dev::h256 nHeight;
+    dev::h256 nHeightBeforePectra;
+    {
+        LOCK(::cs_main);
+        CBlockIndex* pindex = m_node.chainman->ActiveChain().Tip();
+        BOOST_CHECK(pindex != 0);
+        expectedResult = uintToh256(*pindex->phashBlock);
+        nHeight = (dev::h256) dev::u256(pindex->nHeight);
+        nHeightBeforePectra = (dev::h256) dev::u256(pindex->nHeight - 1);
+    }
+
+    // Check that both opcode block hash and historical block hash has the same value when the index is found
+    dev::Address proxy = createQtumAddress(txs[0].getHashWith(), txs[0].getNVout());
+    std::vector<QtumTransaction> txBlockHash;
+    txBlockHash.push_back(createQtumTransaction(getCode(CodeID::getBlockHash, nHeight), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    txBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeight), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    txBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightBeforePectra), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    result = executeBC(txBlockHash, *m_node.chainman);
+
+    // Check opcode block hash value is the expected
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[0].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[0].execRes.output) == expectedResult);
+    BOOST_CHECK(result.first[0].execRes.gasUsed == 21807);
+
+    // Check historical block hash value is the expected
+    BOOST_CHECK(result.first[1].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[1].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[1].execRes.output) == expectedResult);
+    BOOST_CHECK(result.first[1].execRes.gasUsed == 27379);
+
+    // Check historical block hash value is not present before Pectra
+    BOOST_CHECK(result.first[2].execRes.excepted == dev::eth::TransactionException::RevertInstruction);
+    BOOST_CHECK(dev::h256(result.first[2].execRes.output) == dev::h256(0));
+}
+
+BOOST_AUTO_TEST_CASE(checking_historical_precompile_contract_before_fork){
+    genesisLoading();
+    createNewBlocks(this, 498);
+    dev::h256 hashTx(HASHTX);
+
+    // Create contract
+    std::vector<QtumTransaction> txs;
+    txs.push_back(createQtumTransaction(getCode(CodeID::blockHashContract), 0, GASLIMIT, dev::u256(1), ++hashTx, dev::Address()));
+    auto result = executeBC(txs, *m_node.chainman);
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+
+    // Prepare variables
+    dev::h256 nHeight;
+    {
+        LOCK(::cs_main);
+        CBlockIndex* pindex = m_node.chainman->ActiveChain().Tip();
+        BOOST_CHECK(pindex != 0);
+        nHeight = (dev::h256) dev::u256(pindex->nHeight);
+    }
+
+    // Get the historical block hash before the Pactra fork
+    dev::Address proxy = createQtumAddress(txs[0].getHashWith(), txs[0].getNVout());
+    std::vector<QtumTransaction> txBlockHash;
+    txBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeight), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    result = executeBC(txBlockHash, *m_node.chainman);
+
+    // Check historical block hash value is not present
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::RevertInstruction);
+    BOOST_CHECK(dev::h256(result.first[0].execRes.output) == dev::h256(0));
+}
+
+BOOST_AUTO_TEST_CASE(checking_historical_precompile_contract_edges){
+    genesisLoading();
+    createNewBlocks(this, 10000);
+    dev::h256 hashTx(HASHTX);
+
+    // Create contract
+    std::vector<QtumTransaction> txs;
+    txs.push_back(createQtumTransaction(getCode(CodeID::blockHashContract), 0, GASLIMIT, dev::u256(1), ++hashTx, dev::Address()));
+    auto result = executeBC(txs, *m_node.chainman);
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+
+    // Prepare variables
+    dev::h256 nHeightTip;
+    dev::h256 expectedTip;
+    dev::h256 nHeightLast;
+    dev::h256 expectedLast;
+    dev::h256 nHeightAfterTip;
+    dev::h256 nHeightBeforeLast;
+    {
+        LOCK(::cs_main);
+        CBlockIndex* pindex = m_node.chainman->ActiveChain().Tip();
+        BOOST_CHECK(pindex != 0);
+        nHeightTip = (dev::h256) dev::u256(pindex->nHeight);
+        expectedTip = uintToh256(*pindex->phashBlock);
+
+        int nHeight = pindex->nHeight;
+        pindex = m_node.chainman->ActiveChain()[nHeight - HISTORY_SERVE_WINDOW + 1];
+        BOOST_CHECK(pindex != 0);
+        nHeightLast = (dev::h256) dev::u256(pindex->nHeight);
+        expectedLast = uintToh256(*pindex->phashBlock);
+
+        nHeightAfterTip = (dev::h256) dev::u256(nHeight + 1);
+        nHeightBeforeLast = (dev::h256) dev::u256(nHeight - HISTORY_SERVE_WINDOW);
+    }
+
+    // Get the historical block hash edges
+    dev::Address proxy = createQtumAddress(txs[0].getHashWith(), txs[0].getNVout());
+    std::vector<QtumTransaction> txBlockHash;
+    txBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightTip), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    txBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightLast), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    txBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightAfterTip), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    txBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightBeforeLast), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    result = executeBC(txBlockHash, *m_node.chainman);
+
+    // Check tip block hash value is present
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[0].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[0].execRes.output) == expectedTip);
+    BOOST_CHECK(result.first[0].execRes.gasUsed == 27379);
+
+    // Check last block hash value is present
+    BOOST_CHECK(result.first[1].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[1].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[1].execRes.output) == expectedLast);
+    BOOST_CHECK(result.first[1].execRes.gasUsed == 27379);
+
+    // Check after tip block hash value is not present
+    BOOST_CHECK(result.first[2].execRes.excepted == dev::eth::TransactionException::RevertInstruction);
+    BOOST_CHECK(dev::h256(result.first[2].execRes.output) == dev::h256(0));
+
+    // Check before last block hash value is not present
+    BOOST_CHECK(result.first[3].execRes.excepted == dev::eth::TransactionException::RevertInstruction);
+    BOOST_CHECK(dev::h256(result.first[3].execRes.output) == dev::h256(0));
+}
+
+BOOST_AUTO_TEST_CASE(checking_historical_precompile_reorganize_blocks){
+
+    /* -------------------------------
+     * 1. Mine 9000 blocks
+     * -------------------------------*/
+
+    genesisLoading();
+    createNewBlocks(this, 9000);
+    dev::h256 hashTx(HASHTX);
+
+    /* -------------------------------
+     * 2. Check historical contract
+     * -------------------------------*/
+
+    // Create a contract that use the history precompile contract
+    std::vector<QtumTransaction> txCreateBlockHash;
+    txCreateBlockHash.push_back(createQtumTransaction(getCode(CodeID::blockHashContract), 0, GASLIMIT, dev::u256(1), ++hashTx, dev::Address()));
+    auto result = executeBC(txCreateBlockHash, *m_node.chainman);
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+
+    // Get tip height and expected value
+    dev::h256 nHeightTip;
+    dev::h256 oldExpectedValue;
+    {
+        LOCK(::cs_main);
+        CBlockIndex* pindex = m_node.chainman->ActiveChain().Tip();
+        BOOST_CHECK(pindex != 0);
+        nHeightTip = (dev::h256) dev::u256(pindex->nHeight);
+        oldExpectedValue = uintToh256(*pindex->phashBlock);
+    }
+
+    // Get the history block hash for the tip
+    dev::Address proxy = createQtumAddress(txCreateBlockHash[0].getHashWith(), txCreateBlockHash[0].getNVout());
+    std::vector<QtumTransaction> txGetBlockHash;
+    txGetBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightTip), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    result = executeBC(txGetBlockHash, *m_node.chainman);
+
+    // Check tip block hash value is present and expected
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[0].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[0].execRes.output) == oldExpectedValue);
+    BOOST_CHECK(result.first[0].execRes.gasUsed == 27379);
+
+    /* -------------------------------
+     * 3. Remove 10 blocks
+     * -------------------------------*/
+
+    const CChain& active{*WITH_LOCK(Assert(m_node.chainman)->GetMutex(), return &Assert(m_node.chainman)->ActiveChain())};
+    auto* orig_tip = active.Tip();
+    for (int i = 0; i < 10; ++i) {
+        BlockValidationState state;
+        m_node.chainman->ActiveChainstate().InvalidateBlock(state, active.Tip());
+    }
+    BOOST_CHECK_EQUAL(active.Height(), orig_tip->nHeight - 10);
+
+    /* -------------------------------
+     * 4. Check historical contract
+     * -------------------------------*/
+
+    // Call the contract that use the history storage after invalidate
+    std::vector<QtumTransaction> txAfterInvalidate;
+    txAfterInvalidate.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightTip), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    result = executeBC(txGetBlockHash, *m_node.chainman);
+
+    // Check that the contract does not exist
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::Unknown);
+
+    // Re-create the contract that use the history precompile contract
+    result = executeBC(txCreateBlockHash, *m_node.chainman);
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+
+    // Get the height of the last stored block hash and the height of the not stored
+    dev::h256 expectedLast;
+    dev::h256 nHeightLast;
+    dev::h256 nHeightBeforeLast;
+    {
+        LOCK(::cs_main);
+        CBlockIndex* pindex = m_node.chainman->ActiveChain().Tip();
+        int nHeight = pindex->nHeight;
+        pindex = m_node.chainman->ActiveChain()[nHeight - HISTORY_SERVE_WINDOW + 1];
+        BOOST_CHECK(pindex != 0);
+        nHeightLast = (dev::h256) dev::u256(pindex->nHeight);
+        expectedLast = uintToh256(*pindex->phashBlock);
+        nHeightBeforeLast = (dev::h256) dev::u256(nHeight - HISTORY_SERVE_WINDOW);
+    }
+
+    // Get the last history block hash
+    std::vector<QtumTransaction> txLastBlockHash;
+    txLastBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightLast), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    txLastBlockHash.push_back(createQtumTransaction(getCode(CodeID::getHistoricalBlockHash, nHeightBeforeLast), 0, GASLIMIT, dev::u256(1), ++hashTx, proxy));
+    result = executeBC(txLastBlockHash, *m_node.chainman);
+
+    // Check last block hash value is present and expected
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[0].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[0].execRes.output) == expectedLast);
+    BOOST_CHECK(result.first[0].execRes.gasUsed == 27379);
+
+    // Check the block hash is not stored due to buffer max size
+    BOOST_CHECK(result.first[1].execRes.excepted == dev::eth::TransactionException::RevertInstruction);
+    BOOST_CHECK(dev::h256(result.first[1].execRes.output) == dev::h256(0));
+
+    /* -------------------------------
+     * 5. Mine 20 blocks
+     * -------------------------------*/
+
+    SetMockTime(orig_tip->nTime + 1);
+    createNewBlocks(this, 20);
+
+    /* -------------------------------
+     * 6. Check historical contract
+     * -------------------------------*/
+
+    // Get the new tip value
+    dev::h256 newExpectedValue;
+    {
+        LOCK(::cs_main);
+        CBlockIndex* pindex = m_node.chainman->ActiveChain()[orig_tip->nHeight];
+        BOOST_CHECK(pindex != 0);
+        newExpectedValue = uintToh256(*pindex->phashBlock);
+    }
+
+    // Execute the get block hash transaction
+    result = executeBC(txGetBlockHash, *m_node.chainman);
+
+    // Check block hash value is present and expected
+    BOOST_CHECK(result.first[0].execRes.excepted == dev::eth::TransactionException::None);
+    BOOST_CHECK(result.first[0].execRes.output.size() == 32);
+    BOOST_CHECK(dev::h256(result.first[0].execRes.output) == newExpectedValue);
+    BOOST_CHECK(result.first[0].execRes.gasUsed == 27379);
+
+    // Check that the old value is different then the new value
+    BOOST_CHECK(oldExpectedValue != newExpectedValue);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
