@@ -4428,6 +4428,26 @@ std::optional<CKey> CWallet::GetKey(const CKeyID& keyid) const
     return std::nullopt;
 }
 
+uint256 CTokenInfo::GetHash() const
+{
+    return (HashWriter{} << SER_INFO_GETHASH(*this)).GetHash();
+}
+
+uint256 CTokenTx::GetHash() const
+{
+    return (HashWriter{} << SER_INFO_GETHASH(*this)).GetHash();
+}
+
+uint256 CDelegationInfo::GetHash() const
+{
+    return (HashWriter{} << SER_INFO_GETHASH(*this)).GetHash();
+}
+
+uint256 CSuperStakerInfo::GetHash() const
+{
+    return (HashWriter{} << SER_INFO_GETHASH(*this)).GetHash();
+}
+
 void CWallet::WriteBestBlock() const
 {
     AssertLockHeld(cs_wallet);

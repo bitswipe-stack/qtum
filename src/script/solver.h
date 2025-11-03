@@ -32,6 +32,10 @@ enum class TxoutType {
     WITNESS_V0_KEYHASH,
     WITNESS_V1_TAPROOT,
     WITNESS_UNKNOWN, //!< Only for Witness versions not already defined above
+    CREATE_SENDER,
+    CALL_SENDER,
+    CREATE,
+    CALL,
 };
 
 /** Get the name of a TxoutType as a string */
