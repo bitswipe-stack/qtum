@@ -83,4 +83,4 @@ class QtumPrematureCoinstakeSpendTest(BitcoinTestFramework):
         self.assert_spend_of_coinstake_at_height(height=5002-COINBASE_MATURITY, should_accept=False)
 
 if __name__ == '__main__':
-    QtumPrematureCoinstakeSpendTest().main()
+    QtumPrematureCoinstakeSpendTest(__file__).main()

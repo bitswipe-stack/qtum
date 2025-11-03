@@ -6,7 +6,7 @@
 #include <intx/intx.hpp>
 #include <validation.h>
 #include <chainparams.h>
-#include <qtumtests/precompiled_utils.h>
+#include <test/qtumtests/precompiled_utils.h>
 #include <test/qtumtests/data/point_evaluation.json.h>
 
 #include <span>

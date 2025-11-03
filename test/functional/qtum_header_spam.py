@@ -129,6 +129,7 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         self._remove_from_staking_prevouts(block_header.prevoutStake)
 
     def can_submit_header_after_rolling_checkpoint_test(self):
+        self.start_p2p_connection()
         block_header = self._create_pos_header(self.node, self.staking_prevouts, self.node.getblockhash(self.node.getblockcount()-COINBASE_MATURITY))
         block_header.rehash()
         msg = msg_headers()
@@ -301,7 +302,7 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
             #self.cannot_submit_invalid_prevout_test()
             print("cannot_submit_header_oversized_signature_test")
             self.cannot_submit_header_oversized_signature_test()
-            self.node.generate(1)
+            self.node.generate(1, called_by_framework=True)
             print("can_sync_after_offline_period_test")
             self.can_sync_after_offline_period_test()
             self.staking_prevouts = collect_prevouts(self.node, min_confirmations=self.node.getblockcount()-1000)
@@ -326,4 +327,4 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         assert_equal(self.nodes[1].getchaintips()[0]['hash'], self.node.getbestblockhash())
 
 if __name__ == '__main__':
-    QtumHeaderSpamTest().main()
+    QtumHeaderSpamTest(__file__).main()

@@ -1,8 +1,8 @@
 #include <boost/test/unit_test.hpp>
-#include <qtumtests/test_utils.h>
+#include <test/qtumtests/test_utils.h>
 #include <script/solver.h>
 #include <chainparams.h>
-#include <qtumtests/precompiled_utils.h>
+#include <test/qtumtests/precompiled_utils.h>
 #include <test/qtumtests/data/btc_ecrecover.json.h>
 #include <test/qtumtests/data/ecrecover.json.h>
 #include <test/qtumtests/data/sha256.json.h>

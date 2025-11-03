@@ -150,4 +150,4 @@ class QtumBlockIndexCleanupTest(BitcoinTestFramework):
             assert_equal(self.node.getchaintips(), n.getchaintips())
 
 if __name__ == '__main__':
-    QtumBlockIndexCleanupTest().main()
+    QtumBlockIndexCleanupTest(__file__).main()
