@@ -51,6 +51,7 @@
 #include <rpc/server.h>
 #include <support/allocators/secure.h>
 #include <sync.h>
+#include <util/time.h>
 #include <txmempool.h>
 #include <uint256.h>
 #include <univalue.h>
@@ -324,6 +325,18 @@ public:
         }
         return chainman().GetParams().GenesisBlock().GetBlockTime(); // Genesis block's time of current network
     }
+    uint256 getBlockHash(int blockNumber) override
+    {
+        LOCK(::cs_main);
+        CBlockIndex* index = chainman().ActiveChain()[blockNumber];
+        return index ? index->GetBlockHash() : uint256();
+    }
+    int64_t getBlockTime(int blockNumber) override
+    {
+        LOCK(::cs_main);
+        CBlockIndex* index = chainman().ActiveChain()[blockNumber];
+        return index ? index->GetBlockTime() : 0;
+    }
     double getVerificationProgress() override
     {
         LOCK(chainman().GetMutex());
@@ -333,6 +346,7 @@ public:
     {
         return chainman().IsInitialBlockDownload();
     }
+    bool isAddressTypeSet() override { return !::gArgs.GetArg("-addresstype", "").empty(); }
     bool isLoadingBlocks() override { return chainman().m_blockman.LoadingBlocks(); }
     void setNetworkActive(bool active) override
     {
@@ -368,6 +382,36 @@ public:
     WalletLoader& walletLoader() override
     {
         return *Assert(m_context->wallet_loader);
+    }
+    void getGasInfo(uint64_t& blockGasLimit, uint64_t& minGasPrice, uint64_t& nGasPrice) override
+    {
+    }
+    void getSyncInfo(int& numBlocks, bool& isSyncing) override
+    {
+    }
+    bool tryGetSyncInfo(int& numBlocks, bool& isSyncing) override
+    {
+        return {};
+    }
+    int64_t getBlockSubsidy(int nHeight) override
+    {
+        return {};
+    }
+    uint64_t getNetworkStakeWeight() override
+    {
+        return {};
+    }
+    double getEstimatedAnnualROI() override
+    {
+        return {};
+    }
+    int64_t getMoneySupply() override
+    {
+        return {};
+    }
+    double getPoSKernelPS() override
+    {
+        return {};
     }
     std::unique_ptr<Handler> handleInitMessage(InitMessageFn fn) override
     {
@@ -437,6 +481,7 @@ bool FillBlock(const CBlockIndex* index, const FoundBlock& block, UniqueLock<Rec
     if (block.m_time) *block.m_time = index->GetBlockTime();
     if (block.m_max_time) *block.m_max_time = index->GetBlockTimeMax();
     if (block.m_mtp_time) *block.m_mtp_time = index->GetMedianTimePast();
+    if (block.m_has_delegation) *block.m_has_delegation = index->HasProofOfDelegation();
     if (block.m_in_active_chain) *block.m_in_active_chain = active[index->nHeight] == index;
     if (block.m_locator) { *block.m_locator = GetLocator(index); }
     if (block.m_next_block) FillBlock(active[index->nHeight] == index ? active[index->nHeight + 1] : nullptr, *block.m_next_block, lock, active, blockman);
@@ -558,6 +603,10 @@ public:
         LOCK(::cs_main);
         const CBlockIndex* block{chainman().ActiveChain()[height]};
         return block && ((block->nStatus & BLOCK_HAVE_DATA) != 0) && block->nTx > 0;
+    }
+    std::map<COutPoint, uint32_t> getImmatureStakes() override
+    {
+        return {};
     }
     std::optional<int> findLocatorFork(const CBlockLocator& locator) override
     {
@@ -764,12 +813,14 @@ public:
         LOCK(chainman().GetMutex());
         return GetPruneHeight(chainman().m_blockman, chainman().ActiveChain());
     }
+    bool isLoadingBlocks() override { return chainman().m_blockman.LoadingBlocks(); }
     bool isReadyToBroadcast() override { return !chainman().m_blockman.LoadingBlocks() && !isInitialBlockDownload(); }
     bool isInitialBlockDownload() override
     {
         return chainman().IsInitialBlockDownload();
     }
     bool shutdownRequested() override { return ShutdownRequested(m_node); }
+    int64_t getAdjustedTime() override { return TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()); }
     void initMessage(const std::string& message) override { ::uiInterface.InitMessage(message); }
     void initWarning(const bilingual_str& message) override { InitWarning(message); }
     void initError(const bilingual_str& message) override { InitError(message); }
@@ -853,8 +904,63 @@ public:
 
     NodeContext* context() override { return &m_node; }
     ArgsManager& args() { return *Assert(m_node.args); }
-    ChainstateManager& chainman() { return *Assert(m_node.chainman); }
+    ChainstateManager& chainman() override { return *Assert(m_node.chainman); }
     ValidationSignals& validation_signals() { return *Assert(m_node.validation_signals); }
+    const CTxMemPool& mempool() override { return *Assert(m_node.mempool); }
+    bilingual_str getWarnings() override { return Join(Assert(m_node.warnings)->GetMessages(), Untranslated("<hr />")); }
+
+    CBlockIndex* getTip() const override
+    {
+        return {};
+    }
+    bool getUnspentOutput(const COutPoint& output, Coin& coin) override
+    {
+        return {};
+    }
+    CCoinsViewCache& getCoinsTip() override
+    {
+        LOCK(::cs_main);
+        return chainman().ActiveChainstate().CoinsTip();
+    }
+    size_t getNodeCount(ConnectionDirection flags) override
+    {
+        return {};
+    }
+    CAmount getTxGasFee(const CMutableTransaction& tx) override
+    {
+        return {};
+    }
+#ifdef ENABLE_WALLET
+    void startStake(wallet::CWallet& wallet) override
+    {
+    }
+    void stopStake(wallet::CWallet& wallet) override
+    {
+    }
+    uint64_t getStakeWeight(const wallet::CWallet& wallet, uint64_t* pStakerWeight, uint64_t* pDelegateWeight) override
+    {
+        return {};
+    }
+    void refreshDelegates(wallet::CWallet *pwallet, bool myDelegates, bool stakerDelegates) override
+    {
+    }
+    std::span<const CRPCCommand> getContractRPCCommands() override
+    {
+        return {};
+    }
+    std::span<const CRPCCommand> getMiningRPCCommands() override
+    {
+        return {};
+    }
+#endif
+    bool getDelegation(const uint160& address, Delegation& delegation) override
+    {
+        return {};
+    }
+    bool verifyDelegation(const uint160& address, const Delegation& delegation) override
+    {
+        return {};
+    }
     NodeContext& m_node;
 };
 
