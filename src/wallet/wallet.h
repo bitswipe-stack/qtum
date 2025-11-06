@@ -764,14 +764,23 @@ public:
     void CommitTransaction(CTransactionRef tx, mapValue_t mapValue, std::vector<std::pair<std::string, std::string>> orderForm);
 
     uint64_t GetStakeWeight(uint64_t* pStakerWeight = nullptr, uint64_t* pDelegateWeight = nullptr) const;
+    uint64_t GetSuperStakerWeight(const uint160& staker) const;
     bool CanSuperStake(const std::set<std::pair<const CWalletTx*,unsigned int> >& setCoins, const std::vector<COutPoint>& setDelegateCoins) const;
+    bool GetHDKeyPath(const CTxDestination& dest, std::string& hdkeypath) const;
     bool GetDelegationStaker(const uint160& keyid, Delegation& delegation);
     const CWalletTx* GetCoinSuperStaker(const std::set<std::pair<const CWalletTx*,unsigned int> >& setCoins, const PKHash& superStaker, COutPoint& prevout, CAmount& nValueRet);
+    const CScriptCache& GetScriptCache(const COutPoint& prevout, const CScript& scriptPubKey, std::map<COutPoint, CScriptCache>* insertScriptCache = nullptr) const;
+    bool HasAddressStakeScripts(const uint160& keyId, std::map<uint160, bool>* insertAddressStake = nullptr) const;
+    void RefreshAddressStakeCache();
+    bool GetSuperStaker(CSuperStakerInfo &info, const uint160& stakerAddress) const;
     void RefreshDelegates(bool myDelegates, bool stakerDelegates);
 
     /** Pass this transaction to node for mempool insertion and relay to peers if flag set to true */
     bool SubmitTxMemoryPoolAndRelay(CWalletTx& wtx, std::string& err_string, bool relay) const
         EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
+
+    CAmount GetTxGasFee(const CMutableTransaction& tx);
+    CAmount GetTxGasFee(const std::vector<CRecipient>& vecSend);
 
     /** Updates wallet birth time if 'time' is below it */
     void MaybeUpdateBirthTime(int64_t time);
@@ -876,6 +885,9 @@ public:
     bool IsMine(const CTxDestination& dest) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     bool IsMine(const CScript& script) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     /** Returns amount of debit, i.e. the amount leaving this wallet due to this input */
+    CKeyID GetKeyForDestination(const CTxDestination& dest);
+    bool GetPubKey(const PKHash& pkhash, CPubKey& pubkey) const;
+    bool GetKeyOrigin(const PKHash& pkhash, KeyOriginInfo& info) const;
     CAmount GetDebit(const CTxIn& txin) const;
     bool IsMine(const CTxOut& txout) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     bool IsMine(const CTransaction& tx) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
@@ -907,6 +919,9 @@ public:
     bool DelContractBook(const std::string& strAddress);
 
     unsigned int GetKeyPoolSize() const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
+
+    //! disable transaction for coinstake
+    void DisableTransaction(const CTransaction &tx);
 
     //! Get wallet transactions that conflict with given transaction (spend same outputs)
     std::set<Txid> GetConflicts(const Txid& txid) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
@@ -1184,18 +1199,41 @@ public:
     //! Returns nullopt when no descriptor has the key or if the wallet is locked.
     std::optional<CKey> GetKey(const CKeyID& keyid) const;
 
+    /* Add token entry into the wallet */
+    bool AddTokenEntry(const CTokenInfo& token);
+
+    /* Add token tx entry into the wallet */
+    bool AddTokenTxEntry(const CTokenTx& tokenTx);
+
     /* Get details token tx entry into the wallet */
     bool GetTokenTxDetails(const CTokenTx &wtx, uint256& credit, uint256& debit, std::string& tokenSymbol, uint8_t& decimals) const;
 
     /* Check if token transaction is mine */
     bool IsTokenTxMine(const CTokenTx &wtx) const;
 
+    /* Remove token entry from the wallet */
+    bool RemoveTokenEntry(const uint256& tokenHash);
+
+    /* Clean token transaction entries in the wallet */
+    bool CleanTokenTxEntries();
 
     /* Load delegation entry into the wallet */
     bool LoadDelegation(const CDelegationInfo &delegation);
 
+    /* Add delegation entry into the wallet */
+    bool AddDelegationEntry(const CDelegationInfo& delegation);
+
+    /* Remove delegation entry from the wallet */
+    bool RemoveDelegationEntry(const uint256& delegationHash);
+
     /* Load super staker entry into the wallet */
     bool LoadSuperStaker(const CSuperStakerInfo &superStaker);
+
+    /* Add super staker entry into the wallet */
+    bool AddSuperStakerEntry(const CSuperStakerInfo& superStaker);
+
+    /* Remove super staker entry from the wallet */
+    bool RemoveSuperStakerEntry(const uint256& superStakerHash);
 
     /* Start staking qtums */
     void StartStake();
@@ -1205,6 +1243,12 @@ public:
 
     /* Is staking closing */
     bool IsStakeClosing();
+
+    /* Clean coinstake transactions */
+    void CleanCoinStake();
+
+    /* Clean coinstake transactions when not reindex and not importing */
+    void TryCleanCoinStake();
 
     void updateDelegationsStaker(const std::map<uint160, Delegation>& delegations_staker);
     void updateDelegationsWeight(const std::map<uint160, CAmount>& delegations_weight);
