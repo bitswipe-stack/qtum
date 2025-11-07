@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cassert>
 #include <string>
+#include <streams.h>
 
 typedef std::vector<unsigned char> valtype;
 
@@ -138,7 +139,7 @@ std::optional<std::pair<int, std::vector<std::span<const unsigned char>>>> Match
     return std::pair{*threshold, std::move(keyspans)};
 }
 
-TxoutType Solver(const CScript& scriptPubKey, std::vector<std::vector<unsigned char>>& vSolutionsRet)
+TxoutType Solver(const CScript& scriptPubKey, std::vector<std::vector<unsigned char>>& vSolutionsRet, bool contractConsensus, bool allowEmptySenderSig)
 {
     vSolutionsRet.clear();
 
@@ -225,4 +226,74 @@ CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey>& keys)
     script << keys.size() << OP_CHECKMULTISIG;
 
     return script;
+}
+
+bool ExtractSenderData(const CScript &outputPubKey, CScript *senderPubKey, CScript *senderSig)
+{
+    if(outputPubKey.HasOpSender())
+    {
+        try
+        {
+            // Solve the contract with or without contract consensus
+            std::vector<valtype> vSolutions;
+            if (TxoutType::NONSTANDARD == Solver(outputPubKey, vSolutions, true) &&
+                    TxoutType::NONSTANDARD == Solver(outputPubKey, vSolutions, false))
+                return false;
+
+            // Check the size of the returned data
+            if(vSolutions.size() < 2)
+                return false;
+
+            // Get the sender public key
+            if(senderPubKey)
+            {
+                DataStream ss(vSolutions[0]);
+                ss >> *senderPubKey;
+            }
+
+            // Get the sender signature
+            if(senderSig)
+            {
+                DataStream ss(vSolutions[1]);
+                ss >> *senderSig;
+            }
+        }
+        catch(...)
+        {
+            return false;
+        }
+
+        return true;
+    }
+    return false;
+}
+
+bool GetSenderPubKey(const CScript &outputPubKey, CScript &senderPubKey)
+{
+    if(outputPubKey.HasOpSender())
+    {
+        try
+        {
+            // Solve the contract with or without contract consensus
+            std::vector<valtype> vSolutions;
+            if (TxoutType::NONSTANDARD == Solver(outputPubKey, vSolutions, true, true) &&
+                    TxoutType::NONSTANDARD == Solver(outputPubKey, vSolutions, false, true))
+                return false;
+
+            // Check the size of the returned data
+            if(vSolutions.size() < 1)
+                return false;
+
+            // Get the sender public key
+            DataStream ss(vSolutions[0]);
+            ss >> senderPubKey;
+        }
+        catch(...)
+        {
+            return false;
+        }
+
+        return true;
+    }
+    return false;
 }
