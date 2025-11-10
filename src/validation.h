@@ -107,6 +107,11 @@ enum class SynchronizationState {
 /** Documentation for argument 'checklevel'. */
 extern const std::vector<std::string> CHECKLEVEL_DOC;
 
+/** The set of all seen COutPoint entries for proof of stake. */
+extern std::set<std::pair<COutPoint, unsigned int>> setStakeSeen;
+
+int64_t FutureDrift(uint32_t nTime, int nHeight, const Consensus::Params& consensusParams);
+
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams);
 
 bool FatalError(kernel::Notifications& notifications, BlockValidationState& state, const bilingual_str& message);
@@ -398,6 +403,7 @@ public:
 
 /** Context-independent validity checks */
 bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+bool CheckCanonicalBlockSignature(const CBlockHeader* pblock);
 
 /**
  * Verify a block, including transactions.
