@@ -120,6 +120,8 @@ TRACEPOINT_SEMAPHORE(utxocache, flush);
 TRACEPOINT_SEMAPHORE(mempool, replaced);
 TRACEPOINT_SEMAPHORE(mempool, rejected);
 
+std::set<std::pair<COutPoint, unsigned int>> setStakeSeen;
+
 const CBlockIndex* Chainstate::FindForkInGlobalIndex(const CBlockLocator& locator) const
 {
     AssertLockHeld(cs_main);
@@ -4343,7 +4345,7 @@ bool ChainstateManager::AcceptBlockHeader(const CBlockHeader& block, BlockValida
 }
 
 // Exposed wrapper for AcceptBlockHeader
-bool ChainstateManager::ProcessNewBlockHeaders(std::span<const CBlockHeader> headers, bool min_pow_checked, BlockValidationState& state, const CBlockIndex** ppindex)
+bool ChainstateManager::ProcessNewBlockHeaders(std::span<const CBlockHeader> headers, bool min_pow_checked, BlockValidationState& state, const CBlockIndex** ppindex,  const CBlockIndex** pindexFirst)
 {
     AssertLockNotHeld(cs_main);
     {
@@ -5592,6 +5594,36 @@ bool Chainstate::ResizeCoinsCaches(size_t coinstip_size, size_t coinsdb_size)
     return ret;
 }
 
+bool Chainstate::RemoveBlockIndex(CBlockIndex *pindex)
+{
+    AssertLockHeld(cs_main);
+    // Check if the block index is present in any variable and remove it
+    if(m_chainman.m_best_invalid == pindex)
+        m_chainman.m_best_invalid = nullptr;
+
+    if(m_chainman.m_best_header == pindex)
+        m_chainman.m_best_header = nullptr;
+
+    // Check if the block index is present in any list and remove it
+    for (auto it=m_blockman.m_blocks_unlinked.begin(); it!=m_blockman.m_blocks_unlinked.end();){
+        if(it->first == pindex || it->second == pindex)
+        {
+            it = m_blockman.m_blocks_unlinked.erase(it);
+        }
+        else{
+            it++;
+        }
+    }
+
+    setBlockIndexCandidates.erase(pindex);
+
+    m_blockman.m_dirty_blockindex.erase(pindex);
+
+    m_chainman.m_versionbitscache.Erase(pindex);
+
+    return true;
+}
+
 double ChainstateManager::GuessVerificationProgress(const CBlockIndex* pindex) const
 {
     AssertLockHeld(GetMutex());
@@ -6572,3 +6604,23 @@ std::pair<int, int> ChainstateManager::GetPruneRange(const Chainstate& chainstat
 
     return {prune_start, prune_end};
 }
+
+std::map<COutPoint, uint32_t> GetImmatureStakes(ChainstateManager& chainman)
+{
+    std::map<COutPoint, uint32_t> immatureStakes;
+    int height = chainman.ActiveChain().Height();
+    int coinbaseMaturity = chainman.GetConsensus().CoinbaseMaturity(height + 1);
+    for(int i = 0; i < coinbaseMaturity -1; i++) {
+        CBlockIndex* block = chainman.ActiveChain()[height - i];
+        if(block)
+        {
+            immatureStakes[block->prevoutStake] = block->nTime;
+        }
+        else
+        {
+            break;
+        }
+    }
+    return immatureStakes;
+}
+//////////////////////////////////////////////////////////////////////////////////

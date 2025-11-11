@@ -60,7 +60,7 @@ FUZZ_TARGET(partially_downloaded_block, .init = initialize_pdb)
     bilingual_str error;
     CTxMemPool pool{MemPoolOptionsForTest(g_setup->m_node), error};
     Assert(error.empty());
-    PartiallyDownloadedBlock pdb{&pool};
+    PartiallyDownloadedBlock pdb{&pool, g_setup->m_node.chainman.get()};
 
     // Set of available transactions (mempool or extra_txn)
     std::set<uint16_t> available;

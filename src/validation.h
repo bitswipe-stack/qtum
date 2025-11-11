@@ -399,6 +399,9 @@ public:
     CSHA256 ScriptExecutionCacheHasher() const { return m_script_execution_cache_hasher; }
 };
 
+std::map<COutPoint, uint32_t> GetImmatureStakes(ChainstateManager& chainman);
+/////////////////////////////////////////////////////////////////
+
 /** Functions for validating blocks and updating the block tree */
 
 /** Context-independent validity checks */
@@ -792,6 +795,8 @@ public:
     void PruneBlockIndexCandidates();
 
     void ClearBlockIndexCandidates() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+
+    bool RemoveBlockIndex(CBlockIndex *pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     /** Find the last common block of this chain and a locator. */
     const CBlockIndex* FindForkInGlobalIndex(const CBlockLocator& locator) const EXCLUSIVE_LOCKS_REQUIRED(cs_main);
@@ -1251,7 +1256,7 @@ public:
      * @param[out] ppindex If set, the pointer will be set to point to the last new block index object for the given headers
      * @returns false if AcceptBlockHeader fails on any of the headers, true otherwise (including if headers were already known)
      */
-    bool ProcessNewBlockHeaders(std::span<const CBlockHeader> headers, bool min_pow_checked, BlockValidationState& state, const CBlockIndex** ppindex = nullptr) LOCKS_EXCLUDED(cs_main);
+    bool ProcessNewBlockHeaders(std::span<const CBlockHeader> headers, bool min_pow_checked, BlockValidationState& state, const CBlockIndex** ppindex = nullptr, const CBlockIndex** pindexFirst=nullptr) LOCKS_EXCLUDED(cs_main);
 
     /**
      * Sufficiently validate a block for disk storage (and store on disk).

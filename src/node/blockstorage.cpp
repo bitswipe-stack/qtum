@@ -151,6 +151,15 @@ bool BlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, s
 
     return true;
 }
+
+bool BlockTreeDB::EraseBlockIndex(const std::vector<uint256> &vect)
+{
+    CDBBatch batch(*this);
+    for (std::vector<uint256>::const_iterator it=vect.begin(); it!=vect.end(); it++)
+        batch.Erase(std::make_pair(DB_BLOCK_INDEX, *it));
+    return WriteBatch(batch);
+}
+///////////////////////////////////////////////////////
 } // namespace kernel
 
 namespace node {
@@ -607,6 +616,17 @@ bool BlockManager::CheckBlockDataAvailability(const CBlockIndex& upper_block, co
 {
     if (!(upper_block.nStatus & BLOCK_HAVE_DATA)) return false;
     return GetFirstBlock(upper_block, BLOCK_HAVE_DATA, &lower_block) == &lower_block;
+}
+
+// Automatically select a suitable sync-checkpoint 
+const CBlockIndex* BlockManager::AutoSelectSyncCheckpoint(const CBlockIndex *pindexBest)
+{
+    const CBlockIndex *pindex = pindexBest;
+    // Search backward for a block within max span and maturity window
+    int checkpointSpan = GetConsensus().CheckpointSpan(pindexBest->nHeight);
+    while (pindex->pprev && pindex->nHeight + checkpointSpan > pindexBest->nHeight)
+        pindex = pindex->pprev;
+    return pindex;
 }
 
 // If we're using -prune with -reindex, then delete block files that will be ignored by the

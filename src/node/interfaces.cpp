@@ -62,6 +62,8 @@
 #include <util/translation.h>
 #include <validation.h>
 #include <validationinterface.h>
+#include <qtum/qtumdelegation.h>
+#include <qtum/qtumDGP.h>
 
 #include <bitcoin-build-config.h> // IWYU pragma: keep
 
@@ -71,6 +73,11 @@
 #include <utility>
 
 #include <boost/signals2/signal.hpp>
+
+#ifdef ENABLE_WALLET
+#include <wallet/stake.h>
+#include <node/miner.h>
+#endif
 
 using interfaces::BlockRef;
 using interfaces::BlockTemplate;
@@ -388,14 +395,33 @@ public:
     }
     void getSyncInfo(int& numBlocks, bool& isSyncing) override
     {
+        LOCK(::cs_main);
+        // Get node synchronization information with minimal locks
+        numBlocks = chainman().ActiveChain().Height();
+        int64_t blockTime = chainman().ActiveChain().Tip() ? chainman().ActiveChain().Tip()->GetBlockTime() :
+                                                  Params().GenesisBlock().GetBlockTime();
+        int64_t secs = GetTime() - blockTime;
+        isSyncing = secs >= 90*60 ? true : false;
     }
     bool tryGetSyncInfo(int& numBlocks, bool& isSyncing) override
     {
-        return {};
+        TRY_LOCK(::cs_main, lockMain);
+        if (lockMain) {
+            // Get node synchronization information with minimal locks
+            numBlocks = chainman().ActiveChain().Height();
+            int64_t blockTime = chainman().ActiveChain().Tip() ? chainman().ActiveChain().Tip()->GetBlockTime() :
+                                                      Params().GenesisBlock().GetBlockTime();
+            int64_t secs = GetTime() - blockTime;
+            isSyncing = secs >= 90*60 ? true : false;
+            return true;
+        }
+
+        return false;
     }
     int64_t getBlockSubsidy(int nHeight) override
     {
-        return {};
+        const CChainParams& chainparams = Params();
+        return GetBlockSubsidy(nHeight, chainparams.GetConsensus());
     }
     uint64_t getNetworkStakeWeight() override
     {
@@ -407,7 +433,8 @@ public:
     }
     int64_t getMoneySupply() override
     {
-        return {};
+        auto best_header = chainman().m_best_header;
+        return best_header ? best_header->nMoneySupply : 0;
     }
     double getPoSKernelPS() override
     {
@@ -606,7 +633,8 @@ public:
     }
     std::map<COutPoint, uint32_t> getImmatureStakes() override
     {
-        return {};
+        LOCK(cs_main);
+        return GetImmatureStakes(chainman());
     }
     std::optional<int> findLocatorFork(const CBlockLocator& locator) override
     {
@@ -911,11 +939,19 @@ public:
 
     CBlockIndex* getTip() const override
     {
-        return {};
+        LOCK(::cs_main);
+        CBlockIndex* tip = Assert(m_node.chainman)->ActiveChain().Tip();
+        return tip;
     }
     bool getUnspentOutput(const COutPoint& output, Coin& coin) override
     {
-        return {};
+        LOCK(::cs_main);
+        auto coinIn = chainman().ActiveChainstate().CoinsTip().GetCoin(output);
+        if (coinIn.has_value()) {
+            coin = std::move(*coinIn);
+            return true;
+        }
+        return false;
     }
     CCoinsViewCache& getCoinsTip() override
     {
@@ -924,7 +960,7 @@ public:
     }
     size_t getNodeCount(ConnectionDirection flags) override
     {
-        return {};
+        return Assert(m_node.connman) ? m_node.connman->GetNodeCount(flags) : 0;
     }
     CAmount getTxGasFee(const CMutableTransaction& tx) override
     {
