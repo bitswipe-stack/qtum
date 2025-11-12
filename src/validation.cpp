@@ -121,6 +121,8 @@ TRACEPOINT_SEMAPHORE(mempool, replaced);
 TRACEPOINT_SEMAPHORE(mempool, rejected);
 
 std::set<std::pair<COutPoint, unsigned int>> setStakeSeen;
+bool fAddressIndex = false; // qtum
+bool fLogEvents = false;
 
 const CBlockIndex* Chainstate::FindForkInGlobalIndex(const CBlockLocator& locator) const
 {
@@ -1924,6 +1926,11 @@ PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxM
     BlockValidationState state_dummy;
     active_chainstate.FlushStateToDisk(state_dummy, FlushStateMode::PERIODIC);
     return result;
+}
+
+bool CheckIndexProof(const CBlockIndex& block, const Consensus::Params& consensusParams)
+{
+    return {};
 }
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)

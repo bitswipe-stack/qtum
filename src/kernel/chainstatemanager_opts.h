@@ -21,7 +21,7 @@
 class CChainParams;
 class ValidationSignals;
 
-static constexpr auto DEFAULT_MAX_TIP_AGE{24h};
+static constexpr auto DEFAULT_MAX_TIP_AGE{12h}; //Changed to 12 hours so that isInitialBlockDownload() is more accurate
 
 namespace kernel {
 

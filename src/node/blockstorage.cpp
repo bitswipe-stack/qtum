@@ -17,6 +17,7 @@
 #include <kernel/notifications_interface.h>
 #include <logging.h>
 #include <pow.h>
+#include <pos.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>
@@ -37,6 +38,7 @@
 #include <util/syserror.h>
 #include <util/translation.h>
 #include <validation.h>
+#include <chainparams.h>
 
 #include <cstddef>
 #include <map>
@@ -53,6 +55,37 @@ static constexpr uint8_t DB_LAST_BLOCK{'l'};
 // BlockTreeDB::DB_TXINDEX_BLOCK{'T'};
 // BlockTreeDB::DB_TXINDEX{'t'}
 // BlockTreeDB::ReadFlag("txindex")
+
+////////////////////////////////////////// // qtum
+static constexpr uint8_t DB_HEIGHTINDEX{'h'};
+static constexpr uint8_t DB_STAKEINDEX{'s'};
+static constexpr uint8_t DB_DELEGATEINDEX{'d'};
+static constexpr uint8_t DB_ADDRESSINDEX{'a'};
+static constexpr uint8_t DB_ADDRESSUNSPENTINDEX{'u'};
+static constexpr uint8_t DB_TIMESTAMPINDEX{'S'};
+static constexpr uint8_t DB_BLOCKHASHINDEX{'z'};
+static constexpr uint8_t DB_SPENTINDEX{'p'};
+
+struct DelegateEntry {
+    uint160 address;
+    uint8_t fee;
+    DelegateEntry(uint160 _address = uint160(), uint8_t _fee = 0) :
+        address(_address), fee(_fee)
+    {}
+
+    template<typename Stream>
+    void Serialize(Stream &s) const {
+        s << address;
+        s << fee;
+    }
+
+    template<typename Stream>
+    void Unserialize(Stream& s) {
+        s >> address;
+        s >> fee;
+    }
+};
+//////////////////////////////////////////
 
 bool BlockTreeDB::ReadBlockFileInfo(int nFile, CBlockFileInfo& info)
 {
@@ -131,14 +164,23 @@ bool BlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, s
                 pindexNew->nTime          = diskindex.nTime;
                 pindexNew->nBits          = diskindex.nBits;
                 pindexNew->nNonce         = diskindex.nNonce;
+                pindexNew->nMoneySupply   = diskindex.nMoneySupply;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
+                pindexNew->hashStateRoot  = diskindex.hashStateRoot; // qtum
+                pindexNew->hashUTXORoot   = diskindex.hashUTXORoot; // qtum
+                pindexNew->nStakeModifier = diskindex.nStakeModifier;
+                pindexNew->prevoutStake   = diskindex.prevoutStake;
+                pindexNew->vchBlockSigDlgt    = diskindex.vchBlockSigDlgt; // qtum
 
-                if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, consensusParams)) {
-                    LogError("%s: CheckProofOfWork failed: %s\n", __func__, pindexNew->ToString());
+                if (!CheckIndexProof(*pindexNew, consensusParams)) {
+                    LogError("%s: CheckIndexProof failed: %s\n", __func__, pindexNew->ToString());
                     return false;
                 }
 
+                // NovaCoin: build setStakeSeen
+                if (pindexNew->IsProofOfStake())
+                    setStakeSeen.insert(std::make_pair(pindexNew->prevoutStake, pindexNew->nTime));
                 pcursor->Next();
             } else {
                 LogError("%s: failed to read value\n", __func__);
@@ -217,7 +259,8 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block, CBlockInde
 {
     AssertLockHeld(cs_main);
 
-    auto [mi, inserted] = m_block_index.try_emplace(block.GetHash(), block);
+    uint256 hash = block.GetHash();
+    auto [mi, inserted] = m_block_index.try_emplace(hash, block);
     if (!inserted) {
         return &mi->second;
     }
@@ -228,6 +271,8 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block, CBlockInde
     // competitive advantage.
     pindexNew->nSequenceId = 0;
 
+    if (pindexNew->IsProofOfStake())
+        setStakeSeen.insert(std::make_pair(pindexNew->prevoutStake, pindexNew->nTime));
     pindexNew->phashBlock = &((*mi).first);
     BlockMap::iterator miPrev = m_block_index.find(block.hashPrevBlock);
     if (miPrev != m_block_index.end()) {
@@ -566,6 +611,14 @@ bool BlockManager::LoadBlockIndexDB(const std::optional<uint256>& snapshot_block
     m_block_tree_db->ReadReindexing(fReindexing);
     if (fReindexing) m_blockfiles_indexed = false;
 
+    ///////////////////////////////////////////////////////////// // qtum
+    m_block_tree_db->ReadFlag("addrindex", fAddressIndex);
+    LogPrintf("LoadBlockIndexDB(): address index %s\n", fAddressIndex ? "enabled" : "disabled");
+    /////////////////////////////////////////////////////////////
+    // Check whether we have a transaction index
+    m_block_tree_db->ReadFlag("logevents", fLogEvents);
+    LogPrintf("%s: log events index %s\n", __func__, fLogEvents ? "enabled" : "disabled");
+
     return true;
 }
 
@@ -627,6 +680,18 @@ const CBlockIndex* BlockManager::AutoSelectSyncCheckpoint(const CBlockIndex *pin
     while (pindex->pprev && pindex->nHeight + checkpointSpan > pindexBest->nHeight)
         pindex = pindex->pprev;
     return pindex;
+}
+
+// Check against synchronized checkpoint
+bool BlockManager::CheckSync(int nHeight, const CBlockIndex *pindexBest)
+{
+    const CBlockIndex* pindexSync = nullptr;
+    if(nHeight)
+        pindexSync = AutoSelectSyncCheckpoint(pindexBest);
+
+    if(nHeight && nHeight <= pindexSync->nHeight)
+        return false;
+    return true;
 }
 
 // If we're using -prune with -reindex, then delete block files that will be ignored by the
@@ -1017,7 +1082,8 @@ bool BlockManager::WriteBlockUndo(const CBlockUndo& blockundo, BlockValidationSt
     return true;
 }
 
-bool BlockManager::ReadBlock(CBlock& block, const FlatFilePos& pos, const std::optional<uint256>& expected_hash) const
+template <typename Block>
+bool BlockManager::ReadBlock(Block& block, const FlatFilePos& pos, const std::optional<uint256>& expected_hash) const
 {
     block.SetNull();
 
@@ -1038,7 +1104,9 @@ bool BlockManager::ReadBlock(CBlock& block, const FlatFilePos& pos, const std::o
     const auto block_hash{block.GetHash()};
 
     // Check the header
-    if (!CheckProofOfWork(block_hash, block.nBits, GetConsensus())) {
+    // PoS blocks can be loaded out of order from disk, which makes PoS impossible to validate. So, do not validate their headers
+    // they will be validated later in CheckBlock and ConnectBlock anyway
+    if (block.IsProofOfWork() && !CheckProofOfWork(block_hash, block.nBits, GetConsensus())) {
         LogError("Errors in block header at %s while reading block", pos.ToString());
         return false;
     }
