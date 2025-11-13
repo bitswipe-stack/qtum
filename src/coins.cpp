@@ -107,7 +107,8 @@ void CCoinsViewCache::AddCoin(const COutPoint &outpoint, Coin&& coin, bool possi
            (uint32_t)outpoint.n,
            (uint32_t)it->second.coin.nHeight,
            (int64_t)it->second.coin.out.nValue,
-           (bool)it->second.coin.IsCoinBase());
+           (bool)it->second.coin.IsCoinBase(),
+           (bool)it->second.coin.IsCoinStake());
 }
 
 void CCoinsViewCache::EmplaceCoinInternalDANGER(COutPoint&& outpoint, Coin&& coin) {
@@ -118,12 +119,13 @@ void CCoinsViewCache::EmplaceCoinInternalDANGER(COutPoint&& outpoint, Coin&& coi
 
 void AddCoins(CCoinsViewCache& cache, const CTransaction &tx, int nHeight, bool check_for_overwrite) {
     bool fCoinbase = tx.IsCoinBase();
+    bool fCoinstake = tx.IsCoinStake();
     const Txid& txid = tx.GetHash();
     for (size_t i = 0; i < tx.vout.size(); ++i) {
         bool overwrite = check_for_overwrite ? cache.HaveCoin(COutPoint(txid, i)) : fCoinbase;
         // Coinbase transactions can always be overwritten, in order to correctly
         // deal with the pre-BIP30 occurrences of duplicate coinbase transactions.
-        cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase), overwrite);
+        cache.AddCoin(COutPoint(txid, i), Coin(tx.vout[i], nHeight, fCoinbase, fCoinstake), overwrite);
     }
 }
 
@@ -136,7 +138,8 @@ bool CCoinsViewCache::SpendCoin(const COutPoint &outpoint, Coin* moveout) {
            (uint32_t)outpoint.n,
            (uint32_t)it->second.coin.nHeight,
            (int64_t)it->second.coin.out.nValue,
-           (bool)it->second.coin.IsCoinBase());
+           (bool)it->second.coin.IsCoinBase(),
+           (bool)it->second.coin.IsCoinStake());
     if (moveout) {
         *moveout = std::move(it->second.coin);
     }
@@ -281,13 +284,26 @@ void CCoinsViewCache::Uncache(const COutPoint& hash)
                (uint32_t)hash.n,
                (uint32_t)it->second.coin.nHeight,
                (int64_t)it->second.coin.out.nValue,
-               (bool)it->second.coin.IsCoinBase());
+               (bool)it->second.coin.IsCoinBase(),
+               (bool)it->second.coin.IsCoinStake());
         cacheCoins.erase(it);
     }
 }
 
 unsigned int CCoinsViewCache::GetCacheSize() const {
     return cacheCoins.size();
+}
+
+CAmount CCoinsViewCache::GetValueIn(const CTransaction& tx) const
+{
+    if (tx.IsCoinBase())
+        return 0;
+
+    CAmount nResult = 0;
+    for (unsigned int i = 0; i < tx.vin.size(); i++)
+        nResult += AccessCoin(tx.vin[i].prevout).out.nValue;
+
+    return nResult;
 }
 
 bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
@@ -346,7 +362,7 @@ void CCoinsViewCache::SanityCheck() const
 }
 
 static const size_t MIN_TRANSACTION_OUTPUT_WEIGHT = WITNESS_SCALE_FACTOR * ::GetSerializeSize(CTxOut());
-static const size_t MAX_OUTPUTS_PER_BLOCK = MAX_BLOCK_WEIGHT / MIN_TRANSACTION_OUTPUT_WEIGHT;
+static const size_t MAX_OUTPUTS_PER_BLOCK = dgpMaxBlockWeight / MIN_TRANSACTION_OUTPUT_WEIGHT;
 
 const Coin& AccessByTxid(const CCoinsViewCache& view, const Txid& txid)
 {
@@ -385,4 +401,10 @@ std::optional<Coin> CCoinsViewErrorCatcher::GetCoin(const COutPoint& outpoint) c
 bool CCoinsViewErrorCatcher::HaveCoin(const COutPoint& outpoint) const
 {
     return ExecuteBackedWrapper<bool>([&]() { return CCoinsViewBacked::HaveCoin(outpoint); }, m_err_callbacks);
+}
+
+const CTxOut &CCoinsViewCache::GetOutputFor(const CTxIn& input) const
+{
+    const Coin& coins = AccessCoin(input.prevout);
+    return coins.out;
 }
