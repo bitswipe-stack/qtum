@@ -47,12 +47,95 @@ class ValidationSignals;
 struct bilingual_str;
 
 /** Fake height value used in Coin to signify they are only in the memory pool (since 0.8) */
-static const uint32_t MEMPOOL_HEIGHT = 0x7FFFFFFF;
+static const uint32_t MEMPOOL_HEIGHT = 0x0FFFFFFF;
 
 /**
  * Test whether the LockPoints height and time are still valid on the current chain
  */
 bool TestLockPointValidity(CChain& active_chain, const LockPoints& lp) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+//////////////////////////////////////////////////////// // qtum
+struct CSpentIndexKeyCompare
+{
+    bool operator()(const CSpentIndexKey& a, const CSpentIndexKey& b) const {
+        if (a.txid == b.txid) {
+            return a.outputIndex < b.outputIndex;
+        } else {
+            return a.txid < b.txid;
+        }
+    }
+};
+
+struct CMempoolAddressDelta
+{
+    int64_t time;
+    CAmount amount;
+    uint256 prevhash;
+    unsigned int prevout;
+
+    CMempoolAddressDelta(int64_t t, CAmount a, uint256 hash, unsigned int out) {
+        time = t;
+        amount = a;
+        prevhash = hash;
+        prevout = out;
+    }
+
+    CMempoolAddressDelta(int64_t t, CAmount a) {
+        time = t;
+        amount = a;
+        prevhash.SetNull();
+        prevout = 0;
+    }
+};
+
+struct CMempoolAddressDeltaKey
+{
+    int type;
+    uint256 addressBytes;
+    uint256 txhash;
+    unsigned int index;
+    int spending;
+
+    CMempoolAddressDeltaKey(int addressType, uint256 addressHash, uint256 hash, unsigned int i, int s) {
+        type = addressType;
+        addressBytes = addressHash;
+        txhash = hash;
+        index = i;
+        spending = s;
+    }
+
+    CMempoolAddressDeltaKey(int addressType, uint256 addressHash) {
+        type = addressType;
+        addressBytes = addressHash;
+        txhash.SetNull();
+        index = 0;
+        spending = 0;
+    }
+};
+
+struct CMempoolAddressDeltaKeyCompare
+{
+    bool operator()(const CMempoolAddressDeltaKey& a, const CMempoolAddressDeltaKey& b) const {
+        if (a.type == b.type) {
+            if (a.addressBytes == b.addressBytes) {
+                if (a.txhash == b.txhash) {
+                    if (a.index == b.index) {
+                        return a.spending < b.spending;
+                    } else {
+                        return a.index < b.index;
+                    }
+                } else {
+                    return a.txhash < b.txhash;
+                }
+            } else {
+                return a.addressBytes < b.addressBytes;
+            }
+        } else {
+            return a.type < b.type;
+        }
+    }
+};
+////////////////////////////////////////////////////////
 
 // extracts a transaction hash from CTxMemPoolEntry or CTransactionRef
 struct mempoolentry_txid
@@ -385,6 +468,12 @@ public:
                 boost::multi_index::tag<ancestor_score>,
                 boost::multi_index::identity<CTxMemPoolEntry>,
                 CompareTxMemPoolEntryByAncestorFee
+            >,
+            // sorted by fee rate with gas price (if contract tx) or ancestors otherwise
+            boost::multi_index::ordered_non_unique<
+                boost::multi_index::tag<ancestor_score_or_gas_price>,
+                boost::multi_index::identity<CTxMemPoolEntry>,
+                CompareTxMemPoolEntryByAncestorFeeOrGasPrice
             >
         >
         {};
@@ -431,6 +520,19 @@ public:
 private:
     typedef std::map<txiter, setEntries, CompareIteratorByHash> cacheMap;
 
+    //////////////////////////////////////////////////////////////// // qtum
+    typedef std::map<CMempoolAddressDeltaKey, CMempoolAddressDelta, CMempoolAddressDeltaKeyCompare> addressDeltaMap;
+    addressDeltaMap mapAddress;
+
+    typedef std::map<uint256, std::vector<CMempoolAddressDeltaKey> > addressDeltaMapInserted;
+    addressDeltaMapInserted mapAddressInserted;
+
+    typedef std::map<CSpentIndexKey, CSpentIndexValue, CSpentIndexKeyCompare> mapSpentIndex;
+    mapSpentIndex mapSpent;
+
+    typedef std::map<uint256, std::vector<CSpentIndexKey> > mapSpentIndexInserted;
+    mapSpentIndexInserted mapSpentInserted;
+    ////////////////////////////////////////////////////////////////
 
     void UpdateParent(txiter entry, txiter parent, bool add) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void UpdateChild(txiter entry, txiter child, bool add) EXCLUSIVE_LOCKS_REQUIRED(cs);
@@ -488,6 +590,16 @@ public:
      */
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
+    ///////////////////////////////////////////////////////// // qtum
+    void addAddressIndex(const CTransaction& tx, const int64_t nAcceptTime, const CCoinsViewCache &view);
+    bool getAddressIndex(std::vector<std::pair<uint256, int> > &addresses,
+                         std::vector<std::pair<CMempoolAddressDeltaKey, CMempoolAddressDelta> > &results);
+    bool removeAddressIndex(const uint256 txhash);
+
+    void addSpentIndex(const CTransaction& tx, const CCoinsViewCache &view);
+    bool getSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value) const;
+    bool removeSpentIndex(const uint256 txhash);
+    /////////////////////////////////////////////////////////
 
     void removeRecursive(const CTransaction& tx, MemPoolRemovalReason reason) EXCLUSIVE_LOCKS_REQUIRED(cs);
     /** After reorg, filter the entries that would no longer be valid in the next block, and update
@@ -694,6 +806,13 @@ public:
 
     const CTxMemPoolEntry* GetEntry(const Txid& txid) const LIFETIMEBOUND EXCLUSIVE_LOCKS_REQUIRED(cs);
 
+    bool exists(const COutPoint& outpoint) const
+    {
+        LOCK(cs);
+        auto it = mapTx.find(outpoint.hash);
+        return (it != mapTx.end() && outpoint.n < it->GetTx().vout.size());
+    }
+
     CTransactionRef get(const Txid& hash) const;
 
     template <TxidOrWtxid T>
@@ -876,7 +995,7 @@ public:
 
         using TxHandle = CTxMemPool::txiter;
 
-        TxHandle StageAddition(const CTransactionRef& tx, const CAmount fee, int64_t time, unsigned int entry_height, uint64_t entry_sequence, bool spends_coinbase, int64_t sigops_cost, LockPoints lp);
+        TxHandle StageAddition(const CTransactionRef& tx, const CAmount fee, int64_t time, unsigned int entry_height, uint64_t entry_sequence, bool spends_coinbase, int64_t sigops_cost, LockPoints lp, CAmount min_gas_price = 0);
         void StageRemoval(CTxMemPool::txiter it) { m_to_remove.insert(it); }
 
         const CTxMemPool::setEntries& GetRemovals() const { return m_to_remove; }
@@ -989,6 +1108,7 @@ public:
     /** GetCoin, returning whether it exists and is not spent. Also updates m_non_base_coins if the
      * coin is not fetched from base. */
     std::optional<Coin> GetCoin(const COutPoint& outpoint) const override;
+    bool HaveCoin(const COutPoint &outpoint) const override;
     /** Add the coins created by this transaction. These coins are only temporarily stored in
      * m_temp_added and cannot be flushed to the back end. Only used for package validation. */
     void PackageAddTransaction(const CTransactionRef& tx);
