@@ -9,6 +9,8 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <mutex>
+#include <condition_variable>
 
 namespace util {
 class SignalInterrupt;
@@ -73,6 +75,9 @@ private:
     struct evhttp_request* req;
     const util::SignalInterrupt& m_interrupt;
     bool replySent;
+    bool connClosed;
+
+    std::mutex cs;
 
 public:
     explicit HTTPRequest(struct evhttp_request* req, const util::SignalInterrupt& interrupt, bool replySent = false);
@@ -85,6 +90,8 @@ public:
         HEAD,
         PUT
     };
+
+    bool isConnClosed();
 
     /** Get requested URI.
      */
@@ -143,6 +150,16 @@ public:
         WriteReply(nStatus, std::as_bytes(std::span{reply}));
     }
     void WriteReply(int nStatus, std::span<const std::byte> reply);
+
+    /**
+     * Start chunk transfer. Assume to be 200.
+     */
+    void Chunk(const std::string& chunk);
+
+    /**
+	 * End chunk transfer.
+	 */
+    void ChunkEnd();
 };
 
 /** Get the query parameter value from request uri for a specified key, or std::nullopt if the key

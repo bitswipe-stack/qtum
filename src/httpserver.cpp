@@ -608,6 +608,11 @@ HTTPRequest::~HTTPRequest()
     // evhttpd cleans up the request, as long as a reply was sent.
 }
 
+bool HTTPRequest::isConnClosed() {
+    std::lock_guard<std::mutex> lock(cs);
+    return connClosed;
+}
+
 std::pair<bool, std::string> HTTPRequest::GetHeader(const std::string& hdr) const
 {
     const struct evkeyvalq* headers = evhttp_request_get_input_headers(req);
@@ -644,6 +649,12 @@ void HTTPRequest::WriteHeader(const std::string& hdr, const std::string& value)
     struct evkeyvalq* headers = evhttp_request_get_output_headers(req);
     assert(headers);
     evhttp_add_header(headers, hdr.c_str(), value.c_str());
+}
+
+void HTTPRequest::ChunkEnd() {
+}
+
+void HTTPRequest::Chunk(const std::string& chunk) {
 }
 
 /** Closure sent to main thread to request a reply to be sent to
