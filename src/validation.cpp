@@ -9,6 +9,7 @@
 
 #include <arith_uint256.h>
 #include <chain.h>
+#include <chainparams.h>
 #include <checkqueue.h>
 #include <clientversion.h>
 #include <consensus/amount.h>
@@ -32,12 +33,14 @@
 #include <logging/timer.h>
 #include <node/blockstorage.h>
 #include <node/utxo_snapshot.h>
+#include <node/transaction.h>
 #include <policy/ephemeral_policy.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
 #include <policy/settings.h>
 #include <policy/truc_policy.h>
 #include <pow.h>
+#include <pos.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>
@@ -65,6 +68,12 @@
 #include <validationinterface.h>
 
 #include <pubkey.h>
+#include <libethcore/ABI.h>
+#include <univalue.h>
+#include <util/signstr.h>
+#include <qtum/qtumutils.h>
+#include <common/args.h>
+#include <addresstype.h>
 
 #include <algorithm>
 #include <cassert>
@@ -77,6 +86,7 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <fstream>
 
 using kernel::CCoinsStats;
 using kernel::CoinStatsHashType;
@@ -120,6 +130,12 @@ TRACEPOINT_SEMAPHORE(utxocache, flush);
 TRACEPOINT_SEMAPHORE(mempool, replaced);
 TRACEPOINT_SEMAPHORE(mempool, rejected);
 
+std::unique_ptr<QtumState> globalState;
+std::shared_ptr<dev::eth::SealEngineFace> globalSealEngine;
+std::unique_ptr<StorageResults> pstorageresult;
+bool fRecordLogOpcodes = false;
+bool fIsVMlogFile = false;
+bool fGettingValuesDGP = false;
 std::set<std::pair<COutPoint, unsigned int>> setStakeSeen;
 bool fAddressIndex = false; // qtum
 bool fLogEvents = false;
@@ -2385,6 +2401,26 @@ static unsigned int GetBlockScriptFlags(const CBlockIndex& block_index, const Ch
     return flags;
 }
 
+bool GetSpentCoinFromMainChain(const CBlockIndex* pforkPrev, COutPoint prevoutStake, Coin* coin, Chainstate& chainstate) {
+    return false;
+}
+std::vector<ResultExecute> CallContract(const dev::Address& addrContract, std::vector<unsigned char> opcode, Chainstate& chainstate, const dev::Address& sender, uint64_t gasLimit, CAmount nAmount){
+    CBlockIndex* pblockindex = &(chainstate.m_blockman.m_block_index[chainstate.m_chain.Tip()->GetBlockHash()]);
+    return CallContract(addrContract, opcode, chainstate, pblockindex, sender, gasLimit, nAmount);
+}
+
+std::vector<ResultExecute> CallContract(const dev::Address& addrContract, std::vector<unsigned char> opcode, Chainstate& chainstate, int blockHeight, const dev::Address& sender, uint64_t gasLimit, CAmount nAmount) {
+    CBlockIndex* pblockindex = &(chainstate.m_blockman.m_block_index[chainstate.m_chain[blockHeight]->GetBlockHash()]);
+    return CallContract(addrContract, opcode, chainstate, pblockindex, sender, gasLimit, nAmount);
+}
+
+std::vector<ResultExecute> CallContract(const dev::Address& addrContract, std::vector<unsigned char> opcode, Chainstate& chainstate, CBlockIndex* pblockindex, const dev::Address& sender, uint64_t gasLimit, CAmount nAmount)
+{
+    return {};
+}
+
+void writeVMlog(const std::vector<ResultExecute>& res, CChain& chain, const CTransaction& tx, const CBlock& block){
+}
 
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins.
  *  Validity checks that depend on the UTXO set are also done; ConnectBlock()
@@ -5666,6 +5702,30 @@ double ChainstateManager::GuessVerificationProgress(const CBlockIndex* pindex) c
     }
 
     return std::min<double>(pindex->m_chain_tx_count / fTxTotal, 1.0);
+}
+
+std::string exceptedMessage(const dev::eth::TransactionException& excepted, const dev::bytes& output)
+{
+    std::string message;
+    try
+    {
+        // Process the revert message from the output
+        if(excepted == dev::eth::TransactionException::RevertInstruction)
+        {
+            // Get function: Error(string)
+            dev::bytesConstRef oRawData(&output);
+            dev::bytes errorFunc = oRawData.cropped(0, 4).toBytes();
+            if(dev::toHex(errorFunc) == "08c379a0")
+            {
+                dev::bytesConstRef oData = oRawData.cropped(4);
+                message = dev::eth::ABIDeserialiser<std::string>::deserialise(oData);
+            }
+        }
+    }
+    catch(...)
+    {}
+
+    return message;
 }
 
 std::optional<uint256> ChainstateManager::SnapshotBlockhash() const
