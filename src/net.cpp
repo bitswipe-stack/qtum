@@ -759,10 +759,10 @@ int V1Transport::readHeader(std::span<const uint8_t> msg_bytes)
         return -1;
     }
 
-    // reject messages larger than MAX_SIZE or MAX_PROTOCOL_MESSAGE_LENGTH
+    // reject messages larger than MAX_SIZE or dgpMaxProtoMsgLength
     // NOTE: failing to perform this check previously allowed a malicious peer to make us allocate 32MiB of memory per
     // connection. See https://bitcoincore.org/en/2024/07/03/disclose_receive_buffer_oom.
-    if (hdr.nMessageSize > MAX_SIZE || hdr.nMessageSize > MAX_PROTOCOL_MESSAGE_LENGTH) {
+    if (hdr.nMessageSize > MAX_SIZE || hdr.nMessageSize > dgpMaxProtoMsgLength) {
         LogDebug(BCLog::NET, "Header error: Size too large (%s, %u bytes), peer=%d\n", SanitizeString(hdr.GetMessageType()), hdr.nMessageSize, m_node_id);
         return -1;
     }
@@ -1211,9 +1211,9 @@ bool V2Transport::ProcessReceivedPacketBytes() noexcept
     // - 0x00 byte: indicating long message type encoding
     // - 12 bytes of message type
     // - payload
-    static constexpr size_t MAX_CONTENTS_LEN =
+    size_t MAX_CONTENTS_LEN =
         1 + CMessageHeader::MESSAGE_TYPE_SIZE +
-        std::min<size_t>(MAX_SIZE, MAX_PROTOCOL_MESSAGE_LENGTH);
+        std::min<size_t>(MAX_SIZE, dgpMaxProtoMsgLength);
 
     if (m_recv_buffer.size() == BIP324Cipher::LENGTH_LEN) {
         // Length descriptor received.
@@ -3749,7 +3749,7 @@ bool CConnman::OutboundTargetReached(bool historicalBlockServingLimit) const
     {
         // keep a large enough buffer to at least relay each block once
         const std::chrono::seconds timeLeftInCycle = GetMaxOutboundTimeLeftInCycle_();
-        const uint64_t buffer = timeLeftInCycle / std::chrono::minutes{10} * MAX_BLOCK_SERIALIZED_SIZE;
+        const uint64_t buffer = timeLeftInCycle / std::chrono::minutes{10} * dgpMaxBlockSerSize;
         if (buffer >= nMaxOutboundLimit || nMaxOutboundTotalBytesSentInCycle >= nMaxOutboundLimit - buffer)
             return true;
     }

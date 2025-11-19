@@ -6672,6 +6672,11 @@ std::pair<int, int> ChainstateManager::GetPruneRange(const Chainstate& chainstat
     return {prune_start, prune_end};
 }
 
+bool GetAddressWeight(uint256 addressHash, int type, const std::map<COutPoint, uint32_t>& immatureStakes, int32_t nHeight, uint64_t& nWeight, node::BlockManager& blockman)
+{
+    return true;
+}
+
 std::map<COutPoint, uint32_t> GetImmatureStakes(ChainstateManager& chainman)
 {
     std::map<COutPoint, uint32_t> immatureStakes;
