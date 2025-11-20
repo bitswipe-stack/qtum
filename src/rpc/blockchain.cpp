@@ -1899,6 +1899,165 @@ private:
     uint160 address;
 };
 
+uint64_t getDelegateWeight(const uint160& keyid, const std::map<COutPoint, uint32_t>& immatureStakes, int height, node::BlockManager& blockman)
+{
+    // Decode address
+    uint256 hashBytes;
+    int type = 0;
+    if (!DecodeIndexKey(EncodeDestination(PKHash(keyid)), hashBytes, type)) {
+        return 0;
+    }
+
+    // Get address weight
+    uint64_t weight = 0;
+    if (!GetAddressWeight(hashBytes, type, immatureStakes, height, weight, blockman)) {
+        return 0;
+    }
+
+    return weight;
+}
+
+RPCHelpMan getdelegationsforstaker()
+{
+    return RPCHelpMan{"getdelegationsforstaker",
+                "requires -logevents to be enabled\n"
+                "\nGet the current list of delegates for a super staker.\n",
+                {
+                    {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The qtum address string for staker"},
+                },
+               RPCResult{
+            RPCResult::Type::ARR, "", "",
+                {
+                    {RPCResult::Type::OBJ, "", "",
+                        {
+                            {RPCResult::Type::STR, "delegate", "The delegate address"},
+                            {RPCResult::Type::STR, "staker", "The staker address"},
+                            {RPCResult::Type::NUM, "fee", "The percentage of the reward"},
+                            {RPCResult::Type::NUM, "blockHeight", "The block height"},
+                            {RPCResult::Type::NUM, "weight", /*optional=*/true, "Delegate weight, displayed when address index is enabled"},
+                            {RPCResult::Type::STR_HEX, "PoD", "The proof of delegation"},
+                        }}
+                }},
+                RPCExamples{
+                    HelpExampleCli("getdelegationsforstaker", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+            + HelpExampleRpc("getdelegationsforstaker", "QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    if (!fLogEvents)
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Events indexing disabled");
+
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    LOCK(cs_main);
+
+    // Parse the public key hash address
+    std::string strAddress = request.params[0].get_str();
+
+    CTxDestination dest = DecodeDestination(strAddress);
+    if (!IsValidDestination(dest)) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address");
+    }
+
+    if (!std::holds_alternative<PKHash>(dest)) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to public key hash");
+    }
+
+    // Get delegations for staker
+    QtumDelegation qtumDelegation;
+    std::vector<DelegationEvent> events;
+    PKHash pkhash = std::get<PKHash>(dest);
+    uint160 address = uint160(pkhash);
+    DelegationsStakerFilter filter(address);
+    if(!qtumDelegation.FilterDelegationEvents(events, filter, chainman)) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Failed to get delegations for staker");
+    }
+    std::map<uint160, Delegation> delegations = qtumDelegation.DelegationsFromEvents(events);
+
+    // Get chain parameters
+    std::map<COutPoint, uint32_t> immatureStakes = GetImmatureStakes(chainman);
+    int height = chainman.ActiveChain().Height();
+
+    // Fill the json object with information
+    UniValue result(UniValue::VARR);
+    for (std::map<uint160, Delegation>::iterator it=delegations.begin(); it!=delegations.end(); it++){
+        UniValue delegation(UniValue::VOBJ);
+        delegation.pushKV("delegate", EncodeDestination(PKHash(it->first)));
+        delegation.pushKV("staker", EncodeDestination(PKHash(it->second.staker)));
+        delegation.pushKV("fee", (int64_t)it->second.fee);
+        delegation.pushKV("blockHeight", (int64_t)it->second.blockHeight);
+        if(fAddressIndex)
+        {
+            delegation.pushKV("weight", getDelegateWeight(it->first, immatureStakes, height, chainman.m_blockman));
+        }
+        delegation.pushKV("PoD", HexStr(it->second.PoD));
+        result.push_back(delegation);
+    }
+
+    return result;
+},
+    };
+}
+//////////////////////////////////////////////////////////////////////
+
+RPCHelpMan listcontracts()
+{
+    return RPCHelpMan{"listcontracts",
+                "\nGet the contracts list.\n",
+                {
+                    {"start", RPCArg::Type::NUM, RPCArg::Default{1}, "The starting account index"},
+                    {"maxdisplay", RPCArg::Type::NUM, RPCArg::Default{20}, "Max accounts to list"},
+                },
+                RPCResult{
+                    RPCResult::Type::OBJ_DYN, "", "",
+                    {
+                        {RPCResult::Type::NUM, "account", "The balance for the account"},
+                    }},
+                RPCExamples{
+                    HelpExampleCli("listcontracts", "")
+            + HelpExampleRpc("listcontracts", "")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+	LOCK(cs_main);
+
+	int start=1;
+	if (!request.params[0].isNull()){
+		start = request.params[0].getInt<int>();
+		if (start<= 0)
+			throw JSONRPCError(RPC_TYPE_ERROR, "Invalid start, min=1");
+	}
+
+	int maxDisplay=20;
+	if (!request.params[1].isNull()){
+		maxDisplay = request.params[1].getInt<int>();
+		if (maxDisplay <= 0)
+			throw JSONRPCError(RPC_TYPE_ERROR, "Invalid maxDisplay");
+	}
+
+	UniValue result(UniValue::VOBJ);
+
+	auto map = globalState->addresses();
+	int contractsCount=(int)map.size();
+
+	if (contractsCount>0 && start > contractsCount)
+		throw JSONRPCError(RPC_TYPE_ERROR, "start greater than max index "+ i64tostr(contractsCount));
+
+	int itStartPos=std::min(start-1,contractsCount);
+	int i=0;
+	for (auto it = std::next(map.begin(),itStartPos); it!=map.end(); it++)
+	{
+		result.pushKV(it->first.hex(),ValueFromAmount(CAmount(globalState->balance(it->first))));
+		i++;
+		if(i==maxDisplay)break;
+	}
+
+	return result;
+},
+    };
+}
+
 //! Return height of highest block that has been pruned, or std::nullopt if no blocks have been pruned
 std::optional<int> GetPruneHeight(const BlockManager& blockman, const CChain& chain) {
     AssertLockHeld(::cs_main);
@@ -4513,6 +4672,312 @@ return RPCHelpMan{
     };
 }
 
+static RPCHelpMan qrc20name()
+{
+    return RPCHelpMan{"qrc20name",
+                "\nReturns the name of the token\n",
+                {
+                    {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
+                },
+                RPCResult{
+                    RPCResult::Type::STR, "name", "The name of the token"},
+                RPCExamples{
+                    HelpExampleCli("qrc20name", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\"")
+            + HelpExampleRpc("qrc20name", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\"")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    // Set contract address
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    CallToken token(chainman);
+    token.setAddress(request.params[0].get_str());
+
+    // Get name
+    std::string result;
+    if(!token.name(result))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get token name");
+
+    return result;
+},
+    };
+}
+
+static RPCHelpMan qrc20symbol()
+{
+    return RPCHelpMan{"qrc20symbol",
+                "\nReturns the symbol of the token\n",
+                {
+                    {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
+                },
+                RPCResult{
+                    RPCResult::Type::STR, "symbol", "The symbol of the token"},
+                RPCExamples{
+                    HelpExampleCli("qrc20symbol", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\"")
+            + HelpExampleRpc("qrc20symbol", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\"")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    // Set contract address
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    CallToken token(chainman);
+    token.setAddress(request.params[0].get_str());
+
+    // Get symbol
+    std::string result;
+    if(!token.symbol(result))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get symbol");
+
+    return result;
+},
+    };
+}
+
+static RPCHelpMan qrc20totalsupply()
+{
+    return RPCHelpMan{"qrc20totalsupply",
+                "\nReturns the total supply of the token\n",
+                {
+                    {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
+                },
+                RPCResult{
+                    RPCResult::Type::STR, "totalSupply", "The total supply of the token"},
+                RPCExamples{
+                    HelpExampleCli("qrc20totalsupply", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\"")
+            + HelpExampleRpc("qrc20totalsupply", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\"")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    // Set contract address
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    CallToken token(chainman);
+    token.setAddress(request.params[0].get_str());
+
+    // Get total supply
+    std::string result;
+    if(!token.totalSupply(result))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get total supply");
+
+    // Get decimals
+    uint32_t decimals;
+    if(!token.decimals(decimals))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get decimals");
+
+    // Check value
+    dev::s256 value(result);
+    if(value < 0)
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid total supply, value must be positive");
+
+    return FormatToken(decimals, value);
+},
+    };
+}
+
+static RPCHelpMan qrc20decimals()
+{
+    return RPCHelpMan{"qrc20decimals",
+                "\nReturns the number of decimals of the token\n",
+                {
+                    {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
+                },
+                RPCResult{
+                    RPCResult::Type::NUM, "decimals", "The number of decimals of the token"},
+                RPCExamples{
+                    HelpExampleCli("qrc20decimals", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\"")
+            + HelpExampleRpc("qrc20decimals", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\"")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    // Set contract address
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    CallToken token(chainman);
+    token.setAddress(request.params[0].get_str());
+    uint32_t result;
+
+    // Get decimals
+    if(!token.decimals(result))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get decimals");
+
+    return (int)result;
+},
+    };
+}
+
+static RPCHelpMan qrc20balanceof()
+{
+    return RPCHelpMan{"qrc20balanceof",
+                "\nReturns the token balance for address\n",
+                {
+                    {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
+                    {"address", RPCArg::Type::STR, RPCArg::Optional::NO,  "The qtum address to check token balance"},
+                },
+                RPCResult{
+                    RPCResult::Type::STR, "balance", "The token balance of the chosen address"},
+                RPCExamples{
+                    HelpExampleCli("qrc20balanceof", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\" \"QX1GkJdye9WoUnrE2v6ZQhQ72EUVDtGXQX\"")
+            + HelpExampleRpc("qrc20balanceof", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\" \"QX1GkJdye9WoUnrE2v6ZQhQ72EUVDtGXQX\"")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    // Get parameters
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    CallToken token(chainman);
+    token.setAddress(request.params[0].get_str());
+    std::string sender = request.params[1].get_str();
+    token.setSender(sender);
+
+    // Get balance of address
+    std::string result;
+    if(!token.balanceOf(result))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get balance");
+
+    // Get decimals
+    uint32_t decimals;
+    if(!token.decimals(decimals))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get decimals");
+
+    // Check value
+    dev::s256 value(result);
+    if(value < 0)
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid balance, vout must be positive");
+
+    return FormatToken(decimals, value);
+},
+    };
+}
+
+static RPCHelpMan qrc20allowance()
+{
+    return RPCHelpMan{"qrc20allowance",
+                "\nReturns remaining tokens allowed to spend for an address\n",
+                {
+                    {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
+                    {"addressfrom", RPCArg::Type::STR, RPCArg::Optional::NO,  "The qtum address of the account owning tokens"},
+                    {"addressto", RPCArg::Type::STR, RPCArg::Optional::NO,  "The qtum address of the account able to transfer the tokens"},
+                },
+                RPCResult{
+                    RPCResult::Type::STR, "allowance", "Amount of remaining tokens allowed to spent"},
+                RPCExamples{
+                    HelpExampleCli("qrc20allowance", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\" \"QX1GkJdye9WoUnrE2v6ZQhQ72EUVDtGXQX\" \"QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
+            + HelpExampleRpc("qrc20allowance", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\" \"QX1GkJdye9WoUnrE2v6ZQhQ72EUVDtGXQX\" \"QM72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    // Set contract address
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    CallToken token(chainman);
+    token.setAddress(request.params[0].get_str());
+
+    // Get total supply
+    std::string result;
+    if(!token.allowance(request.params[1].get_str(), request.params[2].get_str(), result))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get allowance");
+
+    // Get decimals
+    uint32_t decimals;
+    if(!token.decimals(decimals))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get decimals");
+
+    // Check value
+    dev::s256 value(result);
+    if(value < 0)
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid allowance, value must be positive");
+
+    return FormatToken(decimals, value);
+},
+    };
+}
+
+static RPCHelpMan qrc20listtransactions()
+{
+    return RPCHelpMan{"qrc20listtransactions",
+                "\nReturns transactions history for a specific address.\n",
+                {
+                    {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address."},
+                    {"address", RPCArg::Type::STR, RPCArg::Optional::NO,  "The qtum address to get history for."},
+                    {"fromblock", RPCArg::Type::NUM, RPCArg::Default{0}, "The number of the earliest block."},
+                    {"minconf", RPCArg::Type::NUM, RPCArg::Default{6}, "Minimal number of confirmations."},
+                },
+               RPCResult{
+            RPCResult::Type::ARR, "", "",
+                {
+                    {RPCResult::Type::OBJ, "", "",
+                        {
+                            {RPCResult::Type::STR, "receiver", "The receiver qtum address"},
+                            {RPCResult::Type::STR, "sender", "The sender qtum address"},
+                            {RPCResult::Type::STR, "amount", "The transferred token amount"},
+                            {RPCResult::Type::NUM, "confirmations", "The number of confirmations of the most recent transaction included"},
+                            {RPCResult::Type::STR_HEX, "blockHash", "The block hash"},
+                            {RPCResult::Type::NUM, "blockNumber", "The block number"},
+                            {RPCResult::Type::NUM_TIME, "blocktime", "The block time expressed in " + UNIX_EPOCH_TIME + "."},
+                            {RPCResult::Type::STR_HEX, "transactionHash", "The transaction hash"},
+                        }
+                    }}
+                },
+                RPCExamples{
+                    HelpExampleCli("qrc20listtransactions", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\" \"QX1GkJdye9WoUnrE2v6ZQhQ72EUVDtGXQX\"")
+            + HelpExampleCli("qrc20listtransactions", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\" \"QX1GkJdye9WoUnrE2v6ZQhQ72EUVDtGXQX\" 0 6")
+            + HelpExampleRpc("qrc20listtransactions", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\" \"QX1GkJdye9WoUnrE2v6ZQhQ72EUVDtGXQX\"")
+            + HelpExampleRpc("qrc20listtransactions", "\"eb23c0b3e6042821da281a2e2364feb22dd543e3\" \"QX1GkJdye9WoUnrE2v6ZQhQ72EUVDtGXQX\" 0 6")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    // Get parameters
+    ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    CallToken token(chainman);
+    token.setAddress(request.params[0].get_str());
+    std::string sender = request.params[1].get_str();
+    token.setSender(sender);
+    int64_t fromBlock = 0;
+    int64_t minconf = 6;
+    if(!request.params[2].isNull())
+        fromBlock = request.params[2].getInt<int64_t>();
+    if(!request.params[3].isNull())
+        minconf = request.params[3].getInt<int64_t>();
+
+    // Get transaction events
+    LOCK(cs_main);
+    std::vector<TokenEvent> result;
+    CChain& active_chain = chainman.ActiveChain();
+    int64_t toBlock = active_chain.Height();
+    if(!token.transferEvents(result, fromBlock, toBlock, minconf))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get transfer events");
+    if(!token.burnEvents(result, fromBlock, toBlock, minconf))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get burn events");
+
+    // Get decimals
+    uint32_t decimals;
+    if(!token.decimals(decimals))
+        throw JSONRPCError(RPC_MISC_ERROR, "Fail to get decimals");
+
+    // Create transaction list
+    UniValue res(UniValue::VARR);
+    for(const auto& event : result){
+        UniValue obj(UniValue::VOBJ);
+
+        obj.pushKV("receiver", event.receiver);
+        obj.pushKV("sender", event.sender);
+        dev::s256 v = uintTou256(event.value);
+        dev::s256 value;
+        if(event.sender == event.receiver)
+            value = 0;
+        else if(event.receiver == sender)
+            value = v;
+        else
+            value = -v;
+        obj.pushKV("amount", FormatToken(decimals, value));
+        int confirms = toBlock - event.blockNumber + 1;
+        obj.pushKV("confirmations", confirms);
+        obj.pushKV("blockHash", event.blockHash.GetHex());
+        obj.pushKV("blockNumber", event.blockNumber);
+        obj.pushKV("blocktime", active_chain[event.blockNumber]->GetBlockTime());
+        obj.pushKV("transactionHash", event.transactionHash.GetHex());
+        res.push_back(obj);
+    }
+
+    return res;
+},
+    };
+}
 
 void RegisterBlockchainRPCCommands(CRPCTable& t)
 {
@@ -4533,6 +4998,9 @@ void RegisterBlockchainRPCCommands(CRPCTable& t)
         {"blockchain", &gettxoutsetinfo},
         {"blockchain", &pruneblockchain},
         {"blockchain", &verifychain},
+        {"blockchain", &getaccountinfo},
+        {"blockchain", &getcontractcode},
+        {"blockchain", &getstorage},
         {"blockchain", &preciousblock},
         {"blockchain", &scantxoutset},
         {"blockchain", &scanblocks},
@@ -4541,6 +5009,22 @@ void RegisterBlockchainRPCCommands(CRPCTable& t)
         {"blockchain", &dumptxoutset},
         {"blockchain", &loadtxoutset},
         {"blockchain", &getchainstates},
+        {"blockchain", &callcontract},
+        {"blockchain", &qrc20name},
+        {"blockchain", &qrc20symbol},
+        {"blockchain", &qrc20totalsupply},
+        {"blockchain", &qrc20decimals},
+        {"blockchain", &qrc20balanceof},
+        {"blockchain", &qrc20allowance},
+        {"blockchain", &qrc20listtransactions},
+        {"blockchain", &listcontracts},
+        {"blockchain", &gettransactionreceipt},
+        {"blockchain", &getblocktransactionreceipts},
+        {"blockchain", &searchlogs},
+        {"blockchain", &waitforlogs},
+        {"blockchain", &getestimatedannualroi},
+        {"blockchain", &getdelegationinfoforaddress},
+        {"blockchain", &getdelegationsforstaker},
         {"hidden", &invalidateblock},
         {"hidden", &reconsiderblock},
         {"blockchain", &waitfornewblock},
