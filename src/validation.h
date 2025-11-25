@@ -155,6 +155,12 @@ bool FatalError(kernel::Notifications& notifications, BlockValidationState& stat
 /** Prune block files up to a given height */
 void PruneBlockFilesManual(Chainstate& active_chainstate, int nManualPruneHeight);
 
+/** Check if the transaction is confirmed in N previous blocks */
+bool IsConfirmedInNPrevBlocks(const CDiskTxPos& txindex, const CBlockIndex* pindexFrom, int nMaxDepth, int& nActualDepth);
+
+/** Check if the header proof is valid */
+bool CheckHeaderProof(const CBlockHeader& block, const Consensus::Params& consensusParams, Chainstate& chainstate);
+
 /**
 * Validation result for a transaction evaluated by MemPoolAccept (single or package).
 * Here are the expected fields and properties of a result depending on its ResultType, applicable to
@@ -394,10 +400,13 @@ private:
     bool cacheStore;
     PrecomputedTransactionData *txdata;
     SignatureCache* m_signature_cache;
+    int nOut;
 
 public:
     CScriptCheck(const CTxOut& outIn, const CTransaction& txToIn, SignatureCache& signature_cache, unsigned int nInIn, unsigned int nFlagsIn, bool cacheIn, PrecomputedTransactionData* txdataIn) :
-        m_tx_out(outIn), ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), txdata(txdataIn), m_signature_cache(&signature_cache) { }
+        m_tx_out(outIn), ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), txdata(txdataIn), m_signature_cache(&signature_cache), nOut(-1) { }
+    CScriptCheck(const CTransaction& txToIn, SignatureCache& signature_cache, int nOutIn, unsigned int nFlagsIn, bool cacheIn, PrecomputedTransactionData* txdataIn) :
+        ptxTo(&txToIn), nIn(0), nFlags(nFlagsIn), cacheStore(cacheIn), txdata(txdataIn), m_signature_cache(&signature_cache), nOut(nOutIn){ }
 
     CScriptCheck(const CScriptCheck&) = delete;
     CScriptCheck& operator=(const CScriptCheck&) = delete;
@@ -405,6 +414,8 @@ public:
     CScriptCheck& operator=(CScriptCheck&&) = default;
 
     std::optional<std::pair<ScriptError, std::string>> operator()();
+
+    bool checkOutput() const { return nOut > -1; }
 };
 
 // CScriptCheck is used a lot in std::vector, make sure that's efficient
@@ -457,7 +468,7 @@ bool CheckIndexProof(const CBlockIndex& block, const Consensus::Params& consensu
 /** Functions for validating blocks and updating the block tree */
 
 /** Context-independent validity checks */
-bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, Chainstate& chainstate, bool fCheckPOW = true, bool fCheckMerkleRoot = true, bool fCheckSig=true);
 bool CheckCanonicalBlockSignature(const CBlockHeader* pblock);
 
 /**
@@ -517,13 +528,24 @@ public:
         int nCheckDepth) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 };
 
+//////////////////////////////////////////////////////// qtum
+bool GetSpentCoinFromBlock(const CBlockIndex* pindex, COutPoint prevout, Coin* coin, Chainstate& chainstate);
+
 bool GetSpentCoinFromMainChain(const CBlockIndex* pforkPrev, COutPoint prevoutStake, Coin* coin, Chainstate& chainstate);
+
+unsigned int GetContractScriptFlags(int nHeight, const Consensus::Params& consensusparams);
 
 std::vector<ResultExecute> CallContract(const dev::Address& addrContract, std::vector<unsigned char> opcode, Chainstate& chainstate, const dev::Address& sender = dev::Address(), uint64_t gasLimit=0, CAmount nAmount=0);
 
 std::vector<ResultExecute> CallContract(const dev::Address& addrContract, std::vector<unsigned char> opcode, Chainstate& chainstate, int blockHeight, const dev::Address& sender = dev::Address(), uint64_t gasLimit = 0, CAmount nAmount = 0);
 
 std::vector<ResultExecute> CallContract(const dev::Address& addrContract, std::vector<unsigned char> opcode, Chainstate& chainstate, CBlockIndex* pblockindex, const dev::Address& sender = dev::Address(), uint64_t gasLimit = 0, CAmount nAmount = 0);
+
+bool CheckOpSender(const CTransaction& tx, const CChainParams& chainparams, int nHeight);
+
+bool CheckSenderScript(const CCoinsViewCache& view, const CTransaction& tx);
+
+bool CheckMinGasPrice(std::vector<EthTransactionParams>& etps, const uint64_t& minGasPrice);
 
 void writeVMlog(const std::vector<ResultExecute>& res, CChain& chain, const CTransaction& tx = CTransaction(), const CBlock& block = CBlock());
 
@@ -550,6 +572,84 @@ struct ByteCodeExecResult{
     CAmount refundSender = 0;
     std::vector<CTxOut> refundOutputs;
     std::vector<CTransaction> valueTransfers;
+};
+
+class QtumTxConverter{
+
+public:
+
+    QtumTxConverter(CTransaction tx, Chainstate& _chainstate, const CTxMemPool* _mempool, CCoinsViewCache* v = NULL, const std::vector<CTransactionRef>* blockTxs = NULL, unsigned int flags = SCRIPT_EXEC_BYTE_CODE) : txBit(tx), view(v), blockTransactions(blockTxs), sender(false), nFlags(flags), chainstate(_chainstate), mempool(_mempool){}
+
+    bool extractionQtumTransactions(ExtractQtumTX& qtumTx);
+
+private:
+
+    bool receiveStack(const CScript& scriptPubKey);
+
+    bool parseEthTXParams(EthTransactionParams& params);
+
+    QtumTransaction createEthTX(const EthTransactionParams& etp, const uint32_t nOut);
+
+    size_t correctedStackSize(size_t size);
+
+    const CTransaction txBit;
+    const CCoinsViewCache* view;
+    std::vector<valtype> stack;
+    opcodetype opcode;
+    const std::vector<CTransactionRef> *blockTransactions;
+    bool sender;
+    dev::Address refundSender;
+    unsigned int nFlags;
+    Chainstate& chainstate;
+    const CTxMemPool* mempool;
+};
+
+class LastHashes: public dev::eth::LastBlockHashesFace
+{
+public:
+    explicit LastHashes();
+
+    void set(CBlockIndex const* tip);
+
+    dev::h256s precedingHashes(dev::h256 const&) const override;
+
+    void clear() override;
+
+private:
+    dev::h256s m_lastHashes;
+};
+
+class ByteCodeExec {
+
+public:
+
+    ByteCodeExec(const CBlock& _block, std::vector<QtumTransaction> _txs, const uint64_t _blockGasLimit, CBlockIndex* _pindex, CChain& _chain) : txs(_txs), block(_block), blockGasLimit(_blockGasLimit), pindex(_pindex), chain(_chain) {}
+
+    bool performByteCode(dev::eth::Permanence type = dev::eth::Permanence::Committed);
+
+    bool processingResults(ByteCodeExecResult& result);
+
+    std::vector<ResultExecute>& getResult(){ return result; }
+
+private:
+
+    dev::eth::EnvInfo BuildEVMEnvironment();
+
+    dev::Address EthAddrFromScript(const CScript& scriptIn);
+
+    std::vector<QtumTransaction> txs;
+
+    std::vector<ResultExecute> result;
+
+    const CBlock& block;
+
+    const uint64_t blockGasLimit;
+
+    CBlockIndex* pindex;
+
+    LastHashes lastHashes;
+
+    CChain& chain;
 };
 
 enum DisconnectResult
