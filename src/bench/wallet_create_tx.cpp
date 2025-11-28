@@ -71,7 +71,7 @@ void generateFakeBlock(const CChainParams& params,
     coinbase_tx.vin[0].prevout.SetNull();
     coinbase_tx.vout.resize(2);
     coinbase_tx.vout[0].scriptPubKey = coinbase_out_script;
-    coinbase_tx.vout[0].nValue = 48 * COIN;
+    coinbase_tx.vout[0].nValue = 19999 * COIN;
     coinbase_tx.vin[0].scriptSig = CScript() << ++tip.tip_height << OP_0;
     coinbase_tx.vout[1].scriptPubKey = coinbase_out_script; // extra output
     coinbase_tx.vout[1].nValue = 1 * COIN;
@@ -136,7 +136,8 @@ static void WalletCreateTx(benchmark::Bench& bench, const OutputType output_type
 
     // Check available balance
     auto bal = WITH_LOCK(wallet.cs_wallet, return wallet::AvailableCoins(wallet).GetTotalAmount()); // Cache
-    assert(bal == 49 * COIN * (chain_size - COINBASE_MATURITY));
+    constexpr size_t coinbaseMaturity = 2000;
+    assert(bal == (int64_t) (20000 * COIN * (chain_size - coinbaseMaturity)));
 
     wallet::CCoinControl coin_control;
     coin_control.m_allow_other_inputs = allow_other_inputs;
@@ -156,7 +157,7 @@ static void WalletCreateTx(benchmark::Bench& bench, const OutputType output_type
     }
 
     // If automatic coin selection is enabled, add the value of another UTXO to the target
-    if (coin_control.m_allow_other_inputs) target += 50 * COIN;
+    if (coin_control.m_allow_other_inputs) target += 20000 * COIN;
     std::vector<wallet::CRecipient> recipients = {{dest, target, true}};
 
     bench.run([&] {
@@ -187,7 +188,7 @@ static void AvailableCoins(benchmark::Bench& bench, const std::vector<OutputType
 
     // Generate chain; each coinbase will have two outputs to fill-up the wallet
     const auto& params = Params();
-    unsigned int chain_size = 1000;
+    unsigned int chain_size = 3000;
     for (unsigned int i = 0; i < chain_size / dest_wallet.size(); ++i) {
         for (const auto& dest : dest_wallet) {
             generateFakeBlock(params, test_setup->m_node, wallet, dest);
@@ -196,12 +197,13 @@ static void AvailableCoins(benchmark::Bench& bench, const std::vector<OutputType
 
     // Check available balance
     auto bal = WITH_LOCK(wallet.cs_wallet, return wallet::AvailableCoins(wallet).GetTotalAmount()); // Cache
-    assert(bal == 49 * COIN * (chain_size - COINBASE_MATURITY));
+    constexpr size_t coinbaseMaturity = 2000;
+    assert(bal == (int64_t) (20000 * COIN * (chain_size - coinbaseMaturity)));
 
     bench.run([&] {
         LOCK(wallet.cs_wallet);
         const auto& res = wallet::AvailableCoins(wallet);
-        assert(res.All().size() == (chain_size - COINBASE_MATURITY) * 2);
+        assert(res.All().size() == (chain_size - coinbaseMaturity) * 2);
     });
 }
 

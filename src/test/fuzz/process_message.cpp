@@ -39,7 +39,8 @@ void ResetChainman(TestingSetup& setup)
     setup.m_node.chainman.reset();
     setup.m_make_chainman();
     setup.LoadVerifyActivateChainstate();
-    for (int i = 0; i < 2 * COINBASE_MATURITY; i++) {
+    int coinbaseMaturity = setup.m_node.chainman->GetParams().GetConsensus().CoinbaseMaturity(0);
+    for (int i = 0; i < 2 * coinbaseMaturity; i++) {
         MineBlock(setup.m_node, {});
     }
     setup.m_node.validation_signals->SyncWithValidationInterfaceQueue();

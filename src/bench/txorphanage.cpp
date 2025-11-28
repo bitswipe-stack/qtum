@@ -17,8 +17,8 @@
 #include <cstdint>
 #include <memory>
 
-static constexpr node::TxOrphanage::Usage TINY_TX_WEIGHT{240};
-static constexpr int64_t APPROX_WEIGHT_PER_INPUT{200};
+static constexpr node::TxOrphanage::Usage TINY_TX_WEIGHT{480};
+static constexpr int64_t APPROX_WEIGHT_PER_INPUT{400};
 
 // Creates a transaction with num_inputs inputs and 1 output, padded to target_weight. Use this function to maximize m_outpoint_to_orphan_it operations.
 // If num_inputs is 0, we maximize the number of inputs.
@@ -192,8 +192,9 @@ static void OrphanageEraseAll(benchmark::Bench& bench, bool block_or_disconnect)
     const auto orphanage{node::MakeTxOrphanage(/*max_global_latency_score=*/node::DEFAULT_MAX_ORPHANAGE_LATENCY_SCORE, /*reserved_peer_usage=*/node::DEFAULT_RESERVED_ORPHAN_WEIGHT_PER_PEER)};
     // This is an unrealistically large number of inputs for a block, as there is almost no room given to witness data,
     // outputs, and overhead for individual transactions. The entire block is 1 transaction with 20,000 inputs.
-    constexpr unsigned int NUM_BLOCK_INPUTS{MAX_BLOCK_WEIGHT / APPROX_WEIGHT_PER_INPUT};
-    const auto block_tx{MakeTransactionBulkedTo(NUM_BLOCK_INPUTS, MAX_BLOCK_WEIGHT - 4000, det_rand)};
+    const unsigned int maxBlockWeight = 8000000;
+    constexpr unsigned int NUM_BLOCK_INPUTS{maxBlockWeight / APPROX_WEIGHT_PER_INPUT};
+    const auto block_tx{MakeTransactionBulkedTo(NUM_BLOCK_INPUTS, maxBlockWeight - 4000, det_rand)};
     CBlock block;
     block.vtx.push_back(block_tx);
 
