@@ -70,7 +70,7 @@ void sanity_check_snapshot()
 template <bool INVALID>
 void initialize_chain()
 {
-    const auto params{CreateChainParams(ArgsManager{}, ChainType::REGTEST)};
+    const auto params{CreateChainParams(ArgsManager{}, ChainType::UNITTEST)};
     int coinbaseMaturity = params->GetConsensus().CoinbaseMaturity(0);
     static const auto chain{CreateBlockChain(2 * coinbaseMaturity, *params)};
     g_chain = &chain;

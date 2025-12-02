@@ -56,7 +56,7 @@ void initialize_process_message()
 
     static const auto testing_setup{
         MakeNoLogFileContext<TestingSetup>(
-            /*chain_type=*/ChainType::REGTEST,
+            /*chain_type=*/ChainType::UNITTEST,
             {}),
     };
     g_setup = testing_setup.get();
