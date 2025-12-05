@@ -1285,6 +1285,7 @@ RPCHelpMan listlabels();
 #ifdef ENABLE_EXTERNAL_SIGNER
 RPCHelpMan walletdisplayaddress();
 #endif // ENABLE_EXTERNAL_SIGNER
+RPCHelpMan createmultisig();
 
 // backup
 RPCHelpMan importprunedfunds();
@@ -1403,6 +1404,7 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &walletpassphrase},
         {"wallet", &walletpassphrasechange},
         {"wallet", &walletprocesspsbt},
+        {"util",   &createmultisig},
     };
     return commands;
 }
