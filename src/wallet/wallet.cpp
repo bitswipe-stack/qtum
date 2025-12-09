@@ -2254,6 +2254,51 @@ bool CWallet::SignTransactionOutput(CMutableTransaction& tx) const
 
 bool CWallet::SignTransactionOutput(CMutableTransaction& tx, int sighash, std::map<int, std::string>& output_errors) const
 {
+    // Sign transaction op_sender outputs
+    for (ScriptPubKeyMan* spk_man : GetAllScriptPubKeyMans()) {
+        if (spk_man->SignTransactionOutput(tx, sighash, output_errors)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool CWallet::SignTransactionStake(CMutableTransaction& txTo, const std::vector<std::pair<const CWalletTx*,unsigned int>>& vwtxPrev) const
+{
+    // Create the list of coins
+    std::vector<std::pair<CTxOut,unsigned int>> coins;
+    unsigned int nIn = 0;
+    for(const std::pair<const CWalletTx*,unsigned int> &pcoin : vwtxPrev)
+    {
+        const CTransaction& txFrom = *pcoin.first->tx;
+        assert(nIn < txTo.vin.size());
+        CTxIn& txin = txTo.vin[nIn];
+        assert(txin.prevout.n < txFrom.vout.size());
+        const CTxOut& txout = txFrom.vout[txin.prevout.n];
+        coins.push_back(std::make_pair(txout, nIn));
+        nIn++;
+    }
+
+    // Sign coinstake transaction
+    for (ScriptPubKeyMan* spk_man : GetAllScriptPubKeyMans()) {
+        if (spk_man->SignTransactionStake(txTo, coins)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool CWallet::SignBlockStake(CBlock& block, const PKHash& pkhash, bool compact) const
+{
+    // Sign coinstake transaction
+    for (ScriptPubKeyMan* spk_man : GetAllScriptPubKeyMans()) {
+        if (spk_man->SignBlockStake(block, pkhash, compact)) {
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -4992,6 +5037,39 @@ bool CWallet::CleanTokenTxEntries()
     return true;
 }
 
+bool CWallet::SetContractBook(const std::string &strAddress, const std::string &strName, const std::string &strAbi)
+{
+    bool fUpdated = false;
+    {
+        LOCK(cs_wallet); // mapContractBook
+        auto mi = mapContractBook.find(strAddress);
+        fUpdated = mi != mapContractBook.end();
+        mapContractBook[strAddress].name = strName;
+        mapContractBook[strAddress].abi = strAbi;
+    }
+
+    NotifyContractBookChanged(this, strAddress, strName, strAbi, (fUpdated ? CT_UPDATED : CT_NEW) );
+
+    WalletBatch batch(GetDatabase());
+    bool ret = batch.WriteContractData(strAddress, "name", strName);
+    ret &= batch.WriteContractData(strAddress, "abi", strAbi);
+    return ret;
+}
+
+bool CWallet::DelContractBook(const std::string &strAddress)
+{
+    {
+        LOCK(cs_wallet); // mapContractBook
+        mapContractBook.erase(strAddress);
+    }
+
+    NotifyContractBookChanged(this, strAddress, "", "", CT_DELETED);
+
+    WalletBatch batch(GetDatabase());
+    bool ret = batch.EraseContractData(strAddress, "name");
+    ret &= batch.EraseContractData(strAddress, "abi");
+    return ret;
+}
 
 bool CWallet::LoadContractData(const std::string &address, const std::string &key, const std::string &value)
 {
@@ -5307,6 +5385,64 @@ bool CWallet::GetSuperStaker(CSuperStakerInfo &info, const uint160 &stakerAddres
     return false;
 }
 
+void CWallet::GetStakerAddressBalance(const PKHash &staker, CAmount &balance, CAmount &stake, CAmount& weight) const
+{
+    AssertLockHeld(cs_wallet);
+
+    balance = 0;
+    stake = 0;
+    weight = 0;
+    int nHeight = GetLastBlockHeight() + 1;
+    int coinbaseMaturity = Params().GetConsensus().CoinbaseMaturity(nHeight);
+    std::map<COutPoint, uint32_t> immatureStakes = chain().getImmatureStakes();
+    for (auto& entry : mapWallet)
+    {
+        const Txid& wtxid = entry.first;
+        const CWalletTx* pcoin = &entry.second;
+        int nDepth = GetTxDepthInMainChain(*pcoin);
+
+        if (nDepth < 1)
+            continue;
+
+        bool fHasProofOfDelegation = false;
+        if (auto* conf = pcoin->state<TxStateConfirmed>()) {
+            fHasProofOfDelegation = conf->has_delegation;
+        }
+
+        bool isImature = GetTxBlocksToMaturity(*pcoin) == 0;
+        for (unsigned int i = 0; i < pcoin->tx->vout.size(); i++)
+        {
+            bool OK = false;
+            PKHash keyId = ExtractPublicKeyHash(pcoin->tx->vout[i].scriptPubKey, &OK);
+            if(OK && keyId == staker)
+            {
+                COutPoint prevout = COutPoint(wtxid, i);
+                bool mine = IsMine(pcoin->tx->vout[i]);
+                if (mine && !IsSpent(prevout) &&
+                    !IsLockedCoin(prevout) && (pcoin->tx->vout[i].nValue > 0))
+                {
+                      CAmount nValue = pcoin->tx->vout[i].nValue;
+                      if(isImature)
+                      {
+                          balance += nValue;
+                          if(nDepth >= coinbaseMaturity && nValue >= DEFAULT_STAKING_MIN_UTXO_VALUE)
+                          {
+                              if(immatureStakes.find(prevout) == immatureStakes.end())
+                              {
+                                  weight += nValue;
+                              }
+                          }
+                      }
+                      else if(pcoin->IsCoinStake() && fHasProofOfDelegation)
+                      {
+                          stake += nValue;
+                      }
+                }
+            }
+        }
+    }
+}
+
 void CWallet::updateHaveCoinSuperStaker(const std::set<std::pair<const CWalletTx *, unsigned int> > &setCoins)
 {
     LOCK(cs_wallet);
@@ -5354,6 +5490,11 @@ void CWallet::TryCleanCoinStake()
     }
 }
 
+bool CWallet::HasPrivateKey(const CTxDestination& dest, const bool& fAllowWatchOnly)
+{
+    return false;
+}
+
 CKeyID CWallet::GetKeyForDestination(const CTxDestination& dest)
 {
     CScript script = GetScriptForDestination(dest);
@@ -5384,6 +5525,44 @@ bool CWallet::GetKeyOrigin(const PKHash& pkhash, KeyOriginInfo& info) const
     }
 
     return false;
+}
+
+bool CWallet::GetSenderDest(const CTransaction &tx, CTxDestination &txSenderDest, bool sign) const
+{
+    // Initialize variables
+    CScript senderPubKey;
+
+    // Get sender destination
+    if(tx.HasOpSender())
+    {
+        // Get destination from the outputs
+        for(CTxOut out : tx.vout)
+        {
+            if(out.scriptPubKey.HasOpSender())
+            {
+                if(sign)
+                {
+                    ExtractSenderData(out.scriptPubKey, &senderPubKey, 0);
+                }
+                else
+                {
+                    GetSenderPubKey(out.scriptPubKey, senderPubKey);
+                }
+                break;
+            }
+        }
+    }
+    else
+    {
+        // Get destination from the inputs
+        if(tx.vin.size() > 0 && mapWallet.find(tx.vin[0].prevout.hash) != mapWallet.end())
+        {
+            senderPubKey = mapWallet.at(tx.vin[0].prevout.hash).tx->vout[tx.vin[0].prevout.n].scriptPubKey;
+        }
+    }
+
+    // Extract destination from script
+    return ExtractDestination(senderPubKey, txSenderDest, nullptr, true);
 }
 
 bool CWallet::GetHDKeyPath(const CTxDestination &dest, std::string &hdkeypath) const

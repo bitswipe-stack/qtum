@@ -301,7 +301,7 @@ public:
     virtual bool addTokenEntry(const TokenInfo &token) = 0;
 
     //! Add wallet token transaction entry.
-    virtual bool addTokenTxEntry(const TokenTx& tokenTx, bool fFlushOnClose=true) = 0;
+    virtual bool addTokenTxEntry(const TokenTx& tokenTx) = 0;
 
     //! Check if exist wallet token entry.
     virtual bool existTokenEntry(const TokenInfo &token) = 0;
