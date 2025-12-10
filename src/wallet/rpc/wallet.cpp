@@ -1404,6 +1404,11 @@ std::span<const CRPCCommand> GetWalletRPCCommands()
         {"wallet", &walletpassphrase},
         {"wallet", &walletpassphrasechange},
         {"wallet", &walletprocesspsbt},
+        {"wallet", &reservebalance,                 },
+        {"wallet", &setsuperstakervaluesforaddress},
+        {"wallet", &listsuperstakercustomvalues},
+        {"wallet", &listsuperstakervaluesforaddress},
+        {"wallet", &removesuperstakervaluesforaddress},
         {"util",   &createmultisig},
     };
     return commands;

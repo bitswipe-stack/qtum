@@ -1034,6 +1034,458 @@ bool CanStake()
 }
 
 #ifdef ENABLE_WALLET
+//////////////////////////////////////////////////////////////////////////////
+//
+// Proof of Stake miner
+//
+
+//
+// Looking for suitable coins for creating new block.
+//
+
+class DelegationFilterBase : public IDelegationFilter
+{
+public:
+    bool GetKey(const std::string& strAddress, uint160& keyId)
+    {
+        CTxDestination destination = DecodeDestination(strAddress);
+        if (!IsValidDestination(destination)) {
+            return false;
+        }
+
+        if (!std::holds_alternative<PKHash>(destination)) {
+            return false;
+        }
+
+        keyId = uint160(std::get<PKHash>(destination));
+
+        return true;
+    }
+};
+
+class DelegationsStaker : public DelegationFilterBase
+{
+public:
+    enum StakerType
+    {
+        STAKER_NORMAL    = 0,
+        STAKER_ALLOWLIST = 1,
+        STAKER_EXCLUDELIST = 2,
+    };
+
+    DelegationsStaker(wallet::CWallet *_pwallet):
+        pwallet(_pwallet),
+        cacheHeight(0),
+        type(StakerType::STAKER_NORMAL),
+        fAllowWatchOnly(false)
+    {
+        fAllowWatchOnly = _pwallet->IsWalletFlagSet(wallet::WALLET_FLAG_DISABLE_PRIVATE_KEYS);
+
+        // Get allow list
+        for (const std::string& strAddress : gArgs.GetArgs("-stakingallowlist"))
+        {
+            uint160 keyId;
+            if(GetKey(strAddress, keyId))
+            {
+                if(std::find(allowList.begin(), allowList.end(), keyId) == allowList.end())
+                    allowList.push_back(keyId);
+            }
+            else
+            {
+                LogDebug(BCLog::COINSTAKE, "Fail to add %s to stake allow list\n", strAddress);
+            }
+        }
+
+        // Get exclude list
+        for (const std::string& strAddress : gArgs.GetArgs("-stakingexcludelist"))
+        {
+            uint160 keyId;
+            if(GetKey(strAddress, keyId))
+            {
+                if(std::find(excludeList.begin(), excludeList.end(), keyId) == excludeList.end())
+                    excludeList.push_back(keyId);
+            }
+            else
+            {
+                LogDebug(BCLog::COINSTAKE, "Fail to add %s to stake exclude list\n", strAddress);
+            }
+        }
+
+        // Set staker type
+        if(allowList.size() > 0)
+        {
+            type = StakerType::STAKER_ALLOWLIST;
+        }
+        else if(excludeList.size() > 0)
+        {
+            type = StakerType::STAKER_EXCLUDELIST;
+        }
+    }
+
+    bool Match(const DelegationEvent& event) const override
+    {
+        bool mine = pwallet->HasPrivateKey(PKHash(event.item.staker), fAllowWatchOnly);
+        if(!mine)
+            return false;
+
+        wallet::CSuperStakerInfo info;
+        if(pwallet->GetSuperStaker(info, event.item.staker) && info.fCustomConfig)
+        {
+            return CheckAddressList(info.nDelegateAddressType, info.delegateAddressList, info.delegateAddressList, event);
+        }
+
+        return CheckAddressList(type, allowList, excludeList, event);
+    }
+
+    bool CheckAddressList(const int& _type, const std::vector<uint160>& _allowList, const std::vector<uint160>& _excludeList, const DelegationEvent& event) const
+    {
+        switch (_type) {
+        case STAKER_NORMAL:
+            return true;
+        case STAKER_ALLOWLIST:
+            return std::count(_allowList.begin(), _allowList.end(), event.item.delegate);
+        case STAKER_EXCLUDELIST:
+            return std::count(_excludeList.begin(), _excludeList.end(), event.item.delegate) == 0;
+        default:
+            break;
+        }
+
+        return false;
+    }
+
+    void Update(int32_t nHeight)
+    {
+        if(pwallet->fUpdatedSuperStaker)
+        {
+            // Clear cache if updated
+            cacheHeight = 0;
+            cacheDelegationsStaker.clear();
+            pwallet->fUpdatedSuperStaker = false;
+        }
+
+        std::map<uint160, Delegation> delegations_staker;
+        int checkpointSpan = Params().GetConsensus().CheckpointSpan(nHeight);
+        if(nHeight <= checkpointSpan)
+        {
+            // Get delegations from events
+            std::vector<DelegationEvent> events;
+            qtumDelegations.FilterDelegationEvents(events, *this, pwallet->chain().chainman());
+            delegations_staker = qtumDelegations.DelegationsFromEvents(events);
+        }
+        else
+        {
+            // Update the cached delegations for the staker, older then the sync checkpoint (500 blocks)
+            int cpsHeight = nHeight - checkpointSpan;
+            if(cacheHeight < cpsHeight)
+            {
+                std::vector<DelegationEvent> events;
+                qtumDelegations.FilterDelegationEvents(events, *this, pwallet->chain().chainman(), cacheHeight, cpsHeight);
+                qtumDelegations.UpdateDelegationsFromEvents(events, cacheDelegationsStaker);
+                cacheHeight = cpsHeight;
+            }
+
+            // Update the wallet delegations
+            std::vector<DelegationEvent> events;
+            qtumDelegations.FilterDelegationEvents(events, *this, pwallet->chain().chainman(), cacheHeight + 1);
+            delegations_staker = cacheDelegationsStaker;
+            qtumDelegations.UpdateDelegationsFromEvents(events, delegations_staker);
+        }
+        pwallet->updateDelegationsStaker(delegations_staker);
+    }
+
+private:
+    wallet::CWallet *pwallet;
+    QtumDelegation qtumDelegations;
+    int32_t cacheHeight;
+    std::map<uint160, Delegation> cacheDelegationsStaker;
+    std::vector<uint160> allowList;
+    std::vector<uint160> excludeList;
+    int type;
+    bool fAllowWatchOnly;
+};
+
+class MyDelegations : public DelegationFilterBase
+{
+public:
+    MyDelegations(wallet::CWallet *_pwallet):
+        pwallet(_pwallet),
+        cacheHeight(0),
+        cacheAddressHeight(0),
+        fAllowWatchOnly(false)
+    {
+        fAllowWatchOnly = _pwallet->IsWalletFlagSet(wallet::WALLET_FLAG_DISABLE_PRIVATE_KEYS);
+    }
+
+    bool Match(const DelegationEvent& event) const override
+    {
+        return pwallet->HasPrivateKey(PKHash(event.item.delegate), fAllowWatchOnly);
+    }
+
+    void Update(int32_t nHeight)
+    {
+        if(fLogEvents)
+        {
+            // When log events are enabled, search the log events to get complete list of my delegations
+            int checkpointSpan = Params().GetConsensus().CheckpointSpan(nHeight);
+            if(nHeight <= checkpointSpan)
+            {
+                // Get delegations from events
+                std::vector<DelegationEvent> events;
+                qtumDelegations.FilterDelegationEvents(events, *this, pwallet->chain().chainman());
+                pwallet->m_my_delegations = qtumDelegations.DelegationsFromEvents(events);
+            }
+            else
+            {
+                // Update the cached delegations for the staker, older then the sync checkpoint (500 blocks)
+                int cpsHeight = nHeight - checkpointSpan;
+                if(cacheHeight < cpsHeight)
+                {
+                    std::vector<DelegationEvent> events;
+                    qtumDelegations.FilterDelegationEvents(events, *this, pwallet->chain().chainman(), cacheHeight, cpsHeight);
+                    qtumDelegations.UpdateDelegationsFromEvents(events, cacheMyDelegations);
+                    cacheHeight = cpsHeight;
+                }
+
+                // Update the wallet delegations
+                std::vector<DelegationEvent> events;
+                qtumDelegations.FilterDelegationEvents(events, *this, pwallet->chain().chainman(), cacheHeight + 1);
+                pwallet->m_my_delegations = cacheMyDelegations;
+                qtumDelegations.UpdateDelegationsFromEvents(events, pwallet->m_my_delegations);
+            }
+        }
+        else
+        {
+            // Log events are not enabled, search the available addresses for list of my delegations
+            if(cacheHeight != nHeight)
+            {
+                cacheMyDelegations.clear();
+
+                // Address map
+                std::map<uint160, bool> mapAddress;
+
+                // Get all addresses with coins
+                SelectAddress(mapAddress, nHeight);
+
+                // Get all addresses for delegations in the GUI
+                for(auto item : pwallet->mapDelegation)
+                {
+                    uint160 address = item.second.delegateAddress;
+                    if(pwallet->HasPrivateKey(PKHash(address), fAllowWatchOnly))
+                    {
+                        if (mapAddress.find(address) == mapAddress.end())
+                        {
+                            mapAddress[address] = false;
+                        }
+                    }
+                }
+
+                // Search my delegations in the addresses
+                for(auto item: mapAddress)
+                {
+                    Delegation delegation;
+                    uint160 address = item.first;
+                    if(qtumDelegations.GetDelegation(address, delegation, pwallet->chain().chainman().ActiveChainstate()) && QtumDelegation::VerifyDelegation(address, delegation))
+                    {
+                        cacheMyDelegations[address] = delegation;
+                    }
+                }
+
+                // Update my delegations list
+                pwallet->m_my_delegations = cacheMyDelegations;
+                cacheHeight = nHeight;
+            }
+        }
+    }
+
+    void SelectAddress(std::map<uint160, bool>& mapAddress, int32_t nHeight)
+    {
+        if(cacheAddressHeight < nHeight)
+        {
+            wallet::SelectAddress(*pwallet, mapAddress);
+            pwallet->mapAddressUnspentCache = mapAddress;
+            if(pwallet->fUpdateAddressUnspentCache == false)
+                pwallet->fUpdateAddressUnspentCache = true;
+            cacheAddressHeight = nHeight + 100;
+        }
+        else
+        {
+            mapAddress = pwallet->mapAddressUnspentCache;
+        }
+    }
+
+private:
+
+    wallet::CWallet *pwallet;
+    QtumDelegation qtumDelegations;
+    int32_t cacheHeight;
+    int32_t cacheAddressHeight;
+    std::map<uint160, Delegation> cacheMyDelegations;
+    bool fAllowWatchOnly;
+};
+
+bool CheckStake(const std::shared_ptr<const CBlock> pblock, wallet::CWallet& wallet)
+{
+    uint256 proofHash, hashTarget;
+    uint256 hashBlock = pblock->GetHash();
+
+    if(!pblock->IsProofOfStake()) {
+        LogError("CheckStake() : %s is not a proof-of-stake block", hashBlock.GetHex());
+        return false;
+    }
+
+    // verify hash target and signature of coinstake tx
+    {
+        LOCK(cs_main);
+        BlockValidationState state;
+        CBlockIndex* pindexPrev = &(wallet.chain().chainman().BlockIndex()[pblock->hashPrevBlock]);
+        if (!CheckProofOfStake(pindexPrev, state, *pblock->vtx[1], pblock->nBits, pblock->nTime, pblock->GetProofOfDelegation(), pblock->prevoutStake, proofHash, hashTarget, wallet.chain().getCoinsTip(), wallet.chain().chainman().ActiveChainstate())) {
+            LogError("CheckStake() : proof-of-stake checking failed %s",state.GetRejectReason());
+            return false;
+        }
+    }
+
+    //// debug print
+    LogDebug(BCLog::COINSTAKE, "CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex(), proofHash.GetHex(), hashTarget.GetHex());
+    LogDebug(BCLog::COINSTAKE, "%s\n", pblock->ToString());
+    LogDebug(BCLog::COINSTAKE, "out %s\n", FormatMoney(pblock->vtx[1]->GetValueOut()));
+
+    // Found a solution
+    {
+        LOCK(cs_main);
+        if (pblock->hashPrevBlock != wallet.chain().getTip()->GetBlockHash()) {
+            LogError("CheckStake() : generated block is stale");
+            return false;
+        }
+    }
+    {
+        LOCK(wallet.cs_wallet);
+        for(const CTxIn& vin : pblock->vtx[1]->vin) {
+            COutPoint prevout(vin.prevout.hash, vin.prevout.n);
+            if (wallet.IsSpent(prevout)) {
+                LogError("CheckStake() : generated block became invalid due to stake UTXO being spent");
+                return false;
+            }
+        }
+    }
+
+    // Process this block the same as if we had received it from another node
+    bool fNewBlock = false;
+    if (!wallet.chain().chainman().ProcessNewBlock(pblock, true, true, &fNewBlock)) {
+        LogError("CheckStake() : ProcessBlock, block not accepted");
+        return false;
+    }
+
+    return true;
+}
+
+bool SleepStaker(wallet::CWallet *pwallet, uint64_t milliseconds)
+{
+    uint64_t seconds = milliseconds / 1000;
+    milliseconds %= 1000;
+
+    for(unsigned int i = 0; i < seconds; i++)
+    {
+        if(!pwallet->IsStakeClosing())
+            UninterruptibleSleep(std::chrono::seconds{1});
+        else
+            return false;
+    }
+
+    if(milliseconds)
+    {
+        if(!pwallet->IsStakeClosing())
+            UninterruptibleSleep(std::chrono::milliseconds{milliseconds});
+        else
+            return false;
+    }
+
+    return !pwallet->IsStakeClosing();
+}
+
+bool SignBlockHWI(std::shared_ptr<CBlock> pblock, wallet::CWallet& wallet, std::vector<unsigned char>& vchSig)
+{
+    // Check ledger ID
+    if(wallet.m_ledger_id == "") {
+        return false;
+    }
+    QtumLedger &device = QtumLedger::instance();
+
+    // Make a blank psbt
+    PartiallySignedTransaction psbtx_in;
+    CMutableTransaction rawTx = CMutableTransaction(*pblock->vtx[1]);
+    psbtx_in.tx = rawTx;
+    for (unsigned int i = 0; i < rawTx.vin.size(); ++i) {
+        psbtx_in.inputs.push_back(PSBTInput());
+    }
+    for (unsigned int i = 0; i < rawTx.vout.size(); ++i) {
+        psbtx_in.outputs.push_back(PSBTOutput());
+    }
+
+    // Get staker path
+    CScript stakerPubKey = rawTx.vout[1].scriptPubKey;
+    CTxDestination txStakerDest = ExtractPublicKeyHash(stakerPubKey);
+    std::string strStaker;
+    if(!wallet.GetHDKeyPath(txStakerDest, strStaker)) {
+        return false;
+    }
+
+    // Fill transaction with out data but don't sign
+    bool bip32derivs = true;
+    bool complete = true;
+    const auto err{wallet.FillPSBT(psbtx_in, complete, 1, false, bip32derivs)};
+    if (err) {
+        return false;
+    }
+
+    // Serialize the PSBT
+    if(wallet.IsStakeClosing()) return false;
+    DataStream ssTx;
+    ssTx << TX_WITH_WITNESS(psbtx_in);
+    std::string psbt = EncodeBase64(ssTx.str());
+    if(!device.signCoinStake(wallet.m_ledger_id, psbt)) {
+        return false;
+    }
+
+    // Unserialize the transactions
+    PartiallySignedTransaction psbtx_out;
+    std::string error;
+    if (!DecodeBase64PSBT(psbtx_out, psbt, error)) {
+        return false;
+    }
+
+    // Update block proof
+    CMutableTransaction txCoinStake;
+    complete = FinalizeAndExtractPSBT(psbtx_out, txCoinStake);
+    if(!complete) {
+        return false;
+    }
+    pblock->vtx[1] = MakeTransactionRef(std::move(txCoinStake));
+    pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+
+    // Sign block header
+    if(wallet.IsStakeClosing()) return false;
+    std::string header = pblock->GetWithoutSign();
+    if(!device.signBlockHeader(wallet.m_ledger_id, header, strStaker, vchSig)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool SignBlockLedger(std::shared_ptr<CBlock> pblock, wallet::CWallet& wallet)
+{
+    LOCK(cs_ledger);
+    std::vector<unsigned char> vchSig;
+    bool ret = SignBlockHWI(pblock, wallet, vchSig);
+    if(ret) pblock->SetBlockSignature(vchSig);
+    if(!ret && !wallet.IsStakeClosing())
+    {
+        std::string errorMessage = QtumLedger::instance().errorMessage();
+        LogPrintf("WARN: %s: fail to sign block (%s)\n", __func__, errorMessage);
+    }
+    return ret;
+}
+
 void StakeQtums(bool fStake, wallet::CWallet *pwallet)
 {
 }

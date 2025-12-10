@@ -12,6 +12,7 @@
 #include <node/interface_ui.h>
 #include <tinyformat.h>
 #include <util/byte_units.h>
+#include <validation.h>
 
 #include <algorithm>
 #include <string>
@@ -40,6 +41,11 @@ size_t CalculateDbCacheBytes(const ArgsManager& args)
 CacheSizes CalculateCacheSizes(const ArgsManager& args, size_t n_indexes)
 {
     size_t total_cache{CalculateDbCacheBytes(args)};
+
+    if (args.GetBoolArg("-addrindex", DEFAULT_ADDRINDEX)) {
+        // enable 3/4 of the cache if addressindex and/or spentindex is enabled
+        total_cache = total_cache * 3 / 4;
+    }
 
     IndexCacheSizes index_sizes;
     index_sizes.tx_index = std::min(total_cache / 8, args.GetBoolArg("-txindex", DEFAULT_TXINDEX) ? MAX_TX_INDEX_CACHE : 0);
