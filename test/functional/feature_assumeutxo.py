@@ -53,9 +53,9 @@ from test_framework.blocktools import (
     target_str,
 )
 
-START_HEIGHT = 199
-SNAPSHOT_BASE_HEIGHT = 299
-FINAL_HEIGHT = 399
+START_HEIGHT = 2099
+SNAPSHOT_BASE_HEIGHT = 4099
+FINAL_HEIGHT = 4199
 COMPLETE_IDX = {'synced': True, 'best_block_height': FINAL_HEIGHT}
 
 
@@ -135,17 +135,17 @@ class AssumeutxoTest(BitcoinTestFramework):
                 f.write(valid_snapshot_contents[:43])
                 f.write((valid_num_coins + off).to_bytes(8, "little"))
                 f.write(valid_snapshot_contents[43 + 8:])
-            expected_error(msg="Bad snapshot - coins left over after deserializing 298 coins." if off == -1 else "Bad snapshot format or truncated snapshot after deserializing 299 coins.")
+            expected_error(msg="Bad snapshot - coins left over after deserializing 4098 coins." if off == -1 else "Bad snapshot format or truncated snapshot after deserializing 4099 coins.")
 
         self.log.info("  - snapshot file with alternated but parsable UTXO data results in different hash")
         cases = [
             # (content, offset, wrong_hash, custom_message)
-            [b"\xff" * 32, 0, "77874d48d932a5cb7a7f770696f5224ff05746fdcf732a58270b45da0f665934", None],  # wrong outpoint hash
+            [b"\xff" * 32, 0, "b5a0110eb8ffa80d08b0a201313a0e09006d0677210b0941e247710506a13cb5", None],  # wrong outpoint hash
             [(2).to_bytes(1, "little"), 32, None, "Bad snapshot format or truncated snapshot after deserializing 1 coins."],  # wrong txid coins count
             [b"\xfd\xff\xff", 32, None, "Mismatch in coins count in snapshot metadata and actual snapshot data"],  # txid coins count exceeds coins left
-            [b"\x01", 33, "9f562925721e4f97e6fde5b590dbfede51e2204a68639525062ad064545dd0ea", None],  # wrong outpoint index
-            [b"\x82", 34, "161393f07f8ad71760b3910a914f677f2cb166e5bcf5354e50d46b78c0422d15", None],  # wrong coin code VARINT
-            [b"\x80", 34, "e6fae191ef851554467b68acff01ca09ad0a2e48c9b3dfea46cf7d35a7fd0ad0", None],  # another wrong coin code
+            [b"\x01", 33, "4a2d96ddec10d00f9de83dd5b2b26419d464b4639edd4d3dfd33fdb7948e241e", None],  # wrong outpoint index
+            [b"\x82", 34, "c67efb6331ae90c591d449c75fa8bdbef2e9c4d283d6f82586d017fbbcae6b71", None],  # wrong coin code VARINT
+            [b"\x80", 34, "42d4c50bb80a6c266605b524314879e6f27e0e01fd5bb8340dc9a188ab056b9f", None],  # another wrong coin code
             [b"\x84\x58", 34, None, "Bad snapshot data after deserializing 0 coins"],  # wrong coin case with height 364 and coinbase 0
             [
                 # compressed txout value + scriptpubkey
@@ -164,7 +164,7 @@ class AssumeutxoTest(BitcoinTestFramework):
                 f.write(content)
                 f.write(valid_snapshot_contents[(5 + 2 + 4 + 32 + 8 + offset + len(content)):])
 
-            msg = custom_message if custom_message is not None else f"Bad snapshot content hash: expected d2b051ff5e8eef46520350776f4100dd710a63447a8e01d917e92e79751a63e2, got {wrong_hash}."
+            msg = custom_message if custom_message is not None else f"Bad snapshot content hash: expected 73200c9ce4eb500fb90dc57599ed084a1351eb0bf5de133c8a8ed4662e7e8162, got {wrong_hash}."
             expected_error(msg)
 
     def test_headers_not_synced(self, valid_snapshot_path):
@@ -195,7 +195,7 @@ class AssumeutxoTest(BitcoinTestFramework):
         self.start_node(0)
 
     def test_invalid_mempool_state(self, dump_output_path):
-        self.log.info("Test bitcoind should fail when mempool not empty.")
+        self.log.info("Test qtumd should fail when mempool not empty.")
         node=self.nodes[2]
         tx = MiniWallet(node).send_self_transfer(from_node=node)
 
@@ -208,13 +208,13 @@ class AssumeutxoTest(BitcoinTestFramework):
         self.restart_node(2, extra_args=self.extra_args[2])
 
     def test_invalid_file_path(self):
-        self.log.info("Test bitcoind should fail when file path is invalid.")
+        self.log.info("Test qtumd should fail when file path is invalid.")
         node = self.nodes[0]
         path = node.datadir_path / node.chain / "invalid" / "path"
         assert_raises_rpc_error(-8, "Couldn't open file {} for reading.".format(path), node.loadtxoutset, path)
 
     def test_snapshot_with_less_work(self, dump_output_path):
-        self.log.info("Test bitcoind should fail when snapshot has less accumulated work than this node.")
+        self.log.info("Test qtumd should fail when snapshot has less accumulated work than this node.")
         node = self.nodes[0]
         msg = "Unable to load UTXO snapshot: Population failed: Work does not exceed active chainstate."
         assert_raises_rpc_error(-32603, msg, node.loadtxoutset, dump_output_path)
@@ -391,7 +391,7 @@ class AssumeutxoTest(BitcoinTestFramework):
         # but that n1 and n2 don't yet see.
         assert n0.getblockcount() == START_HEIGHT
         blocks = {START_HEIGHT: Block(n0.getbestblockhash(), 1, START_HEIGHT + 1)}
-        for i in range(100):
+        for i in range(2000):
             block_tx = 1
             if i % 3 == 0:
                 self.mini_wallet.send_self_transfer(from_node=n0)
@@ -446,7 +446,7 @@ class AssumeutxoTest(BitcoinTestFramework):
         def check_dump_output(output):
             assert_equal(
                 output['txoutset_hash'],
-                "d2b051ff5e8eef46520350776f4100dd710a63447a8e01d917e92e79751a63e2")
+                "73200c9ce4eb500fb90dc57599ed084a1351eb0bf5de133c8a8ed4662e7e8162")
             assert_equal(output["nchaintx"], blocks[SNAPSHOT_BASE_HEIGHT].chain_tx)
 
         check_dump_output(dump_output)
@@ -597,7 +597,7 @@ class AssumeutxoTest(BitcoinTestFramework):
         prev_tx = n0.getblock(spend_coin_blockhash, 3)['tx'][0]
         prevout = {"txid": prev_tx['txid'], "vout": 0, "scriptPubKey": prev_tx['vout'][0]['scriptPubKey']['hex']}
         privkey = n0.get_deterministic_priv_key().key
-        raw_tx = n1.createrawtransaction([prevout], {getnewdestination()[2]: 24.99})
+        raw_tx = n1.createrawtransaction([prevout], {getnewdestination()[2]: 19999.99})
         signed_tx = n1.signrawtransactionwithkey(raw_tx, [privkey], [prevout])['hex']
         signed_txid = tx_from_hex(signed_tx).txid_hex
 
@@ -626,7 +626,7 @@ class AssumeutxoTest(BitcoinTestFramework):
         self.log.info("Checking that blocks are segmented on disk")
         assert self.has_blockfile(n1, "00000"), "normal blockfile missing"
         assert self.has_blockfile(n1, "00001"), "assumed blockfile missing"
-        assert not self.has_blockfile(n1, "00002"), "too many blockfiles"
+        assert not self.has_blockfile(n1, "00010"), "too many blockfiles"
 
         self.log.info("Restarted node before snapshot validation completed, reloading...")
         self.restart_node(1, extra_args=self.extra_args[1])

@@ -59,7 +59,7 @@ class InitTest(BitcoinTestFramework):
             node.start(extra_args)
             node.wait_for_rpc_connection()
             height = node.getblockcount()
-            assert_equal(200, height)
+            assert_equal(2100, height)
             self.wait_until(lambda: all(i["synced"] and i["best_block_height"] == height for i in node.getindexinfo().values()))
 
         lines_to_terminate_after = [
@@ -120,7 +120,7 @@ class InitTest(BitcoinTestFramework):
             {
                 'filepath_glob': 'blocks/blk*.dat',
                 'error_message': 'Error loading block database.',
-                'startup_args': ['-checkblocks=200', '-checklevel=4'],
+                'startup_args': ['-checkblocks=2100', '-checklevel=4'],
             },
             {
                 'filepath_glob': 'indexes/txindex/MANIFEST*',
@@ -146,7 +146,7 @@ class InitTest(BitcoinTestFramework):
             {
                 'filepath_glob': 'blocks/blk*.dat',
                 'error_message': 'Corrupted block database detected.',
-                'startup_args': ['-checkblocks=200', '-checklevel=4'],
+                'startup_args': ['-checkblocks=2100', '-checklevel=4'],
             },
             {
                 'filepath_glob': 'indexes/blockfilter/basic/db/*.*',
@@ -210,7 +210,7 @@ class InitTest(BitcoinTestFramework):
                     # Since the genesis block is not checked by -checkblocks, the
                     # perturbation window must be chosen such that a higher block
                     # in blk*.dat is affected.
-                    tf.seek(150)
+                    tf.seek(500)
                     tf.write(b"1" * 200)
 
             start_expecting_error(err_fragment, startup_args)
