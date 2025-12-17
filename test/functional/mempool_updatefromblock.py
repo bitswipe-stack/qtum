@@ -50,7 +50,7 @@ class MempoolUpdateFromBlockTest(BitcoinTestFramework):
 
         return blocks
 
-    def transaction_graph_test(self, size, *, n_tx_to_mine, fee=100_000):
+    def transaction_graph_test(self, size, *, n_tx_to_mine, fee=40_000_000):
         """Create an acyclic tournament (a type of directed graph) of transactions and use it for testing.
 
         Keyword arguments:
