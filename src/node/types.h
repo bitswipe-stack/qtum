@@ -63,6 +63,18 @@ struct BlockCreateOptions {
      * coinbase_max_additional_weight and coinbase_output_max_additional_sigops.
      */
     CScript coinbase_output_script{CScript() << OP_TRUE};
+    /**
+     * Is proof of stake
+     */
+    bool is_coinstake{false};
+    /**
+     * Proof time
+     */
+    int64_t proof_time{0};
+    /**
+     * Time limit for adding transaction
+     */
+    int64_t time_limit{0};
 };
 
 struct BlockWaitOptions {

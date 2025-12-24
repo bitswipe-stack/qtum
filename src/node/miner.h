@@ -300,11 +300,11 @@ public:
     CMutableTransaction originalRewardTx; // qtum
 
     //When GetAdjustedTime() exceeds this, no more transactions will attempt to be added
-    int32_t nTimeLimit;
+    int64_t nTimeLimit;
 
     /** Construct a new block template */
-    std::unique_ptr<CBlockTemplate> CreateNewBlock(bool fProofOfStake=false, int64_t* pTotalFees = 0, int32_t nTime=0, int32_t nTimeLimit=0);
-    std::unique_ptr<CBlockTemplate> CreateEmptyBlock(bool fProofOfStake=false, int64_t* pTotalFees = 0, int32_t nTime=0);
+    std::unique_ptr<CBlockTemplate> CreateNewBlock(bool fProofOfStake=false, int64_t* pTotalFees = 0, int64_t nTime=0, int64_t nTimeLimit=0);
+    std::unique_ptr<CBlockTemplate> CreateEmptyBlock(bool fProofOfStake=false, int64_t* pTotalFees = 0, int64_t nTime=0);
 
     /** The number of transactions in the last assembled block (excluding coinbase transaction) */
     inline static std::optional<int64_t> m_last_block_num_txs{};

@@ -33,7 +33,7 @@ bool SetDefaultPayForContractAddress(const CWallet& wallet, CCoinControl & coinC
     for (const COutput& out : vecOutputs) {
         CTxDestination destAdress;
         const CScript& scriptPubKey = out.txout.scriptPubKey;
-        bool fValidAddress = out.spendable && ExtractDestination(scriptPubKey, destAdress, nullptr, true)
+        bool fValidAddress = ExtractDestination(scriptPubKey, destAdress, nullptr, true)
                 && IsValidContractSenderAddress(destAdress);
 
         if (!fValidAddress)
@@ -57,7 +57,7 @@ bool SetDefaultSignSenderAddress(const CWallet& wallet, CTxDestination& destAdre
 
     for (const COutput& out : vecOutputs) {
         const CScript& scriptPubKey = out.txout.scriptPubKey;
-        bool fValidAddress = out.spendable && ExtractDestination(scriptPubKey, destAdress, nullptr, true)
+        bool fValidAddress = ExtractDestination(scriptPubKey, destAdress, nullptr, true)
                 && IsValidContractSenderAddress(destAdress);
 
         if (!fValidAddress)
@@ -225,7 +225,6 @@ RPCHelpMan createcontract()
     if(fPsbt) fBroadcast=false;
 
     CCoinControl coinControl;
-    if(fPsbt) coinControl.fAllowWatchOnly = true;
 
     CTxDestination signSenderAddress = CNoDestination();
     if(fHasSender){
@@ -238,7 +237,7 @@ RPCHelpMan createcontract()
         for (const COutput& out : vecOutputs) {
             CTxDestination destAdress;
             const CScript& scriptPubKey = out.txout.scriptPubKey;
-            bool fValidAddress = out.spendable && ExtractDestination(scriptPubKey, destAdress, nullptr, true);
+            bool fValidAddress = ExtractDestination(scriptPubKey, destAdress, nullptr, true);
 
             if (!fValidAddress || senderAddress != destAdress)
                 continue;
@@ -283,7 +282,6 @@ RPCHelpMan createcontract()
 
     const auto bal = GetBalance(*pwallet);
     CAmount curBalance = bal.m_mine_trusted;
-    if(fPsbt) curBalance += bal.m_watchonly_trusted;
 
     // Check amount
     if (nGasFee <= 0)
@@ -302,7 +300,7 @@ RPCHelpMan createcontract()
     {
         if(IsValidDestination(signSenderAddress))
         {
-            if (!pwallet->HasPrivateKey(signSenderAddress, coinControl.fAllowWatchOnly)) {
+            if (!pwallet->HasPrivateKey(signSenderAddress)) {
                 throw JSONRPCError(RPC_WALLET_ERROR, "Private key not available");
             }
             CKeyID key_id = pwallet->GetKeyForDestination(signSenderAddress);
@@ -486,7 +484,6 @@ UniValue SendToContract(CWallet& wallet, const UniValue& params, ChainstateManag
     if(fPsbt) fBroadcast=false;
 
     CCoinControl coinControl;
-    if(fPsbt) coinControl.fAllowWatchOnly = true;
 
     CTxDestination signSenderAddress = CNoDestination();
     if(fHasSender){
@@ -499,7 +496,7 @@ UniValue SendToContract(CWallet& wallet, const UniValue& params, ChainstateManag
 
             CTxDestination destAdress;
             const CScript& scriptPubKey = out.txout.scriptPubKey;
-            bool fValidAddress = out.spendable && ExtractDestination(scriptPubKey, destAdress, nullptr, true);
+            bool fValidAddress = ExtractDestination(scriptPubKey, destAdress, nullptr, true);
 
             if (!fValidAddress || senderAddress != destAdress)
                 continue;
@@ -545,7 +542,6 @@ UniValue SendToContract(CWallet& wallet, const UniValue& params, ChainstateManag
 
     const auto bal = GetBalance(wallet);
     CAmount curBalance = bal.m_mine_trusted;
-    if(fPsbt) curBalance += bal.m_watchonly_trusted;
 
     // Check amount
     if (nGasFee <= 0)
@@ -564,7 +560,7 @@ UniValue SendToContract(CWallet& wallet, const UniValue& params, ChainstateManag
     {
         if(IsValidDestination(signSenderAddress))
         {
-            if (!wallet.HasPrivateKey(signSenderAddress, coinControl.fAllowWatchOnly)) {
+            if (!wallet.HasPrivateKey(signSenderAddress)) {
                 throw JSONRPCError(RPC_WALLET_ERROR, "Private key not available");
             }
             CKeyID key_id = wallet.GetKeyForDestination(signSenderAddress);
@@ -988,7 +984,7 @@ RPCHelpMan setdelegateforaddress()
     PKHash pkhSender = std::get<PKHash>(destSender);
 
     // Get the private key for the sender address
-    if (!pwallet->HasPrivateKey(destSender, fPsbt)) {
+    if (!pwallet->HasPrivateKey(destSender)) {
         throw JSONRPCError(RPC_WALLET_ERROR, "Private key not available for the sender address");
     }
 
@@ -1613,7 +1609,7 @@ RPCHelpMan qrc20burnfrom()
     };
 }
 
-Span<const CRPCCommand> GetContractRPCCommands()
+std::span<const CRPCCommand> GetContractRPCCommands()
 {
 // clang-format off
 static const CRPCCommand commands[] =

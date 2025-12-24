@@ -5548,9 +5548,20 @@ void CWallet::TryCleanCoinStake()
     }
 }
 
-bool CWallet::HasPrivateKey(const CTxDestination& dest, const bool& fAllowWatchOnly)
+bool CWallet::HasPrivateKey(const CTxDestination& dest)
 {
-    return false;
+    CScript script = GetScriptForDestination(dest);
+    bool mine = IsMine(script);
+    if(!mine) return false;
+    std::unique_ptr<SigningProvider> provider = GetSolvingProvider(script);
+    bool solvable = false;
+    if(provider)
+    {
+        auto inferred = InferDescriptor(script, *provider);
+        solvable = inferred ? inferred->IsSolvable() : false;
+    }
+    bool spendable = mine && solvable;
+    return spendable;
 }
 
 CKeyID CWallet::GetKeyForDestination(const CTxDestination& dest)

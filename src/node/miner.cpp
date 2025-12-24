@@ -192,7 +192,7 @@ void BlockAssembler::RebuildRefundTransaction(CBlock* pblock){
     pblock->vtx[refundtx] = MakeTransactionRef(std::move(contrTx));
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(bool fProofOfStake, int64_t* pTotalFees, int32_t txProofTime, int32_t nTimeLimit)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(bool fProofOfStake, int64_t* pTotalFees, int64_t txProofTime, int64_t nTimeLimit)
 {
     const auto time_start{SteadyClock::now()};
 
@@ -347,7 +347,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(bool fProofOfStak
     return std::move(pblocktemplate);
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(bool fProofOfStake, int64_t* pTotalFees, int32_t nTime)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(bool fProofOfStake, int64_t* pTotalFees, int64_t nTime)
 {
     resetBlock();
 
@@ -380,7 +380,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(bool fProofOfSt
     if (chainparams.MineBlocksOnDemand())
         pblock->nVersion = gArgs.GetIntArg("-blockversion", pblock->nVersion);
 
-    uint32_t txProofTime = nTime == 0 ? TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()) : nTime;
+    int64_t txProofTime = nTime == 0 ? TicksSinceEpoch<std::chrono::seconds>(NodeClock::now()) : nTime;
     if(fProofOfStake)
         txProofTime &= ~chainparams.GetConsensus().StakeTimestampMask(nHeight);
     pblock->nTime = txProofTime;
@@ -1076,11 +1076,8 @@ public:
     DelegationsStaker(wallet::CWallet *_pwallet):
         pwallet(_pwallet),
         cacheHeight(0),
-        type(StakerType::STAKER_NORMAL),
-        fAllowWatchOnly(false)
+        type(StakerType::STAKER_NORMAL)
     {
-        fAllowWatchOnly = _pwallet->IsWalletFlagSet(wallet::WALLET_FLAG_DISABLE_PRIVATE_KEYS);
-
         // Get allow list
         for (const std::string& strAddress : gArgs.GetArgs("-stakingallowlist"))
         {
@@ -1124,7 +1121,7 @@ public:
 
     bool Match(const DelegationEvent& event) const override
     {
-        bool mine = pwallet->HasPrivateKey(PKHash(event.item.staker), fAllowWatchOnly);
+        bool mine = pwallet->HasPrivateKey(PKHash(event.item.staker));
         if(!mine)
             return false;
 
@@ -1201,7 +1198,6 @@ private:
     std::vector<uint160> allowList;
     std::vector<uint160> excludeList;
     int type;
-    bool fAllowWatchOnly;
 };
 
 class MyDelegations : public DelegationFilterBase
@@ -1210,15 +1206,12 @@ public:
     MyDelegations(wallet::CWallet *_pwallet):
         pwallet(_pwallet),
         cacheHeight(0),
-        cacheAddressHeight(0),
-        fAllowWatchOnly(false)
-    {
-        fAllowWatchOnly = _pwallet->IsWalletFlagSet(wallet::WALLET_FLAG_DISABLE_PRIVATE_KEYS);
-    }
+        cacheAddressHeight(0)
+    {}
 
     bool Match(const DelegationEvent& event) const override
     {
-        return pwallet->HasPrivateKey(PKHash(event.item.delegate), fAllowWatchOnly);
+        return pwallet->HasPrivateKey(PKHash(event.item.delegate));
     }
 
     void Update(int32_t nHeight)
@@ -1270,7 +1263,7 @@ public:
                 for(auto item : pwallet->mapDelegation)
                 {
                     uint160 address = item.second.delegateAddress;
-                    if(pwallet->HasPrivateKey(PKHash(address), fAllowWatchOnly))
+                    if(pwallet->HasPrivateKey(PKHash(address)))
                     {
                         if (mapAddress.find(address) == mapAddress.end())
                         {
@@ -1320,7 +1313,6 @@ private:
     int32_t cacheHeight;
     int32_t cacheAddressHeight;
     std::map<uint160, Delegation> cacheMyDelegations;
-    bool fAllowWatchOnly;
 };
 
 bool CheckStake(const std::shared_ptr<const CBlock> pblock, wallet::CWallet& wallet)
@@ -1484,6 +1476,82 @@ bool SignBlockLedger(std::shared_ptr<CBlock> pblock, wallet::CWallet& wallet)
         LogPrintf("WARN: %s: fail to sign block (%s)\n", __func__, errorMessage);
     }
     return ret;
+}
+
+// novacoin: attempt to generate suitable proof-of-stake
+bool SignBlock(std::shared_ptr<CBlock> pblock, wallet::CWallet& wallet, const CAmount& nTotalFees, uint32_t nTime, std::set<std::pair<const wallet::CWalletTx*,unsigned int> >& setCoins, std::vector<COutPoint>& setSelectedCoins, std::vector<COutPoint>& setDelegateCoins, bool selectedOnly = false, bool tryOnly = false)
+{
+    // if we are trying to sign
+    //    something except proof-of-stake block template
+    if (!CheckFirstCoinstakeOutput(*pblock))
+        return false;
+
+    // if we are trying to sign
+    //    a complete proof-of-stake block
+    if (pblock->IsProofOfStake() && !pblock->vchBlockSigDlgt.empty())
+        return true;
+
+    PKHash pkhash;
+    CMutableTransaction txCoinStake(*pblock->vtx[1]);
+    uint32_t nTimeBlock = nTime;
+    std::vector<unsigned char> vchPoD;
+    COutPoint headerPrevout;
+    //original line:
+    //int64_t nSearchInterval = IsProtocolV2(nBestHeight+1) ? 1 : nSearchTime - nLastCoinStakeSearchTime;
+    //IsProtocolV2 mean POS 2 or higher, so the modified line is:
+    if(wallet.IsStakeClosing()) return false;
+    LOCK(wallet.cs_wallet);
+    uint32_t nHeight = wallet.chain().getHeight().value_or(0) + 1;
+    const Consensus::Params& consensusParams = Params().GetConsensus();
+    nTimeBlock &= ~consensusParams.StakeTimestampMask(nHeight);
+    bool privateKeysDisabled = wallet.IsWalletFlagSet(wallet::WALLET_FLAG_DISABLE_PRIVATE_KEYS);
+    bool found = false;
+    {
+        LOCK(cs_main);
+        found = wallet::CreateCoinStake(wallet, pblock->nBits, nTotalFees, nTimeBlock, txCoinStake, pkhash, setCoins, setSelectedCoins, setDelegateCoins, selectedOnly, !privateKeysDisabled, vchPoD, headerPrevout);
+    }
+    if (found)
+    {
+        if (nTimeBlock >= wallet.chain().getTip()->GetMedianTimePast()+1)
+        {
+            // make sure coinstake would meet timestamp protocol
+            //    as it would be the same as the block timestamp
+            pblock->nTime = nTimeBlock;
+            pblock->vtx[1] = MakeTransactionRef(std::move(txCoinStake));
+            pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+            pblock->prevoutStake = headerPrevout;
+
+            if(tryOnly)
+                return true;
+
+            // Check timestamp against prev
+            if(pblock->GetBlockTime() <= wallet.chain().getTip()->GetBlockTime() || FutureDrift(pblock->GetBlockTime(), nHeight, consensusParams) < wallet.chain().getTip()->GetBlockTime())
+            {
+                return false;
+            }
+
+            // Sign block
+            if (wallet.chain().getHeight().value_or(0) + 1 >= consensusParams.nOfflineStakeHeight)
+            {
+                // append PoD to the end of the block header
+                if(vchPoD.size() > 0)
+                    pblock->SetProofOfDelegation(vchPoD);
+
+                // append a signature to our block, ensure that is compact and check block header
+                bool isSigned = privateKeysDisabled ? SignBlockLedger(pblock, wallet) : wallet.SignBlockStake(*pblock, pkhash, true);
+                return isSigned && CheckHeaderProof(*pblock, consensusParams, wallet.chain().chainman().ActiveChainstate());
+            }
+            else
+            {
+                // append a signature to our block and ensure that is LowS
+                return wallet.SignBlockStake(*pblock, pkhash, false) &&
+                           EnsureLowS(pblock->vchBlockSigDlgt) &&
+                           CheckHeaderProof(*pblock, consensusParams, wallet.chain().chainman().ActiveChainstate());
+            }
+        }
+    }
+
+    return false;
 }
 
 void StakeQtums(bool fStake, wallet::CWallet *pwallet)
