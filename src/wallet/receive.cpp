@@ -112,7 +112,7 @@ CAmount CachedTxGetCredit(const CWallet& wallet, const CWalletTx& wtx, bool avoi
     AssertLockHeld(wallet.cs_wallet);
 
     // Must wait until coinbase is safely deep enough in the chain before valuing it
-    if (wallet.IsTxImmatureCoinBase(wtx))
+    if (wallet.IsTxImmature(wtx))
         return 0;
 
     // GetBalance can assume transactions in mapWallet won't change

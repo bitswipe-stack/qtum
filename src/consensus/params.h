@@ -129,6 +129,7 @@ struct Params {
     int nCancunHeight;
     /** Block height at which EVM Pectra fork becomes active */
     int nPectraHeight;
+    uint32_t nMinerConfirmationWindow;
     std::array<BIP9Deployment,MAX_VERSION_BITS_DEPLOYMENTS> vDeployments;
     /** Proof of work parameters */
     uint256 powLimit;
@@ -152,7 +153,7 @@ struct Params {
     {
         return std::chrono::seconds{TargetSpacing(height)};
     }
-    int64_t DifficultyAdjustmentInterval(int height=0) const
+    int64_t DifficultyAdjustmentInterval(int height) const
     {
         int64_t targetTimespan = TargetTimespan(height);
         int64_t targetSpacing = TargetSpacing(height);
