@@ -61,7 +61,6 @@ static void BlockEncodingBench(benchmark::Bench& bench, size_t n_pool, size_t n_
 {
     const auto testing_setup = MakeNoLogFileContext<const ChainTestingSetup>(ChainType::MAIN);
     CTxMemPool& pool = *Assert(testing_setup->m_node.mempool);
-    ChainstateManager* chainman = testing_setup->m_node.chainman.get();
     InsecureRandomContext rng(11);
 
     LOCK2(cs_main, pool.cs);
@@ -101,7 +100,7 @@ static void BlockEncodingBench(benchmark::Bench& bench, size_t n_pool, size_t n_
     BenchCBHAST cmpctblock{rng, 3000};
 
     bench.run([&] {
-        PartiallyDownloadedBlock pdb{&pool, chainman};
+        PartiallyDownloadedBlock pdb{&pool};
         auto res = pdb.InitData(cmpctblock, extratxn);
 
         // if there were duplicates the benchmark will be invalid

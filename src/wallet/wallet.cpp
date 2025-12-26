@@ -1420,6 +1420,18 @@ void CWallet::RecursiveUpdateTxState(WalletBatch* batch, const Txid& tx_hash, co
 
 bool CWallet::SyncTransaction(const CTransactionRef& ptx, const SyncTxState& state, bool update_tx, bool rescanning_old_block)
 {
+    const TxStateInactive* conf = std::get_if<TxStateInactive>(&state);
+    if (conf && conf->disabled) 
+    {
+        // wallets need to refund inputs when disconnecting coinstake
+        const CTransaction& tx = *ptx;
+        if (tx.IsCoinStake() && IsFromMe(tx))
+        {
+            DisableTransaction(tx);
+            return true;
+        }
+    }
+
     if (!AddToWalletIfInvolvingMe(ptx, state, update_tx, rescanning_old_block))
         return false; // Not one of ours
 
@@ -1587,7 +1599,8 @@ void CWallet::blockDisconnected(const interfaces::BlockInfo& block)
         const CTransactionRef& ptx = block.data->vtx[index];
         // Coinbase transactions are not only inactive but also abandoned,
         // meaning they should never be relayed standalone via the p2p protocol.
-        SyncTransaction(ptx, TxStateInactive{/*abandoned=*/index == 0});
+        SyncTransaction(ptx, TxStateInactive{/*abandoned=*/index == 0, ptx->IsCoinStake()});
+        if(ptx->IsCoinStake()) continue;
 
         for (const CTxIn& tx_in : ptx->vin) {
             // No other wallet transactions conflicted with this transaction
