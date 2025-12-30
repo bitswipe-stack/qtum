@@ -193,6 +193,27 @@ public:
         m_is_mockable_chain = false;
         fHasHardwareWalletSupport = true;
 
+        checkpointData = {
+            {
+                {0, uint256{"000075aef83cf2853580f8ae8ce6f8c3096cfa21d98334d6e3f95e5582ed986c"}},
+                {5000, uint256{"00006a5338e5647872bd91de1d291365e941e14dff1939b5f16d1804d1ce61cd"}}, //last PoW block
+                {45000, uint256{"060c6af680f6975184c7a17059f2ff4970544fcfd4104e73744fe7ab7be14cfc"}},
+                {90000, uint256{"66fcf426b0aa6f2c9e3330cb2775e9e13c4a2b8ceedb50f8931ae0e12078ad50"}},
+                {245000, uint256{"ed79607feeadcedf5b94f1c43df684af5106e79b0989a008a88f9dc2221cc12a"}},
+                {353000, uint256{"d487896851fed42b07771f950fcc4469fbfa79211cfefed800f6d7806255e23f"}},
+                {367795, uint256{"1209326b73e38e44ec5dc210f51dc5d8c3494e9c698521032dd754747d4c1685"}},
+                {445709, uint256{"814e7d91aac6c577e4589b76918f44cf80020212159d39709fbad3f219725c9f"}},
+                {498000, uint256{"497f28fd4b1dadc9ff6dd2ac771483acfd16e4c4664eb45d0a6008dc33811418"}},
+                {708000, uint256{"23c66194def65cfea20d32a71f23807a93a0b207b3d7251246e2c351204fe9d3"}},
+                {888000, uint256{"02caf7a26b995e5054462715a4d31e1a7ff220c53fead7c06de720ac54510433"}},
+                {1405000, uint256{"8ef924fb7d2a28e0420c8731fb34301c204d15fe8d1e68461e5ebe959df011f2"}},
+                {1883974, uint256{"efe5b66cd0963b19ed64850884f039ff4d98c49cd63b9ec763d5c336619d5a6d"}},
+                {2636000, uint256{"4844cfb8403cdee4994acaab4bf1168339bce5ccd65496d4d9ffc1d262b0d79a"}},
+                {3142000, uint256{"3dc42fcf2e731093ee9b3cbaa2df07d8b8638cdea77758bb28b1130f504a7f43"}},
+                {4300000, uint256{"cd130baf8762afbebc10ceff9fe13ecb09f7e4bb579508a7e5f13a83ffe1e64d"}},
+            }
+        };
+
         m_assumeutxo_data = {
             {}
         };
@@ -324,6 +345,25 @@ public:
         fMineBlocksOnDemand = false;
         m_is_mockable_chain = false;
         fHasHardwareWalletSupport = true;
+
+        checkpointData = {
+            {
+                {0, uint256{"0000e803ee215c0684ca0d2f9220594d3f828617972aad66feb2ba51f5e14222"}},
+                {5000, uint256{"000000302bc22f2f65995506e757fff5c824545db5413e871d57d27a0997e8a0"}}, //last PoW block
+                {77000, uint256{"f41e2e8d09bca38827c23cad46ed6d434902da08415d2314d0c8ce285b1970cb"}},
+                {230000, uint256{"cd17baf80fa817dd543b83897ccb1e07350019e5b812f4956f69efe855d62601"}},
+                {343000, uint256{"ac66f1de1a5fa473b5097b313c203e97d45669485e4c235a32a0f80df64f6948"}},
+                {441632, uint256{"2cb93f74cb3e47ec05b745a445f90a023b7136a68f94e9bff7fb49819155ccd8"}},
+                {491300, uint256{"75a7db2865423d3af5f0dfd70cfef6053b91f3c018c4b28a4e28c09a8c011e78"}},
+                {690000, uint256{"89b010b5333fa9d22c7fcf157c7eeaee1ccfe80c435390243b3d782a1fc1eff7"}},
+                {944000, uint256{"6bb6312088d81ca5484460b3466c66c01ff7d1cd4ef91e1dc9555a15b51d025d"}},
+                {1405000, uint256{"aff1f9c768e83f90d10a55306993e9042b5740251abc1afdde1429d09e95fa66"}},
+                {1930000, uint256{"f4836510a70e25d5c70554abbbcb346abd66af540f616d806fb1c20335c1e874"}},
+                {2686000, uint256{"c12594feff0dfae05f5a056cd9248ff5e6fc42d37c4bedf37b212eb17dccb486"}},
+                {3180000, uint256{"de6afcb300f7036b67b7446933b8aa7986850058d5927e07ce5df1e270069ef2"}},
+                {4330000, uint256{"91750084e54c2a5cf621c0582695e0e51776e5c35068ab23a170a91971edacf2"}},
+            }
+        };
 
         m_assumeutxo_data = {
             {}
@@ -461,6 +501,12 @@ public:
         fMineBlocksOnDemand = false;
         m_is_mockable_chain = false;
         fHasHardwareWalletSupport = true;
+
+        checkpointData = {
+            {
+                {},
+            }
+        };
 
         m_assumeutxo_data = {
             {}
@@ -750,6 +796,12 @@ public:
         fMineBlocksOnDemand = true;
         m_is_mockable_chain = true;
         fHasHardwareWalletSupport = true;
+
+        checkpointData = {
+            {
+                {0, uint256{"665ed5b402ac0b44efc37d8926332994363e8a7278b7ee9a58fb972efadae943"}},
+            }
+        };
 
         m_assumeutxo_data = {
             {

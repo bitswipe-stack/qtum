@@ -24,6 +24,17 @@
 #include <utility>
 #include <vector>
 
+typedef std::map<int, uint256> MapCheckpoints;
+
+struct CCheckpointData {
+    MapCheckpoints mapCheckpoints;
+
+    int GetHeight() const {
+        const auto& final_checkpoint = mapCheckpoints.rbegin();
+        return final_checkpoint->first /* height */;
+    }
+};
+
 struct AssumeutxoHash : public BaseHash<uint256> {
     explicit AssumeutxoHash(const uint256& hash) : BaseHash(hash) {}
 };
@@ -109,6 +120,7 @@ public:
     const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
     const std::string& Bech32HRP() const { return bech32_hrp; }
     const std::vector<uint8_t>& FixedSeeds() const { return vFixedSeeds; }
+    const CCheckpointData& Checkpoints() const { return checkpointData; }
     std::string EVMGenesisInfo() const;
     std::string EVMGenesisInfo(int nHeight) const;
     std::string EVMGenesisInfo(const dev::eth::EVMConsensus& evmConsensus) const;
@@ -195,6 +207,7 @@ protected:
     bool fDefaultConsistencyChecks;
     bool fMineBlocksOnDemand;
     bool m_is_mockable_chain;
+    CCheckpointData checkpointData;
     std::vector<AssumeutxoData> m_assumeutxo_data;
     ChainTxData chainTxData;
     bool fHasHardwareWalletSupport;

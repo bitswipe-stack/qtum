@@ -1045,6 +1045,15 @@ bool BlockManager::CheckBlockDataAvailability(const CBlockIndex& upper_block, co
     return GetFirstBlock(upper_block, BLOCK_HAVE_DATA, &lower_block) == &lower_block;
 }
 
+bool BlockManager::CheckHardened(int nHeight, const uint256& hash, const CCheckpointData& data)
+{
+    const MapCheckpoints& checkpoints = data.mapCheckpoints;
+
+    MapCheckpoints::const_iterator i = checkpoints.find(nHeight);
+    if (i == checkpoints.end()) return true;
+    return hash == i->second;
+}
+
 // Automatically select a suitable sync-checkpoint 
 const CBlockIndex* BlockManager::AutoSelectSyncCheckpoint(const CBlockIndex *pindexBest)
 {

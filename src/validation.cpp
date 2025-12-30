@@ -3460,6 +3460,13 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     CBlock checkBlock(block.GetBlockHeader());
     std::vector<CTxOut> checkVouts;
 
+    /////////////////////////////////////////////////
+    // We recheck the hardened checkpoints here since ContextualCheckBlock(Header) is not called in ConnectBlock.
+    if (m_chainman.m_options.checkpoints_enabled && !m_blockman.CheckHardened(pindex->nHeight, block.GetHash(), params.Checkpoints())) {
+        return state.Invalid(BlockValidationResult::BLOCK_CHECKPOINT, "bad-fork-hardened-checkpoint", strprintf("%s: expected hardened checkpoint at height %d", __func__, pindex->nHeight));
+    }
+
+
     // Move this check from CheckBlock to ConnectBlock as it depends on DGP values
     if (block.vtx.empty() || block.vtx.size() > dgpMaxBlockSize || GetSerializeSize(TX_NO_WITNESS(block)) > dgpMaxBlockSize) // qtum
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-blk-length", "size limits failed");
@@ -5924,6 +5931,11 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, BlockValidatio
     const Consensus::Params& consensusParams = chainman.GetConsensus();
     if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams, block.IsProofOfStake()))
         return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-diffbits", "incorrect difficulty value");
+
+    // Check against the hardened checkpoints
+    if (chainman.m_options.checkpoints_enabled && !blockman.CheckHardened(nHeight, block.GetHash(), chainman.GetParams().Checkpoints())) {
+        return state.Invalid(BlockValidationResult::BLOCK_CHECKPOINT, "bad-fork-hardened-checkpoint", strprintf("%s: expected hardened checkpoint at height %d", __func__, nHeight));
+    }
 
     // Check that the block satisfies synchronized checkpoint
     if (!blockman.CheckSync(nHeight, chainman.ActiveTip()))
