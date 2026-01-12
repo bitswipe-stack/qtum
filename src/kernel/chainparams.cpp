@@ -901,9 +901,9 @@ public:
         m_assumeutxo_data = {
             {
                 .height = 2010,
-                .hash_serialized = AssumeutxoHash{uint256{"62528c92991cbedf47bdf3f0f5a0ad1e07bce4b2a35500beabe3f87fa5cca44f"}},
+                .hash_serialized = AssumeutxoHash{uint256{"4d67bbf7a819e332db3f1b4d733121871c145e58278e84accbeafc8aadc0bbea"}},
                 .m_chain_tx_count = 2011,
-                .blockhash = consteval_ctor(uint256{"292911929ab59409569a86bae416da0ba697fd7086b107ddd0a8eeaddba91b4d"}),
+                .blockhash = consteval_ctor(uint256{"432400d38d5818c38939546cf44f5303044b162e7f250e108a5d616897ec6e20"}),
             }
         };
     }

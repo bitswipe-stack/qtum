@@ -1138,6 +1138,8 @@ bool AppInitParameterInteraction(const ArgsManager& args)
         }
     }
 
+    updateBlockSizeParams(DEFAULT_BLOCK_SIZE_DGP);
+
     {
         const auto max_block_weight = args.GetIntArg("-blockmaxweight", DEFAULT_BLOCK_MAX_WEIGHT);
         if (max_block_weight > dgpMaxBlockWeight) {
