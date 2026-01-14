@@ -362,8 +362,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(bool fProofOfSt
     // Add dummy coinstake tx as second transaction
     if(fProofOfStake)
         pblock->vtx.emplace_back();
-    pblocktemplate->vTxFees.push_back(-1); // updated at end
-    pblocktemplate->vTxSigOpsCost.push_back(-1); // updated at end
 
 #ifdef ENABLE_WALLET
     if(pwallet && pwallet->IsStakeClosing())
@@ -433,7 +431,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(bool fProofOfSt
     ////////////////////////////////////////////////////////
 
     pblocktemplate->vchCoinbaseCommitment = m_chainstate.m_chainman.GenerateCoinbaseCommitment(*pblock, pindexPrev, fProofOfStake);
-    pblocktemplate->vTxFees[0] = -nFees;
 
     // The total fee is the Fees minus the Refund
     if (pTotalFees)
@@ -445,7 +442,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateEmptyBlock(bool fProofOfSt
         UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
     pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus(),fProofOfStake);
     pblock->nNonce         = 0;
-    pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);
 
     if (!fProofOfStake && m_options.test_block_validity) {
         if (BlockValidationState state{TestBlockValidity(m_chainstate, *pblock, /*check_pow=*/false, /*check_merkle_root=*/false)}; !state.IsValid()) {

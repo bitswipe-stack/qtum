@@ -436,7 +436,7 @@ public:
         consensus.nRBTPowTargetTimespan = 1000;
         consensus.nPowTargetSpacing = 2 * 64;
         consensus.nRBTPowTargetSpacing = 32;
-        consensus.fPowAllowMinDifficultyBlocks = false;
+        consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.enforce_BIP94 = true; // Special difficulty rule for Testnet4 in Bitcoin
         consensus.fPowNoRetargeting = true;
         consensus.fPoSNoRetargeting = false;
@@ -503,9 +503,7 @@ public:
         fHasHardwareWalletSupport = true;
 
         checkpointData = {
-            {
-                {},
-            }
+            {}
         };
 
         m_assumeutxo_data = {
