@@ -17,8 +17,8 @@
 #include <cstdint>
 #include <memory>
 
-static constexpr node::TxOrphanage::Usage TINY_TX_WEIGHT{480};
-static constexpr int64_t APPROX_WEIGHT_PER_INPUT{400};
+static constexpr node::TxOrphanage::Usage TINY_TX_WEIGHT{240};
+static constexpr int64_t APPROX_WEIGHT_PER_INPUT{200};
 
 // Creates a transaction with num_inputs inputs and 1 output, padded to target_weight. Use this function to maximize m_outpoint_to_orphan_it operations.
 // If num_inputs is 0, we maximize the number of inputs.
@@ -192,9 +192,8 @@ static void OrphanageEraseAll(benchmark::Bench& bench, bool block_or_disconnect)
     const auto orphanage{node::MakeTxOrphanage(/*max_global_latency_score=*/node::DEFAULT_MAX_ORPHANAGE_LATENCY_SCORE, /*reserved_peer_usage=*/node::DEFAULT_RESERVED_ORPHAN_WEIGHT_PER_PEER)};
     // This is an unrealistically large number of inputs for a block, as there is almost no room given to witness data,
     // outputs, and overhead for individual transactions. The entire block is 1 transaction with 20,000 inputs.
-    const unsigned int maxBlockWeight = 8000000;
-    constexpr unsigned int NUM_BLOCK_INPUTS{maxBlockWeight / APPROX_WEIGHT_PER_INPUT};
-    const auto block_tx{MakeTransactionBulkedTo(NUM_BLOCK_INPUTS, maxBlockWeight - 4000, det_rand)};
+    const unsigned int NUM_BLOCK_INPUTS{dgpMaxBlockWeight / (unsigned int) APPROX_WEIGHT_PER_INPUT};
+    const auto block_tx{MakeTransactionBulkedTo(NUM_BLOCK_INPUTS, dgpMaxBlockWeight - 4000, det_rand)};
     CBlock block;
     block.vtx.push_back(block_tx);
 
@@ -204,11 +203,11 @@ static void OrphanageEraseAll(benchmark::Bench& bench, bool block_or_disconnect)
     constexpr unsigned int NUM_TXNS_PER_PEER = node::DEFAULT_MAX_ORPHANAGE_LATENCY_SCORE / NUM_PEERS;
 
     // Divide the block's inputs evenly among the peers.
-    constexpr unsigned int INPUTS_PER_PEER = NUM_BLOCK_INPUTS / NUM_PEERS;
-    static_assert(INPUTS_PER_PEER > 0);
+    const unsigned int INPUTS_PER_PEER = NUM_BLOCK_INPUTS / NUM_PEERS;
+    assert(INPUTS_PER_PEER > 0);
     // All the block inputs are spent by the orphanage transactions. Each peer is assigned 76 of them.
     // Each peer has 24 transactions spending 9 inputs each, so jumping by 3 ensures we cover all of the inputs.
-    static_assert(7 * NUM_TXNS_PER_PEER + INPUTS_PER_TX - 1 >= INPUTS_PER_PEER);
+    assert(7 * NUM_TXNS_PER_PEER + INPUTS_PER_TX - 1 >= INPUTS_PER_PEER);
 
     for (NodeId peer{0}; peer < NUM_PEERS; ++peer) {
         int64_t weight_left_for_peer{node::DEFAULT_RESERVED_ORPHAN_WEIGHT_PER_PEER};
