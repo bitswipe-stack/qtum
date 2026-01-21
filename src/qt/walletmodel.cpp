@@ -607,3 +607,13 @@ CAmount WalletModel::getAvailableBalance(const CCoinControl* control)
     // Fetch balance from the wallet, taking into account the selected coins
     return wallet().getAvailableBalance(*control);
 }
+
+bool WalletModel::getSignPsbtWithHwiTool()
+{
+    return {};
+}
+
+bool WalletModel::createUnsigned()
+{
+    return false;
+}

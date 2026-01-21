@@ -77,6 +77,10 @@ add_library(bitcoinqt STATIC EXCLUDE_FROM_ALL
   csvmodelwriter.h
   freespacechecker.cpp
   freespacechecker.h
+  delegationitemmodel.cpp
+  delegationitemmodel.h
+  delegationstakeritemmodel.cpp
+  delegationstakeritemmodel.h
   guiutil.cpp
   guiutil.h
   initexecutor.cpp
@@ -91,6 +95,8 @@ add_library(bitcoinqt STATIC EXCLUDE_FROM_ALL
   $<$<PLATFORM_ID:Darwin>:macos_appnap.mm>
   modaloverlay.cpp
   modaloverlay.h
+  navigationbar.cpp
+  navigationbar.h
   networkstyle.cpp
   networkstyle.h
   notificator.cpp
@@ -105,16 +111,36 @@ add_library(bitcoinqt STATIC EXCLUDE_FROM_ALL
   peertablesortproxy.h
   platformstyle.cpp
   platformstyle.h
+  qswitchcontrol.cpp
+  qswitchcontrol.h
   qvalidatedlineedit.cpp
   qvalidatedlineedit.h
+  qvalidatedtextedit.cpp
+  qvalidatedtextedit.h
   qvaluecombobox.cpp
   qvaluecombobox.h
   rpcconsole.cpp
   rpcconsole.h
   splashscreen.cpp
   splashscreen.h
+  styleSheet.cpp
+  styleSheet.h
+  tabbarinfo.cpp
+  tabbarinfo.h
+  titlebar.cpp
+  titlebar.h
+  tokenamountfield.cpp
+  tokenamountfield.h
+  tokenitemmodel.cpp
+  tokenitemmodel.h
+  superstakeritemmodel.cpp
+  superstakeritemmodel.h
   trafficgraphwidget.cpp
   trafficgraphwidget.h
+  qtumversionchecker.cpp
+  qtumversionchecker.h
+  qtumpushbutton.cpp
+  qtumpushbutton.h
   utilitydialog.cpp
   utilitydialog.h
   $<$<PLATFORM_ID:Windows>:winshutdownmonitor.cpp>
@@ -154,8 +180,20 @@ target_link_libraries(bitcoinqt
 if(ENABLE_WALLET)
   target_sources(bitcoinqt
     PRIVATE
+      abifunctionfield.cpp
+      abifunctionfield.h
+      abiparam.cpp
+      abiparam.h
+      abiparamitem.cpp
+      abiparamitem.h
+      abiparamsfield.cpp
+      abiparamsfield.h
+      adddelegationpage.cpp
+      adddelegationpage.h
       addressbookpage.cpp
       addressbookpage.h
+      addressfield.cpp
+      addressfield.h
       addresstablemodel.cpp
       addresstablemodel.h
       askpassphrasedialog.cpp
@@ -164,6 +202,8 @@ if(ENABLE_WALLET)
       coincontroldialog.h
       coincontroltreewidget.cpp
       coincontroltreewidget.h
+      contracttablemodel.cpp
+      contracttablemodel.h
       createwalletdialog.cpp
       createwalletdialog.h
       editaddressdialog.cpp
@@ -190,6 +230,8 @@ if(ENABLE_WALLET)
       sendcoinsentry.h
       signverifymessagedialog.cpp
       signverifymessagedialog.h
+      tokentransactiontablemodel.cpp
+      tokentransactiontablemodel.h
       transactiondesc.cpp
       transactiondesc.h
       transactiondescdialog.cpp
@@ -206,6 +248,8 @@ if(ENABLE_WALLET)
       transactionview.h
       walletcontroller.cpp
       walletcontroller.h
+      waitmessagebox.cpp
+      waitmessagebox.h
       walletframe.cpp
       walletframe.h
       walletmodel.cpp

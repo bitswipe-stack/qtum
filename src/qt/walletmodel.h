@@ -156,6 +156,9 @@ public:
     // Otherwise, uses the wallet's cached available balance.
     CAmount getAvailableBalance(const wallet::CCoinControl* control);
 
+    bool getSignPsbtWithHwiTool();
+    bool createUnsigned();
+
 private:
     std::unique_ptr<interfaces::Wallet> m_wallet;
     std::unique_ptr<interfaces::Handler> m_handler_unload;
@@ -215,6 +218,9 @@ Q_SIGNALS:
 
     // Notify that there are now keys in the keypool
     void canGetAddressesChanged();
+
+    // Signal that available coin addresses are changed
+    void availableAddressesChanged(QStringList spendableAddresses, QStringList allAddresses, bool includeZeroValue);
 
     void timerTimeout();
 
