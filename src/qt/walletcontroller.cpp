@@ -392,6 +392,10 @@ void LoadWalletsActivity::load(bool show_loading_minimized)
     });
 }
 
+void WalletController::getRestoreData(QString &restorePath, QString &restoreParam, QString &restoreName) const
+{
+}
+
 RestoreWalletActivity::RestoreWalletActivity(WalletController* wallet_controller, QWidget* parent_widget)
     : WalletControllerActivity(wallet_controller, parent_widget)
 {

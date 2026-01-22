@@ -120,6 +120,7 @@ public:
 
     interfaces::Node& node() const { return m_node; }
 
+    bool getRestartApp() const;
 private:
     interfaces::Node& m_node;
     /* Qt-only settings */
@@ -137,6 +138,11 @@ private:
 
     /* settings that were overridden by command-line */
     QString strOverriddenByCommandLine;
+
+    bool fCheckForUpdates;
+    bool bZeroBalanceAddressToken;
+    QString theme;
+    bool restartApp;
 
     static QString FontChoiceToString(const OptionsModel::FontChoice&);
     static FontChoice FontChoiceFromString(const QString&);

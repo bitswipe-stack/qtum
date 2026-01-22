@@ -793,3 +793,8 @@ void OptionsModel::checkAndMigrate()
     // (https://github.com/bitcoin-core/gui/issues/567).
     node().initParameterInteraction();
 }
+
+bool OptionsModel::getRestartApp() const
+{
+    return restartApp;
+}

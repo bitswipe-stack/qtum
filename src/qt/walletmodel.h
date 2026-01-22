@@ -106,6 +106,8 @@ public:
     // Passphrase only needed when unlocking
     bool setWalletLocked(bool locked, const SecureString &passPhrase=SecureString());
     bool changePassphrase(const SecureString &oldPass, const SecureString &newPass);
+    bool getWalletUnlockStakingOnly();
+    void setWalletUnlockStakingOnly(bool unlock);
 
     // RAII object for unlocking wallet, returned by requestUnlock()
     class UnlockContext
@@ -157,6 +159,7 @@ public:
     CAmount getAvailableBalance(const wallet::CCoinControl* control);
 
     bool getSignPsbtWithHwiTool();
+    bool getSignMessageWithHwiTool();
     bool createUnsigned();
 
 private:
