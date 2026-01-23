@@ -141,6 +141,10 @@ add_library(bitcoinqt STATIC EXCLUDE_FROM_ALL
   qtumversionchecker.h
   qtumpushbutton.cpp
   qtumpushbutton.h
+  qtumhwitool.cpp
+  qtumhwitool.h
+  hardwaresigntx.cpp
+  hardwaresigntx.h
   utilitydialog.cpp
   utilitydialog.h
   $<$<PLATFORM_ID:Windows>:winshutdownmonitor.cpp>
@@ -204,10 +208,20 @@ if(ENABLE_WALLET)
       coincontroltreewidget.h
       contracttablemodel.cpp
       contracttablemodel.h
+      derivationpathdialog.cpp
+      derivationpathdialog.h
+      execrpccommand.cpp
+      execrpccommand.h
       createwalletdialog.cpp
       createwalletdialog.h
       editaddressdialog.cpp
       editaddressdialog.h
+      hardwaredevicedialog.cpp
+      hardwaredevicedialog.h
+      hardwarekeystoredialog.cpp
+      hardwarekeystoredialog.h
+      hardwaresigntxdialog.cpp
+      hardwaresigntxdialog.h
       openuridialog.cpp
       openuridialog.h
       overviewpage.cpp

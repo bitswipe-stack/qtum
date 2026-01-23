@@ -8,14 +8,18 @@
 #include <key.h>
 
 #include <qt/walletmodeltransaction.h>
+#include <qt/qtumhwitool.h> 
 
 #include <interfaces/wallet.h>
 #include <primitives/transaction_identifier.h>
 #include <support/allocators/secure.h>
 
 #include <vector>
+#include <atomic> 
 
 #include <QObject>
+#include <QStringList>
+#include <QThread>
 
 enum class OutputType;
 
@@ -158,9 +162,17 @@ public:
     // Otherwise, uses the wallet's cached available balance.
     CAmount getAvailableBalance(const wallet::CCoinControl* control);
 
+    // Get or set selected hardware device fingerprint (only for hardware wallet applicable)
+    QString getFingerprint(bool stake = false) const;
+    void setFingerprint(const QString &value, bool stake = false);
+    QList<HWDevice> getDevices();
+
+    // Get or set hardware wallet init required (only for hardware wallet applicable)
+    void importAddressesData(bool rescan = true, bool importPKH = true, bool importP2SH = true, bool importBech32 = true, QString pathPKH = QString(), QString pathP2SH = QString(), QString pathBech32 = QString());
     bool getSignPsbtWithHwiTool();
     bool getSignMessageWithHwiTool();
     bool createUnsigned();
+    bool hasLedgerProblem();
 
 private:
     std::unique_ptr<interfaces::Wallet> m_wallet;
@@ -190,7 +202,28 @@ private:
 
     // Block hash denoting when the last balance update was done.
     uint256 m_cached_last_update_tip{};
+    int pollNum = 0;
 
+    QString restorePath;
+    QString restoreParam;
+
+    uint64_t nWeight{0};
+    std::atomic<bool> updateStakeWeight{true};
+    std::atomic<bool> updateCoinAddresses{true};
+
+    QString fingerprint;
+    std::atomic<bool> hardwareWalletInitRequired{false};
+    bool rescan{true};
+    bool importPKH{true};
+    bool importP2SH{true};
+    bool importBech32{true};
+    QString pathPKH;
+    QString pathP2SH;
+    QString pathBech32;
+    QList<HWDevice> devices;
+    SteadyMilliseconds deviceTime{0ms};
+
+    QThread t;
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
     void checkBalanceChanged(const interfaces::WalletBalances& new_balances);

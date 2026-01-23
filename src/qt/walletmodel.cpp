@@ -619,6 +619,41 @@ void WalletModel::setWalletUnlockStakingOnly(bool unlock)
     m_wallet->setWalletUnlockStakingOnly(unlock);
 }
 
+QString WalletModel::getFingerprint(bool stake) const
+{
+    if(stake)
+    {
+        std::string ledgerId = wallet().getStakerLedgerId();
+        return QString::fromStdString(ledgerId);
+    }
+
+    return fingerprint;
+}
+
+void WalletModel::setFingerprint(const QString &value, bool stake)
+{
+    if(stake)
+    {
+        wallet().setStakerLedgerId(value.toStdString());
+    }
+    else
+    {
+        fingerprint = value;
+    }
+}
+
+void WalletModel::importAddressesData(bool _rescan, bool _importPKH, bool _importP2SH, bool _importBech32, QString _pathPKH, QString _pathP2SH, QString _pathBech32)
+{
+    rescan = _rescan;
+    importPKH = _importPKH;
+    importP2SH = _importP2SH;
+    importBech32 = _importBech32;
+    pathPKH = _pathPKH;
+    pathP2SH = _pathP2SH;
+    pathBech32 = _pathBech32;
+    hardwareWalletInitRequired = true;
+}
+
 bool WalletModel::getSignPsbtWithHwiTool()
 {
     if(!::Params().HasHardwareWalletSupport())
@@ -655,3 +690,16 @@ bool WalletModel::createUnsigned()
 
     return false;
 }
+
+bool WalletModel::hasLedgerProblem()
+{
+    return wallet().privateKeysDisabled() &&
+            wallet().getEnabledStaking() &&
+            !getFingerprint(true).isEmpty();
+}
+
+QList<HWDevice> WalletModel::getDevices()
+{
+    return devices;
+}
+
