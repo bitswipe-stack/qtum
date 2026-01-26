@@ -129,6 +129,8 @@ add_library(bitcoinqt STATIC EXCLUDE_FROM_ALL
   tabbarinfo.h
   titlebar.cpp
   titlebar.h
+  token.cpp
+  token.h
   tokenamountfield.cpp
   tokenamountfield.h
   tokenitemmodel.cpp
@@ -206,10 +208,14 @@ if(ENABLE_WALLET)
       coincontroldialog.h
       coincontroltreewidget.cpp
       coincontroltreewidget.h
+      contractutil.cpp
+      contractutil.h
       contracttablemodel.cpp
       contracttablemodel.h
       derivationpathdialog.cpp
       derivationpathdialog.h
+      eventlog.cpp
+      eventlog.h
       execrpccommand.cpp
       execrpccommand.h
       createwalletdialog.cpp
@@ -230,6 +236,8 @@ if(ENABLE_WALLET)
       paymentserver.h
       psbtoperationsdialog.cpp
       psbtoperationsdialog.h
+      qrctoken.cpp
+      qrctoken.h
       qrimagewidget.cpp
       qrimagewidget.h
       receivecoinsdialog.cpp
@@ -244,8 +252,14 @@ if(ENABLE_WALLET)
       sendcoinsentry.h
       signverifymessagedialog.cpp
       signverifymessagedialog.h
+      tokenfilterproxy.cpp
+      tokenfilterproxy.h
+      tokentransactionrecord.cpp
+      tokentransactionrecord.h
       tokentransactiontablemodel.cpp
       tokentransactiontablemodel.h
+      tokentransactiondesc.cpp
+      tokentransactiondesc.h
       transactiondesc.cpp
       transactiondesc.h
       transactiondescdialog.cpp

@@ -31,7 +31,13 @@ class RecentRequestsTableModel;
 class SendCoinsRecipient;
 class TransactionTableModel;
 class WalletModelTransaction;
-
+class DelegationItemModel;
+class TokenTransactionTableModel;
+class ContractTableModel;
+class WalletWorker;
+class TokenItemModel;
+class SuperStakerItemModel;
+class DelegationStakerItemModel;
 class CKeyID;
 class COutPoint;
 class CPubKey;
@@ -79,8 +85,14 @@ public:
 
     OptionsModel* getOptionsModel() const;
     AddressTableModel* getAddressTableModel() const;
+    ContractTableModel *getContractTableModel() const;
     TransactionTableModel* getTransactionTableModel() const;
     RecentRequestsTableModel* getRecentRequestsTableModel() const;
+    TokenItemModel *getTokenItemModel() const;
+    TokenTransactionTableModel *getTokenTransactionTableModel() const;
+    DelegationItemModel *getDelegationItemModel() const;
+    SuperStakerItemModel *getSuperStakerItemModel() const;
+    DelegationStakerItemModel *getDelegationStakerItemModel() const;
 
     EncryptionStatus getEncryptionStatus() const;
 
@@ -110,6 +122,7 @@ public:
     // Passphrase only needed when unlocking
     bool setWalletLocked(bool locked, const SecureString &passPhrase=SecureString());
     bool changePassphrase(const SecureString &oldPass, const SecureString &newPass);
+    bool restoreWallet(const QString &filename, const QString &param);
     bool getWalletUnlockStakingOnly();
     void setWalletUnlockStakingOnly(bool unlock);
 
@@ -132,6 +145,7 @@ public:
         WalletModel *wallet;
         const bool valid;
         const bool relock;
+        bool stakingOnly;
     };
 
     UnlockContext requestUnlock();
@@ -150,6 +164,11 @@ public:
     QString getDisplayName() const;
 
     bool isMultiwallet() const;
+    QString getRestorePath();
+    QString getRestoreParam();
+    bool restore();
+
+    uint64_t getStakeWeight();
 
     void refresh(bool pk_hash_only = false);
 
@@ -174,14 +193,18 @@ public:
     bool createUnsigned();
     bool hasLedgerProblem();
 
+    void join();
+
 private:
     std::unique_ptr<interfaces::Wallet> m_wallet;
     std::unique_ptr<interfaces::Handler> m_handler_unload;
     std::unique_ptr<interfaces::Handler> m_handler_status_changed;
     std::unique_ptr<interfaces::Handler> m_handler_address_book_changed;
     std::unique_ptr<interfaces::Handler> m_handler_transaction_changed;
+    std::unique_ptr<interfaces::Handler> m_handler_token_changed;
     std::unique_ptr<interfaces::Handler> m_handler_show_progress;
     std::unique_ptr<interfaces::Handler> m_handler_can_get_addrs_changed;
+    std::unique_ptr<interfaces::Handler> m_handler_contract_book_changed;
     ClientModel* m_client_model;
     interfaces::Node& m_node;
 
@@ -192,8 +215,14 @@ private:
     OptionsModel *optionsModel;
 
     AddressTableModel* addressTableModel{nullptr};
+    ContractTableModel* contractTableModel{nullptr};
     TransactionTableModel* transactionTableModel{nullptr};
     RecentRequestsTableModel* recentRequestsTableModel{nullptr};
+    TokenItemModel* tokenItemModel{nullptr};
+    TokenTransactionTableModel* tokenTransactionTableModel{nullptr};
+    DelegationItemModel* delegationItemModel{nullptr};
+    SuperStakerItemModel* superStakerItemModel{nullptr};
+    DelegationStakerItemModel* delegationStakerItemModel{nullptr};
 
     // Cache some values to be able to detect changes
     interfaces::WalletBalances m_cached_balances;
@@ -224,9 +253,13 @@ private:
     SteadyMilliseconds deviceTime{0ms};
 
     QThread t;
+    WalletWorker *worker{nullptr};
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
-    void checkBalanceChanged(const interfaces::WalletBalances& new_balances);
+    bool checkBalanceChanged(const interfaces::WalletBalances& new_balances);
+    void checkTokenBalanceChanged();
+    void checkDelegationChanged();
+    void checkSuperStakerChanged();
 
 Q_SIGNALS:
     // Signal that balance in wallet changed
@@ -272,6 +305,18 @@ public Q_SLOTS:
     void updateAddressBook(const QString &address, const QString &label, bool isMine, wallet::AddressPurpose purpose, int status);
     /* Current, immature or unconfirmed balance might have changed - emit 'balanceChanged' if so */
     void pollBalanceChanged();
+    /* New, updated or removed contract book entry */
+    void updateContractBook(const QString &address, const QString &label, const QString &abi, int status);
+    /* Set that update for coin address is needed */
+    void checkCoinAddresses();
+    /* Update coin addresses when changed*/
+    void checkCoinAddressesChanged();
+    /* Update stake weight when changed*/
+    void checkStakeWeightChanged();
+    /* Check for hardware wallet params changes*/
+    void checkHardwareWallet();
+    /* Check for hardware device params changes*/
+    void checkHardwareDevice();
 };
 
 #endif // BITCOIN_QT_WALLETMODEL_H
