@@ -123,6 +123,8 @@ add_library(bitcoinqt STATIC EXCLUDE_FROM_ALL
   rpcconsole.h
   splashscreen.cpp
   splashscreen.h
+  splitutxopage.cpp
+  splitutxopage.h
   styleSheet.cpp
   styleSheet.h
   tabbarinfo.cpp
@@ -202,16 +204,38 @@ if(ENABLE_WALLET)
       addressfield.h
       addresstablemodel.cpp
       addresstablemodel.h
+      addsuperstakerpage.cpp
+      addsuperstakerpage.h
+      addtokenpage.cpp
+      addtokenpage.h
       askpassphrasedialog.cpp
       askpassphrasedialog.h
+      callcontract.cpp
+      callcontract.h
       coincontroldialog.cpp
       coincontroldialog.h
       coincontroltreewidget.cpp
       coincontroltreewidget.h
       contractutil.cpp
       contractutil.h
+      contractbookpage.cpp
+      contractbookpage.h
+      contractresult.cpp
+      contractresult.h
       contracttablemodel.cpp
       contracttablemodel.h
+      createcontract.cpp
+      createcontract.h
+      delegationfilterproxy.cpp
+      delegationfilterproxy.h
+      delegationitemwidget.cpp
+      delegationitemwidget.h
+      delegationlistwidget.cpp
+      delegationlistwidget.h
+      delegationpage.cpp
+      delegationpage.h
+      delegationsstakerdialog.cpp
+      delegationsstakerdialog.h
       derivationpathdialog.cpp
       derivationpathdialog.h
       eventlog.cpp
@@ -222,6 +246,10 @@ if(ENABLE_WALLET)
       createwalletdialog.h
       editaddressdialog.cpp
       editaddressdialog.h
+      editcontractinfodialog.cpp
+      editcontractinfodialog.h
+      editsuperstakerdialog.cpp
+      editsuperstakerdialog.h
       hardwaredevicedialog.cpp
       hardwaredevicedialog.h
       hardwarekeystoredialog.cpp
@@ -244,16 +272,42 @@ if(ENABLE_WALLET)
       receivecoinsdialog.h
       receiverequestdialog.cpp
       receiverequestdialog.h
+      receivetokenpage.cpp
+      receivetokenpage.h
       recentrequeststablemodel.cpp
       recentrequeststablemodel.h
+      removedelegationpage.cpp
+      removedelegationpage.h
+      restoredialog.cpp
+      restoredialog.h
+      stakepage.cpp
+      stakepage.h
+      stakerdelegationview.cpp
+      stakerdelegationview.h
       sendcoinsdialog.cpp
       sendcoinsdialog.h
       sendcoinsentry.cpp
       sendcoinsentry.h
+      sendtocontract.cpp
+      sendtocontract.h
+      sendtokenpage.cpp
+      sendtokenpage.h
       signverifymessagedialog.cpp
       signverifymessagedialog.h
+      superstakeritemwidget.cpp
+      superstakeritemwidget.h
+      superstakerlistwidget.cpp
+      superstakerlistwidget.h
+      superstakerconfigdialog.cpp
+      superstakerconfigdialog.h
+      superstakerpage.cpp
+      superstakerpage.h
+      tokendescdialog.cpp
+      tokendescdialog.h
       tokenfilterproxy.cpp
       tokenfilterproxy.h
+      tokentransactionview.cpp
+      tokentransactionview.h
       tokentransactionrecord.cpp
       tokentransactionrecord.h
       tokentransactiontablemodel.cpp
@@ -274,6 +328,10 @@ if(ENABLE_WALLET)
       transactiontablemodel.h
       transactionview.cpp
       transactionview.h
+      tokenitemwidget.cpp
+      tokenitemwidget.h
+      tokenlistwidget.cpp
+      tokenlistwidget.h
       walletcontroller.cpp
       walletcontroller.h
       waitmessagebox.cpp

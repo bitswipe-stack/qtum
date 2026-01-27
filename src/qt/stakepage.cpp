@@ -95,11 +95,6 @@ void StakePage::setBalance(const interfaces::WalletBalances& balances)
     m_balances = balances;
     CAmount balance = balances.balance;
     CAmount stake = balances.stake;
-    if(walletModel->wallet().privateKeysDisabled())
-    {
-        balance += balances.watch_only_balance;
-        stake += balances.watch_only_stake;
-    }
     ui->labelAssets->setText(BitcoinUnits::formatWithUnit(unit, balance, false, BitcoinUnits::SeparatorStyle::ALWAYS));
     ui->labelStake->setText(BitcoinUnits::formatWithUnit(unit, stake, false, BitcoinUnits::SeparatorStyle::ALWAYS));
 }
