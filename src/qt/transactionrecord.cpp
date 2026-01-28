@@ -46,7 +46,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const interface
 
     bool all_from_me = true;
     bool any_from_me = false;
-    if (wtx.is_coinbase) {
+    if (wtx.is_coinbase || wtx.is_coinstake) {
         all_from_me = false;
     } else {
         for (const bool mine : wtx.txin_is_mine)

@@ -344,12 +344,10 @@ QString TransactionDesc::toHTML(interfaces::Node& node, interfaces::Wallet& wall
     if (wtx.value_map.count("comment") && !wtx.value_map["comment"].empty())
         strHTML += "<br>" + TransactionFormater::ItemNameColor(tr("Comment"), false) + "<br>" + GUIUtil::HtmlEscape(wtx.value_map["comment"], true) + "<br>";
 
-
     strHTML += TransactionFormater::ItemNameColor(tr("Transaction ID")) + TransactionFormater::TxIdLink(rec->getTxHash()) + "<br>";
     strHTML += TransactionFormater::ItemNameColor(tr("Transaction total size")) + QString::number(wtx.tx->GetTotalSize()) + " bytes<br>";
     strHTML += TransactionFormater::ItemNameColor(tr("Transaction virtual size")) + QString::number(GetVirtualTransactionSize(*wtx.tx)) + " bytes<br>";
     strHTML += TransactionFormater::ItemNameColor(tr("Output index")) + QString::number(rec->getOutputIndex()) + "<br>";
-
 
     // Message from normal bitcoin:URI (bitcoin:123...?message=example)
     for (const std::pair<std::string, std::string>& r : orderForm) {

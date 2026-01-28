@@ -370,8 +370,8 @@ void CreateWalletActivity::finish()
     }
     else
     {
-    if (m_wallet_model) Q_EMIT created(m_wallet_model);
-        Q_EMIT finished();
+        if (m_wallet_model) Q_EMIT created(m_wallet_model);
+            Q_EMIT finished();
     }
 }
 

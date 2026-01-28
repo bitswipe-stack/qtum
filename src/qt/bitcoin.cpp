@@ -448,7 +448,6 @@ void BitcoinApplication::initializeResult(bool success, interfaces::BlockAndHead
             window->showMinimized();
         }
 
-
 #ifdef ENABLE_WALLET
         // Now that initialization/startup is done, process any command-line
         // bitcoin: URIs or payment requests:
@@ -468,7 +467,6 @@ void BitcoinApplication::initializeResult(bool success, interfaces::BlockAndHead
 
     if(success) {
         Q_EMIT windowShown(window);
-
     } else {
         requestShutdown();
     }
@@ -585,7 +583,6 @@ void BitcoinApplication::restartWallet()
     }
 }
 
-
 static void SetupUIArgs(ArgsManager& argsman)
 {
     argsman.AddArg("-choosedatadir", strprintf("Choose data directory on startup (default: %u)", DEFAULT_CHOOSE_DATADIR), ArgsManager::ALLOW_ANY, OptionsCategory::GUI);
@@ -670,8 +667,6 @@ int GuiMain(int argc, char* argv[])
             return EXIT_FAILURE;
         }
     }
-
- 
 
     /// 3. Application identification
     // must be set before OptionsModel is initialized or translations are loaded,

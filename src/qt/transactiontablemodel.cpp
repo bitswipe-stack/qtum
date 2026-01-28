@@ -134,7 +134,7 @@ public:
      */
     void updateWallet(interfaces::Wallet& wallet, const Txid& hash, int status, bool showTransaction)
     {
-  // Find transaction in wallet
+        // Find transaction in wallet
         interfaces::WalletTx wtx = wallet.getWalletTx(hash);
         // Determine whether to show transaction or not (determine this here so that no relocking is needed in GUI thread)
         showTransaction &= TransactionRecord::showTransaction(wtx);
@@ -224,15 +224,15 @@ public:
         if (idx >= 0 && idx < cachedWallet.size()) {
             TransactionRecord *rec = &cachedWallet[idx];
             if(!isDataLoading) {
-            // If a status update is needed (blocks came in since last check),
-            // try to update the status of this transaction from the wallet.
-            // Otherwise, simply reuse the cached status.
-            interfaces::WalletTxStatus wtx;
-            int numBlocks;
-            int64_t block_time;
-            if (!cur_block_hash.IsNull() && rec->statusUpdateNeeded(cur_block_hash) && wallet.tryGetTxStatus(rec->hash, wtx, numBlocks, block_time)) {
-                rec->updateStatus(wtx, cur_block_hash, numBlocks, block_time);
-            }
+                // If a status update is needed (blocks came in since last check),
+                // try to update the status of this transaction from the wallet.
+                // Otherwise, simply reuse the cached status.
+                interfaces::WalletTxStatus wtx;
+                int numBlocks;
+                int64_t block_time;
+                if (!cur_block_hash.IsNull() && rec->statusUpdateNeeded(cur_block_hash) && wallet.tryGetTxStatus(rec->hash, wtx, numBlocks, block_time)) {
+                    rec->updateStatus(wtx, cur_block_hash, numBlocks, block_time);
+                }
             }
             return rec;
         }
@@ -458,7 +458,7 @@ QVariant TransactionTableModel::addressColor(const TransactionRecord *wtx) const
         {
         QString label = walletModel->getAddressTableModel()->labelForAddress(QString::fromStdString(wtx->address));
         if(label.isEmpty())
-            return COLOR_BAREADDRESS;
+            return color_bareaddress;
         } break;
     default:
         break;
@@ -578,16 +578,16 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
         // Use the "danger" color for abandoned transactions
         if(rec->status.status == TransactionStatus::Abandoned)
         {
-            return COLOR_TX_STATUS_DANGER;
+            return color_tx_status_danger;
         }
         // Non-confirmed (but not immature) as transactions are grey
         if(!rec->status.countsForBalance && rec->status.status != TransactionStatus::Immature)
         {
-            return COLOR_UNCONFIRMED;
+            return color_unconfirmed;
         }
         if(index.column() == Amount && (rec->credit+rec->debit) < 0)
         {
-            return COLOR_NEGATIVE;
+            return color_negative;
         }
         if(index.column() == ToAddress)
         {
@@ -700,7 +700,7 @@ void TransactionTableModel::updateDisplayUnit()
 
 void TransactionTablePriv::NotifyTransactionChanged(const Txid& hash, ChangeType status)
 {
-   TransactionNotification notification(hash, status, true);
+    TransactionNotification notification(hash, status, true);
 
     if (!m_loaded || m_loading)
     {
@@ -761,4 +761,3 @@ void TransactionTableModel::modelDataChanged(const TransactionTableModel::Column
         if(qApp) qApp->processEvents();
     }
 }
-

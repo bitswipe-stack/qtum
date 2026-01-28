@@ -48,7 +48,6 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
     setContentsMargins(0,0,0,0);
 
     QHBoxLayout *hlayout = new QHBoxLayout();
-
     hlayout->setContentsMargins(0,6,0,6);
     hlayout->setSpacing(10);
     hSpacer = new QSpacerItem(0, 20, QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -206,7 +205,7 @@ void TransactionView::setModel(WalletModel *_model)
         transactionView->setModel(transactionProxyModel);
         transactionView->sortByColumn(TransactionTableModel::Date, Qt::DescendingOrder);
 
- QSettings settings;
+        QSettings settings;
         if (!transactionView->horizontalHeader()->restoreState(settings.value("TransactionViewHeaderState-2025").toByteArray())) {
             transactionView->setColumnWidth(TransactionTableModel::Status, STATUS_COLUMN_WIDTH);
             transactionView->setColumnWidth(TransactionTableModel::Date, DATE_COLUMN_WIDTH);
@@ -611,6 +610,7 @@ void TransactionView::resizeEvent(QResizeEvent* event)
     QWidget::resizeEvent(event);
     columnResizingFixer->stretchColumnWidth(TransactionTableModel::ToAddress);
 }
+
 // Need to override default Ctrl+C action for amount as default behaviour is just to copy DisplayRole text
 bool TransactionView::eventFilter(QObject *obj, QEvent *event)
 {

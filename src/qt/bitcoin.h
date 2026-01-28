@@ -72,7 +72,6 @@ public:
     /// Parse parameters
     void parseParameters(int argc, const char* const argv[]);
 
-
     interfaces::Node& node() const { assert(m_node); return *m_node; }
 
 public Q_SLOTS:
@@ -120,7 +119,6 @@ private:
     QString restoreName;
     bool restartApp{false};
     QStringList parameters;
-
 };
 
 int GuiMain(int argc, char* argv[]);

@@ -138,11 +138,11 @@ public:
 
         if(amount < 0)
         {
-            foreground = COLOR_NEGATIVE;
+            foreground = color_negative;
         }
         else if(!confirmed)
         {
-            foreground = COLOR_UNCONFIRMED;
+            foreground = color_unconfirmed;
         }
         else
         {
