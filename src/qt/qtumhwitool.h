@@ -186,7 +186,7 @@ public:
 
     /**
      * @brief importMulti Import list of address descriptions
-     * @param desc Address descriptions
+     * @param descs Address descriptions
      * @return success of the operation
      */
     bool importMulti(const QStringList& descs);

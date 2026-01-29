@@ -145,7 +145,7 @@ public:
 
     /**
      * @brief instance Get the ledger instance
-     * @return
+     * @return Ledger instance
      */
     static QtumLedger &instance();
 

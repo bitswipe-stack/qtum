@@ -439,6 +439,7 @@ private:
             return " testnet";
         case ChainType::SIGNET:
             return " signet";
+        case ChainType::UNITTEST:
         case ChainType::REGTEST:
             return " regtest";
         case ChainType::MAIN:

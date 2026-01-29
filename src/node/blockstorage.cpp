@@ -215,7 +215,7 @@ int BlockTreeDB::ReadHeightIndex(int low, int high, int minconf,
 
     int curheight = 0;
 
-    for (size_t count = 0; pcursor->Valid(); pcursor->Next()) {
+    for (; pcursor->Valid(); pcursor->Next()) {
 
         std::pair<uint8_t, CHeightTxIndexKey> key;
         if (!pcursor->GetKey(key) || key.first != DB_HEIGHTINDEX) {
@@ -247,8 +247,6 @@ int BlockTreeDB::ReadHeightIndex(int low, int high, int minconf,
         if (!pcursor->GetValue(hashesTx)) {
             break;
         }
-
-        count += hashesTx.size();
 
         blocksOfHashes.push_back(hashesTx);
     }

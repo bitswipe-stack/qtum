@@ -320,7 +320,6 @@ void CheckSenderSignatures(CMutableTransaction& mtx)
     // Check the sender signatures are inside the outputs, before signing the inputs
     if(mtx.HasOpSender())
     {
-        int nOut = 0;
         for (const auto& output : mtx.vout)
         {
             if(output.scriptPubKey.HasOpSender())
@@ -330,7 +329,6 @@ void CheckSenderSignatures(CMutableTransaction& mtx)
                     throw JSONRPCError(RPC_INVALID_PARAMETER, "Missing contract sender signature,"
                                                               "use signrawsendertransactionwithwallet or signrawsendertransactionwithkey to sign the outputs");
             }
-            nOut++;
         }
     }
 }

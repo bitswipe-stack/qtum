@@ -54,8 +54,8 @@ class TxViewDelegate : public QAbstractItemDelegate
 {
     Q_OBJECT
 public:
-    explicit TxViewDelegate(const PlatformStyle* _platformStyle, QObject* parent = nullptr)
-        : QAbstractItemDelegate(parent), platformStyle(_platformStyle)
+    explicit TxViewDelegate(QObject* parent = nullptr)
+        : QAbstractItemDelegate(parent)
     {
         connect(this, &TxViewDelegate::width_changed, this, &TxViewDelegate::sizeHintChanged);
 
@@ -187,7 +187,6 @@ Q_SIGNALS:
     void width_changed(const QModelIndex& index) const;
 
 private:
-    const PlatformStyle* platformStyle;
     mutable std::map<int, int> m_minimum_width;
     QColor background_color_selected;
     QColor background_color;
@@ -205,7 +204,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     QWidget(parent),
     ui(new Ui::OverviewPage),
     m_platform_style{platformStyle},
-    txdelegate(new TxViewDelegate(platformStyle, this))
+    txdelegate(new TxViewDelegate(this))
 {
     ui->setupUi(this);
 
