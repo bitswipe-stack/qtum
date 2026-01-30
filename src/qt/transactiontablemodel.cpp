@@ -269,7 +269,7 @@ TransactionTableModel::TransactionTableModel(const PlatformStyle *_platformStyle
     color_tx_status_openuntildate = GetColorStyleValue("guiconstants/color-tx-status-openuntildate", COLOR_TX_STATUS_OPENUNTILDATE);
     color_tx_status_danger = GetColorStyleValue("guiconstants/color-tx-status-danger", COLOR_TX_STATUS_DANGER);
     color_black = GetColorStyleValue("guiconstants/color-black", COLOR_BLACK);
-    columns << QString() << QString() << tr("Date") << tr("Type") << tr("Label") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
+    columns << QString() << tr("Date") << tr("Type") << tr("Label") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
     priv->refreshWallet(walletModel->wallet());
 
     connect(walletModel->getOptionsModel(), &OptionsModel::displayUnitChanged, this, &TransactionTableModel::updateDisplayUnit);
