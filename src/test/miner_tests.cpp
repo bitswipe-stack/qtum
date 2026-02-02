@@ -233,6 +233,22 @@ void MinerTestingSetup::TestPackageSelection(const CScript& scriptPubKey, const 
     options.coinbase_output_script = scriptPubKey;
 
     LOCK(tx_mempool.cs);
+    BOOST_CHECK(tx_mempool.size() == 0);
+
+    // Block template should only have a coinbase when there's nothing in the mempool
+    std::unique_ptr<BlockTemplate> block_template = mining->createNewBlock(options);
+    BOOST_REQUIRE(block_template);
+    CBlock block{block_template->getBlock()};
+    BOOST_REQUIRE_EQUAL(block.vtx.size(), 1U);
+
+    // waitNext() on an empty mempool should return nullptr because there is no better template
+    auto should_be_nullptr = block_template->waitNext({.timeout = MillisecondsDouble{0}, .fee_threshold = 1});
+    BOOST_REQUIRE(should_be_nullptr == nullptr);
+
+    // Unless fee_threshold is 0
+    block_template = block_template->waitNext({.timeout = MillisecondsDouble{0}, .fee_threshold = 0});
+    BOOST_REQUIRE(block_template);
+
     // Test the ancestor feerate transaction selection.
     TestMemPoolEntryHelper entry;
 
@@ -264,9 +280,9 @@ void MinerTestingSetup::TestPackageSelection(const CScript& scriptPubKey, const 
     const auto high_fee_tx{entry.Fee(400000 * 50).Time(Now<NodeSeconds>()).SpendsCoinbase(false).FromTx(tx)};
     AddToMempool(tx_mempool, high_fee_tx);
 
-    std::unique_ptr<BlockTemplate> block_template = mining->createNewBlock(options);
+    block_template = mining->createNewBlock(options);
     BOOST_REQUIRE(block_template);
-    CBlock block{block_template->getBlock()};
+    block = block_template->getBlock();
     BOOST_REQUIRE_EQUAL(block.vtx.size(), 4U);
     BOOST_CHECK(block.vtx[1]->GetHash() == hashParentTx);
     BOOST_CHECK(block.vtx[2]->GetHash() == hashHighFeeTx);
@@ -304,7 +320,7 @@ void MinerTestingSetup::TestPackageSelection(const CScript& scriptPubKey, const 
     AddToMempool(tx_mempool, entry.Fee(feeToUse).FromTx(tx));
 
     // waitNext() should return nullptr because there is no better template
-    auto should_be_nullptr = block_template->waitNext({.timeout = MillisecondsDouble{0}, .fee_threshold = 1});
+    should_be_nullptr = block_template->waitNext({.timeout = MillisecondsDouble{0}, .fee_threshold = 1});
     BOOST_REQUIRE(should_be_nullptr == nullptr);
 
     block = block_template->getBlock();

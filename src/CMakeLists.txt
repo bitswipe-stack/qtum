@@ -438,7 +438,7 @@ if(BUILD_BITCOIN_BIN)
   add_executable(qtum bitcoin.cpp)
   add_windows_resources(qtum bitcoin-res.rc)
   add_windows_application_manifest(qtum)
-  target_link_libraries(qtum core_interface bitcoin_util)
+  target_link_libraries(qtum core_interface bitcoin_common bitcoin_util)
   install_binary_component(qtum HAS_MANPAGE)
 endif()
 
