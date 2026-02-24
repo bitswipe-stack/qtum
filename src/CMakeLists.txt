@@ -284,6 +284,7 @@ target_link_libraries(bitcoin_common
     Boost::filesystem
     Boost::program_options
     Boost::thread
+    Boost::process
     evmone
     OpenSSL::SSL
     OpenSSL::Crypto

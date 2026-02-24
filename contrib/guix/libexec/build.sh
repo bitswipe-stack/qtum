@@ -72,6 +72,8 @@ unset OBJCPLUS_INCLUDE_PATH
 # Set native toolchain
 build_CC="${NATIVE_GCC}/bin/gcc -isystem ${NATIVE_GCC}/include"
 build_CXX="${NATIVE_GCC}/bin/g++ -isystem ${NATIVE_GCC}/include/c++ -isystem ${NATIVE_GCC}/include"
+export C_INCLUDE_PATH="${NATIVE_GCC}/include"
+export CPLUS_INCLUDE_PATH="${NATIVE_GCC}/include/c++:${NATIVE_GCC}/include"
 
 case "$HOST" in
     *darwin*) export LIBRARY_PATH="${NATIVE_GCC}/lib" ;; # Required for native packages
@@ -183,6 +185,8 @@ make -C depends --jobs="$JOBS" HOST="$HOST" \
 case "$HOST" in
     *darwin*)
         # Unset now that Qt is built
+        unset C_INCLUDE_PATH
+        unset CPLUS_INCLUDE_PATH
         unset LIBRARY_PATH
         ;;
 esac
