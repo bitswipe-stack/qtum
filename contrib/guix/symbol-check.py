@@ -159,6 +159,8 @@ PE_ALLOWED_LIBRARIES = {
 'msvcrt.dll', # C standard library for MSVC
 'SHELL32.dll', # shell API
 'WS2_32.dll', # sockets
+'ntdll.dll', # User-mode face of the Windows kernel 
+'Secur32.dll', # Secure Service Provider
 # bitcoin-qt only
 'api-ms-win-core-synch-l1-2-0.dll', # Synchronization Primitives API
 'api-ms-win-core-winrt-l1-1-0.dll', # Windows Runtime API
