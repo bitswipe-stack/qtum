@@ -14,6 +14,12 @@ define $(package)_set_vars
   $(package)_config_opts += -DBOOST_INSTALL_LAYOUT=system
   $(package)_config_opts += -DBUILD_TESTING=OFF
   $(package)_config_opts += -DCMAKE_DISABLE_FIND_PACKAGE_ICU=ON
+  $(package)_config_opts += -DBUILD_SHARED_LIBS=OFF
+ifneq ($(host),$(build))
+  $(package)_config_opts_darwin += -DCMAKE_INSTALL_NAME_TOOL=/bin/true
+  $(package)_config_opts_darwin += -DBOOST_CONTEXT_IMPLEMENTATION=ucontext
+  $(package)_config_opts_linux += -DBOOST_CONTEXT_IMPLEMENTATION=ucontext
+endif
 endef
 
 define $(package)_preprocess_cmds
