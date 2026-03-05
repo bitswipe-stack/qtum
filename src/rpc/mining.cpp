@@ -416,7 +416,6 @@ static RPCHelpMan generateblock()
     };
 }
 
-//begin_qtum
 static RPCHelpMan getsubsidy()
 {
     return RPCHelpMan{"getsubsidy",

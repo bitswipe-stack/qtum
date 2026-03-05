@@ -13,6 +13,8 @@
  */
 class ExecRPCCommand : public QObject
 {
+    Q_OBJECT
+
 public:
     /**
      * @brief ExecRPCCommand Constructor
