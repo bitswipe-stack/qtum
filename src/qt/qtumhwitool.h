@@ -266,7 +266,6 @@ private:
     bool endGetKeyPool(const QString& fingerprint, int type, QString& desc);
     bool execRPC(ExecRPCCommand* cmd, const QMap<QString, QString>& lstParams, QVariant& result, QString& resultJson);
     void addError(const QString& error);
-    bool isDescriptorWallet();
 
     QtumHwiToolPriv* d;
 };

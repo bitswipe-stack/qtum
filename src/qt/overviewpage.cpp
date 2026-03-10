@@ -273,8 +273,7 @@ void OverviewPage::setBalance(const interfaces::WalletBalances& balances)
     // for the non-mining users
     bool showImmature = balances.immature_balance != 0;
     bool showStake = balances.stake != 0;
-    ui->labelImmature->setVisible(showImmature);
-    ui->labelImmatureText->setVisible(showImmature);
+    ui->widgetImmature->setVisible(showImmature);
     ui->widgetStake->setVisible(showStake);
 }
 

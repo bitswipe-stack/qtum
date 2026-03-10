@@ -436,7 +436,7 @@ public:
         consensus.nRBTPowTargetTimespan = 1000;
         consensus.nPowTargetSpacing = 2 * 64;
         consensus.nRBTPowTargetSpacing = 32;
-        consensus.fPowAllowMinDifficultyBlocks = true;
+        consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.enforce_BIP94 = true; // Special difficulty rule for Testnet4 in Bitcoin
         consensus.fPowNoRetargeting = true;
         consensus.fPoSNoRetargeting = false;

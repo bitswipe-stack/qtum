@@ -295,7 +295,6 @@ QString TransactionDesc::toHTML(interfaces::Node& node, interfaces::Wallet& wall
                     }
                 }
 
-                strHTML += "<b>" + tr("Debit") + ":</b> " + BitcoinUnits::formatHtmlWithUnit(unit, -txout.nValue) + "<br>";
                 strHTML += TransactionFormater::ItemNameColor(tr("Debit")) + BitcoinUnits::formatHtmlWithUnit(unit, -txout.nValue) + "<br>";
                 if(toSelf)
                     strHTML += TransactionFormater::ItemNameColor(tr("Credit")) + BitcoinUnits::formatHtmlWithUnit(unit, txout.nValue) + "<br>";
