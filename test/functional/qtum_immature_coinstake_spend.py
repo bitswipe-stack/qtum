@@ -11,9 +11,6 @@ import random
 import time
 
 class QtumPrematureCoinstakeSpendTest(BitcoinTestFramework):
-    def add_options(self, parser):
-        self.add_wallet_options(parser)
-
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 1
@@ -51,7 +48,6 @@ class QtumPrematureCoinstakeSpendTest(BitcoinTestFramework):
         block, sig_key = create_unsigned_mpos_block(self.node, self.staking_prevouts, next_block_time, 1000000)
         block.vtx.append(tx)
         block.hashMerkleRoot = block.calc_merkle_root()
-        block.rehash()
         block.sign_block(sig_key)
         blockcount = self.node.getblockcount()
         self.node.submitblock(bytes_to_hex_str(block.serialize()))

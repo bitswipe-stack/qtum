@@ -59,7 +59,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         coinbase = create_coinbase(tip['height']+1)
         coinbase.vout[0].nValue = 0
         coinbase.vout[0].scriptPubKey = b""
-        coinbase.rehash()
         block = create_block(int(tip['hash'], 16), coinbase, nTime)
         block.nNonce = nNonce
         block.hashStateRoot = int(tip['hashStateRoot'], 16)
@@ -120,7 +119,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
 
     def cannot_submit_header_before_rolling_checkpoint_test(self):
         block_header = self._create_pos_header(self.node, self.staking_prevouts, self.node.getblockhash(self.node.getblockcount()-(COINBASE_MATURITY+1)), int(time.time())&0xfffffff0)
-        block_header.rehash()
         msg = msg_headers()
         msg.headers.extend([block_header])
         self.p2p_node.send_message(msg)
@@ -130,7 +128,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
 
     def can_submit_header_after_rolling_checkpoint_test(self):
         block_header = self._create_pos_header(self.node, self.staking_prevouts, self.node.getblockhash(self.node.getblockcount()-COINBASE_MATURITY))
-        block_header.rehash()
         msg = msg_headers()
         msg.headers.extend([block_header])
         self.p2p_node.send_message(msg)
@@ -141,7 +138,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
     def cannot_submit_header_oversized_signature_test(self):
         block_header = self._create_pos_header(self.node, self.staking_prevouts, self.node.getblockhash(self.node.getblockcount()-COINBASE_MATURITY))
         block_header.vchBlockSig = b'x'*7999812
-        block_header.rehash()
         msg = msg_headers()
         msg.headers.extend([block_header])
         self.p2p_node.send_message(msg)
@@ -152,7 +148,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
     def cannot_submit_invalid_prevout_test(self):
         block_header = self._create_pos_header(self.node, self.staking_prevouts, self.node.getblockhash(self.node.getblockcount()-COINBASE_MATURITY))
         block_header.prevoutStake.n = 0xffff
-        block_header.rehash()
         msg = msg_headers()
         msg.headers.extend([block_header])
         self.p2p_node.send_message(msg)
@@ -168,7 +163,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         t = (prevblock['time'] + 50) & 0xfffffff0
         for i in range((COINBASE_MATURITY+1)):
             block_header = self._create_pos_header(self.node, self.staking_prevouts, prevblock['hash'], nTime=t+0x10*i, nNonce=i)
-            block_header.rehash()
             msg = msg_headers()
             msg.headers.extend([block_header])
             self.p2p_node.send_message(msg)
@@ -183,7 +177,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         for i in range(int(COINBASE_MATURITY*4.1+5)):
             prevblock = self.node.getblock(self.node.getblockhash(self.node.getblockcount()-COINBASE_MATURITY+(i%COINBASE_MATURITY)))
             block_header = self._create_pos_header(self.node, self.staking_prevouts, prevblock['hash'], nTime=t+0x10*i, nNonce=i)
-            block_header.rehash()
             msg = msg_headers()
             msg.headers.extend([block_header])
             self.p2p_node.send_message(msg)
@@ -230,7 +223,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
                 block.vtx.append(tx)
             block.hashMerkleRoot = block.calc_merkle_root()
             block.sign_block(block_sig_key)
-            block.rehash()
             blocks.append(block)
             self._remove_from_staking_prevouts(block.prevoutStake)
             tip['height'] += 1
@@ -266,12 +258,10 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
             tx = rpc_sign_transaction(self.node, tx)
             block.vtx.append(tx)
         block.hashMerkleRoot = block.calc_merkle_root()
-        block.rehash()
         block.sign_block(block_sig_key)
 
         for i in range(400):
             block.nNonce = i
-            block.rehash()
             block.sign_block(block_sig_key)
             self.p2p_node.send_message(msg_block(block))
         time.sleep(10)

@@ -129,7 +129,6 @@ class SegWitTest(BitcoinTestFramework):
             block = create_block(int(self.nodes[0].getbestblockhash(), 16), create_coinbase(self.nodes[0].getblockcount() + 1), int(time.time())+2+i)
             block.nVersion = 4
             block.hashMerkleRoot = block.calc_merkle_root()
-            block.rehash()
             block.solve()
             self.nodes[0].submitblock(bytes_to_hex_str(block.serialize()))
         generatesynchronized(self.nodes[0], 18, None, self.nodes)

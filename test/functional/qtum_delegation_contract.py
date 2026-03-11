@@ -15,9 +15,6 @@ pp = pprint.PrettyPrinter()
 OFFLINE_STAKING_ACTIVATION_HEIGHT = 3*COINBASE_MATURITY+101
 
 class QtumSimpleDelegationContractTest(BitcoinTestFramework):
-    def add_options(self, parser):
-        self.add_wallet_options(parser)
-
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 6
@@ -179,9 +176,7 @@ class QtumSimpleDelegationContractTest(BitcoinTestFramework):
         tmp_normal_block.vtx[1].vout[1].scriptPubKey = CScript([self.delegator_eckey.get_pubkey().get_bytes(), OP_CHECKSIG])
         tmp_normal_block.vtx[1].vout[2].scriptPubKey = CScript([self.delegator_eckey.get_pubkey().get_bytes(), OP_CHECKSIG])
         tmp_normal_block.vtx[1] = rpc_sign_transaction(self.delegator, tmp_normal_block.vtx[1])
-        tmp_normal_block.vtx[1].rehash()
         tmp_normal_block.hashMerkleRoot = tmp_normal_block.calc_merkle_root()
-        tmp_normal_block.rehash()
         tmp_normal_block.sign_block(self.delegator_eckey)
         for n in self.nodes:
             assert_equal(n.submitblock(bytes_to_hex_str(tmp_normal_block.serialize())), 'stake-delegation-not-used')
@@ -207,9 +202,7 @@ class QtumSimpleDelegationContractTest(BitcoinTestFramework):
         block.vtx[1].vout[1].scriptPubKey = CScript([self.delegator_eckey.get_pubkey().get_bytes(), OP_CHECKSIG])
         block.vtx[1].vin[0] = CTxIn(invalid_staker_prevout_for_nas)
         block.vtx[1] = rpc_sign_transaction(self.delegator, block.vtx[1])
-        block.vtx[1].rehash()
         block.hashMerkleRoot = block.calc_merkle_root()
-        block.rehash()
         block.sign_block(self.delegator_eckey, pod=pod)
         block.vchBlockSig += pod
         for n in self.nodes:
@@ -279,9 +272,7 @@ class QtumSimpleDelegationContractTest(BitcoinTestFramework):
         block = create_delegated_pos_block(self.staker, self.staker_eckey, staker_prevout_for_nas, self.delegator_address_hex, pod, fee, delegator_prevouts, nFees=0, nTime=t, use_pos_reward=use_pos_reward)
         block.vtx[1].vout[1].scriptPubKey = CScript([OP_RETURN, self.staker_eckey.get_pubkey().get_bytes()])
         block.vtx[1] = rpc_sign_transaction(self.staker, block.vtx[1])
-        block.vtx[1].rehash()
         block.hashMerkleRoot = block.calc_merkle_root()
-        block.rehash()
         block.sign_block(self.staker_eckey, pod=pod)
         block.vchBlockSig += pod
         for n in self.nodes:
@@ -321,9 +312,7 @@ class QtumSimpleDelegationContractTest(BitcoinTestFramework):
         normal_block.vtx[1].vout[1].scriptPubKey = CScript([self.delegator_eckey.get_pubkey().get_bytes(), OP_CHECKSIG])
         normal_block.vtx[1].vout[2].scriptPubKey = CScript([self.delegator_eckey.get_pubkey().get_bytes(), OP_CHECKSIG])
         normal_block.vtx[1] = rpc_sign_transaction(self.delegator, normal_block.vtx[1])
-        normal_block.vtx[1].rehash()
         normal_block.hashMerkleRoot = normal_block.calc_merkle_root()
-        normal_block.rehash()
         normal_block.sign_block(self.delegator_eckey)
         assert_equal(self.delegator.submitblock(bytes_to_hex_str(normal_block.serialize())), None)
         self.used_delegator_prevouts.append(block.prevoutStake)
@@ -369,9 +358,7 @@ class QtumSimpleDelegationContractTest(BitcoinTestFramework):
         normal_block.vtx[1].vout[1].scriptPubKey = CScript([self.delegator_eckey.get_pubkey().get_bytes(), OP_CHECKSIG])
         normal_block.vtx[1].vout[2].scriptPubKey = CScript([self.delegator_eckey.get_pubkey().get_bytes(), OP_CHECKSIG])
         normal_block.vtx[1] = rpc_sign_transaction(self.delegator, normal_block.vtx[1])
-        normal_block.vtx[1].rehash()
         normal_block.hashMerkleRoot = normal_block.calc_merkle_root()
-        normal_block.rehash()
         normal_block.sign_block(self.delegator_eckey)
         for n in self.nodes:
             assert_equal(n.submitblock(bytes_to_hex_str(normal_block.serialize())), 'bad-cb-header')
@@ -387,9 +374,7 @@ class QtumSimpleDelegationContractTest(BitcoinTestFramework):
         normal_block.vtx[1].vout[1].scriptPubKey = CScript([self.delegator_eckey.get_pubkey().get_bytes(), OP_CHECKSIG])
         normal_block.vtx[1].vout[2].scriptPubKey = CScript([self.delegator_eckey.get_pubkey().get_bytes(), OP_CHECKSIG])
         normal_block.vtx[1] = rpc_sign_transaction(self.delegator, normal_block.vtx[1])
-        normal_block.vtx[1].rehash()
         normal_block.hashMerkleRoot = normal_block.calc_merkle_root()
-        normal_block.rehash()
         normal_block.sign_block(self.delegator_eckey, der_sig=True)
         assert_equal(self.delegator.submitblock(bytes_to_hex_str(normal_block.serialize())), None)
 

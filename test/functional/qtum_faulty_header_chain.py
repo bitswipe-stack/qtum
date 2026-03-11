@@ -14,9 +14,6 @@ import io
 
 
 class QtumHeaderSpamTest(BitcoinTestFramework):
-    def add_options(self, parser):
-        self.add_wallet_options(parser)
-
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 2
@@ -43,7 +40,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         coinbase = create_coinbase(block_height+1)
         coinbase.vout[0].nValue = 0
         coinbase.vout[0].scriptPubKey = b""
-        coinbase.rehash()
         block = create_block(parent_block.sha256, coinbase, (parent_block.nTime + 0x10) & 0xfffffff0)
         if not block.solve_stake(parent_block_stake_modifier, staking_prevouts):
             return None
@@ -94,12 +90,10 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         f = io.BytesIO(hex_str_to_bytes(block_raw_hex))
         block = CBlock()
         block.deserialize(f)
-        block.rehash()
 
         # Make sure that first sending a header and then announcing its block succeeds
         block = self.create_pos_block(self.staking_prevouts, block, stake_modifier, block_height)
         self._remove_from_staking_prevouts(block)
-        block.rehash()
         self._remove_from_staking_prevouts(block)
         self.p2p_node.send_message(msg_headers([CBlockHeader(block)]))
         time.sleep(0.05)
@@ -115,7 +109,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         self.sign_block_with_standard_private_key(block)
         self.p2p_node.send_message(msg_headers([CBlockHeader(block)]))
         time.sleep(0.05)
-        block.rehash()
         assert_raises_rpc_error(-5, "Block not found", self.node.getblockheader, block.hash)
         assert_raises_rpc_error(-5, "Block not found", self.node.getblock, block.hash)
 
@@ -124,7 +117,6 @@ class QtumHeaderSpamTest(BitcoinTestFramework):
         child_stake_modifier = self.calculate_stake_modifier(stake_modifier, block)
         child_block = self.create_pos_block(self.staking_prevouts, block, child_stake_modifier, block_height+1)
         self._remove_from_staking_prevouts(child_block)
-        child_block.rehash()
         print(self.alt_node.submitblock(bytes_to_hex_str(block.serialize())))
         print(self.alt_node.submitblock(bytes_to_hex_str(child_block.serialize())))
         self.node.setmocktime(child_block.nTime-16)

@@ -123,9 +123,6 @@ def wif_to_ECKey(wif):
 HASHTYPES = [SIGHASH_ALL, SIGHASH_SINGLE, SIGHASH_NONE, SIGHASH_ANYONECANPAY]
 
 class QtumOpSenderTest(BitcoinTestFramework):
-    def add_options(self, parser):
-        self.add_wallet_options(parser)
-
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 2
@@ -331,7 +328,6 @@ class QtumOpSenderTest(BitcoinTestFramework):
                 ops[2] = modified_signature
                 tx.vout[0].scriptPubKey = CScript(ops)
                 tx = sign_transaction_sighash_all(tx, input_txout['key'])
-                tx.rehash()
                 # if we change either of these bytes, we get messed up data push sizes and trigger another error
                 if i in [0, 1, 74 if len(signature) == 140 else 73]:
                     assert_raises_rpc_error(-26, 'bad-txns-invalid-sender-script', self.nodes[0].sendrawtransaction, bytes_to_hex_str(tx.serialize()))
@@ -461,7 +457,6 @@ class QtumOpSenderTest(BitcoinTestFramework):
         for i in range(100+COINBASE_MATURITY):
             block = create_block(int(self.nodes[0].getbestblockhash(), 16), create_coinbase(self.nodes[0].getblockcount()+1), int(time.time()))
             block.vtx[0].vout[0].scriptPubKey = CScript([key.get_pubkey().get_bytes(), OP_CHECKSIG])
-            block.vtx[0].rehash()
             block.hashMerkleRoot = block.calc_merkle_root()
             block.solve()
             self.nodes[0].submitblock(bytes_to_hex_str(block.serialize()))

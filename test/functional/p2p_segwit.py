@@ -138,9 +138,7 @@ def submit_old_blocks(node, n):
         block_time = node.getblockheader(tip)["mediantime"] + 1
         block = create_block(int(tip, 16), create_coinbase(height), block_time)
         block.vtx[0].vout[0].scriptPubKey = CScript([hex_str_to_bytes(pubkey), OP_CHECKSIG])
-        block.vtx[0].rehash()
         block.hashMerkleRoot = block.calc_merkle_root()
-        block.rehash()
         block.solve()
         node.submitblock(bytes_to_hex_str(block.serialize()))
     assert_equal(node.getblockcount(), num_blocks_old+n)

@@ -58,9 +58,6 @@ DEFAULT_BLOCK_MIN_TX_FEE = 400000  # default `-blockmintxfee` setting [sat/kvB]
 BLOCK_HEADER_SIZE = len(CBlockHeader().serialize())
 
 class MiningTest(BitcoinTestFramework):
-    def add_options(self, parser):
-        self.add_wallet_options(parser)
-
     def set_test_params(self):
         self.num_nodes = 3
         self.extra_args = [

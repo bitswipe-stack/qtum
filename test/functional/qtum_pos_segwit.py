@@ -11,9 +11,6 @@ import io
 import time
 
 class QtumPOSSegwitTest(BitcoinTestFramework):
-    def add_options(self, parser):
-        self.add_wallet_options(parser)
-
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 1
@@ -35,7 +32,6 @@ class QtumPOSSegwitTest(BitcoinTestFramework):
         coinbase = create_coinbase(block_height+1)
         coinbase.vout[0].nValue = 0
         coinbase.vout[0].scriptPubKey = b""
-        coinbase.rehash()
         block = create_block(int(best_block_hash, 16), coinbase, nTime)
         block.hashPrevBlock = int(best_block_hash, 16)
         if not block.solve_stake(parent_block_stake_modifier, staking_prevouts):
@@ -98,7 +94,6 @@ class QtumPOSSegwitTest(BitcoinTestFramework):
         tx = CTransaction()
         tx.vin = [make_vin(self.node, 2*COIN)]
         tx.vout = [CTxOut(2*COIN - 100000, CScript([OP_TRUE]))]
-        tx.rehash()
         tx_hex = self.node.signrawtransactionwithwallet(bytes_to_hex_str(tx.serialize()))['hex']
         txid = self.node.sendrawtransaction(tx_hex)
         self.generate(self.node, 1)
@@ -124,7 +119,6 @@ class QtumPOSSegwitTest(BitcoinTestFramework):
             parent_tx.vout.append(CTxOut(child_value, scriptPubKey))
         parent_tx.vout[0].nValue -= 50000
         assert(parent_tx.vout[0].nValue > 0)
-        parent_tx.rehash()
 
         child_tx = CTransaction()
         for i in range(NUM_OUTPUTS):
@@ -133,7 +127,6 @@ class QtumPOSSegwitTest(BitcoinTestFramework):
         for i in range(NUM_OUTPUTS):
             child_tx.wit.vtxinwit.append(CTxInWitness())
             child_tx.wit.vtxinwit[-1].scriptWitness.stack = [b'a'*195]*(2*NUM_DROPS) + [witness_program]
-        child_tx.rehash()
 
 
         t = int(time.time()) & 0xfffffff0
@@ -145,7 +138,6 @@ class QtumPOSSegwitTest(BitcoinTestFramework):
         add_witness_commitment(block, 0, is_pos=True)
 
         block.sign_block(block_sig_key)
-        block.rehash()
 
         block_count = self.node.getblockcount()
         self.node.submitblock(bytes_to_hex_str(block.serialize(with_witness=True)))

@@ -9,9 +9,6 @@ from test_framework.address import *
 import time
 
 class QtumPODTest(BitcoinTestFramework):
-    def add_options(self, parser):
-        self.add_wallet_options(parser)
-
     def set_test_params(self):
         self.num_nodes = 2
         self.setup_clean_chain = True
@@ -85,10 +82,8 @@ class QtumPODTest(BitcoinTestFramework):
         block.vtx[1].vout[1].scriptPubKey = CScript([delegator_key.get_pubkey().get_bytes(), OP_CHECKSIG])
         block.vtx[1].vout[2].scriptPubKey = CScript([delegator_key.get_pubkey().get_bytes(), OP_CHECKSIG])
         block.vtx[1] = rpc_sign_transaction(self.delegator, block.vtx[1])
-        block.vtx[1].rehash()
         block.hashMerkleRoot = block.calc_merkle_root()
         block.sign_block(wif_to_ECKey(self.delegator.dumpprivkey(delegator_address)))
-        block.rehash()
         assert_equal(self.delegator.submitblock(bytes_to_hex_str(block.serialize())), 'stake-delegation-not-used')
 
         mocktime += 128
@@ -98,10 +93,8 @@ class QtumPODTest(BitcoinTestFramework):
         block.vtx[1].vout[1].scriptPubKey = CScript([staker_key.get_pubkey().get_bytes(), OP_CHECKSIG])
         block.vtx[1].vout[2].scriptPubKey = CScript([staker_key.get_pubkey().get_bytes(), OP_CHECKSIG])
         block.vtx[1] = rpc_sign_transaction(self.staker, block.vtx[1])
-        block.vtx[1].rehash()
         block.hashMerkleRoot = block.calc_merkle_root()
         block.sign_block(staker_key)
-        block.rehash()
         assert_equal(self.staker.submitblock(bytes_to_hex_str(block.serialize())), None)
         assert_equal(self.staker.getbestblockhash(), block.hash)
 
