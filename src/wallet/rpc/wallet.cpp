@@ -64,7 +64,7 @@ UniValue GetJsonSuperStakerConfig(const CSuperStakerInfo& superStaker)
 static RPCHelpMan setsuperstakervaluesforaddress()
 {
     return RPCHelpMan{"setsuperstakervaluesforaddress",
-                    "\nList super staker configuration values for address." +
+                    "List super staker configuration values for address." +
                     HELP_REQUIRING_PASSPHRASE,
                     {
                         {"params", RPCArg::Type::OBJ, RPCArg::Optional::NO, "",
@@ -214,7 +214,7 @@ static RPCHelpMan setsuperstakervaluesforaddress()
 static RPCHelpMan listsuperstakercustomvalues()
 {
     return RPCHelpMan{"listsuperstakercustomvalues",
-                    "\nList custom super staker configurations values." +
+                    "List custom super staker configurations values." +
                     HELP_REQUIRING_PASSPHRASE,
                     {},
                     RPCResult{
@@ -270,7 +270,7 @@ static RPCHelpMan listsuperstakercustomvalues()
 static RPCHelpMan listsuperstakervaluesforaddress()
 {
     return RPCHelpMan{"listsuperstakervaluesforaddress",
-                    "\nList super staker configuration values for address." +
+                    "List super staker configuration values for address." +
                     HELP_REQUIRING_PASSPHRASE,
                     {
                         {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The super staker Qtum address."},
@@ -339,7 +339,7 @@ static RPCHelpMan listsuperstakervaluesforaddress()
 static RPCHelpMan removesuperstakervaluesforaddress()
 {
     return RPCHelpMan{"removesuperstakervaluesforaddress",
-                    "\nRemove super staker configuration values for address." +
+                    "Remove super staker configuration values for address." +
                     HELP_REQUIRING_PASSPHRASE,
                     {
                         {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The super staker Qtum address."},
@@ -404,7 +404,7 @@ static RPCHelpMan removesuperstakervaluesforaddress()
 static RPCHelpMan reservebalance()
 {
     return RPCHelpMan{"reservebalance",
-            "\nSet reserve amount not participating in network protection."
+            "Set reserve amount not participating in network protection."
             "\nIf no parameters provided current setting is printed.\n",
             {
                 {"reserve", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED,"is true or false to turn balance reserve on or off."},

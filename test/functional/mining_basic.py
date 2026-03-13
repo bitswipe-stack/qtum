@@ -395,7 +395,7 @@ class MiningTest(BitcoinTestFramework):
         assert_equal(mining_info['target'], target_str(REGTEST_TARGET))
         # We don't care about precision, round to avoid mismatch under Valgrind:
         assert_equal(round(mining_info['difficulty']['proof-of-work'], 10), Decimal('0.0000000005'))
-        assert_equal(mining_info['next']['height'], 201)
+        assert_equal(mining_info['next']['height'], 2101)
         assert_equal(mining_info['next']['target'], target_str(REGTEST_TARGET))
         assert_equal(mining_info['next']['bits'], nbits_str(REGTEST_N_BITS))
         assert_equal(round(mining_info['next']['difficulty'], 10), Decimal('0.0000000005'))

@@ -186,7 +186,7 @@ void TxToJSONExpanded(const CTransaction& tx, const uint256 hashBlock, UniValue&
 static RPCHelpMan gethexaddress()
 {
     return RPCHelpMan{"gethexaddress",
-                    "\nConverts a base58 pubkeyhash address to a hex address for use in smart contracts.\n",
+                    "Converts a base58 pubkeyhash address to a hex address for use in smart contracts.\n",
                         {
                             {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The base58 address"},
                         },
@@ -216,7 +216,7 @@ static RPCHelpMan gethexaddress()
 static RPCHelpMan fromhexaddress()
 {
     return RPCHelpMan{"fromhexaddress",
-                        "\nConverts a raw hex address to a base58 pubkeyhash address\n",
+                        "Converts a raw hex address to a base58 pubkeyhash address\n",
                         {
                             {"hexaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO,  "The raw hex address"},
                         },
@@ -1203,7 +1203,7 @@ static RPCHelpMan signrawtransactionwithkey()
 static RPCHelpMan signrawsendertransactionwithkey()
 {
     return RPCHelpMan{"signrawsendertransactionwithkey",
-                "\nSign OP_SENDER outputs for raw transaction (serialized, hex-encoded).\n"
+                "Sign OP_SENDER outputs for raw transaction (serialized, hex-encoded).\n"
                 "The second argument is an array of base58-encoded private\n"
                 "keys that will be the only keys used to sign the transaction.\n",
                 {

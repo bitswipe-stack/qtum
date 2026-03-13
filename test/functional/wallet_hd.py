@@ -123,7 +123,7 @@ class WalletHDTest(BitcoinTestFramework):
             if out['value'] != 1:
                 keypath = self.nodes[1].getaddressinfo(out['scriptPubKey']['address'])['hdkeypath']
 
-        assert_equal(keypath[0:14], "m/44h/88h/0h/1/")
+        assert_equal(keypath[0:15], "m/44h/88h/0h/1/")
 
 
 if __name__ == '__main__':

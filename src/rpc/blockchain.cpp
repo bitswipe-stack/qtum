@@ -352,7 +352,7 @@ UniValue blockToJSON(BlockManager& blockman, const CBlock& block, const CBlockIn
 static RPCHelpMan getestimatedannualroi()
 {
     return RPCHelpMan{"getestimatedannualroi",
-                "\nReturns the estimated annual roi.\n",
+                "Returns the estimated annual roi.\n",
                 {},
                 RPCResult{
                     RPCResult::Type::NUM, "", "The current estimated annual roi"},
@@ -734,7 +734,7 @@ static RPCHelpMan getblockhash()
 static RPCHelpMan getaccountinfo()
 {
     return RPCHelpMan{"getaccountinfo",
-                "\nGet contract details including balance, storage data and code.\n",
+                "Get contract details including balance, storage data and code.\n",
                 {
                     {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
                 },
@@ -812,7 +812,7 @@ static RPCHelpMan getaccountinfo()
 static RPCHelpMan getcontractcode()
 {
     return RPCHelpMan{"getcontractcode",
-                "\nGet contract code.\n",
+                "Get contract code.\n",
                 {
                     {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
                     {"blocknum", RPCArg::Type::NUM,  RPCArg::Default{-1}, "Number of block to get state from."},
@@ -866,7 +866,7 @@ static RPCHelpMan getcontractcode()
 static RPCHelpMan getstorage()
 {
     return RPCHelpMan{"getstorage",
-                "\nGet contract storage data.\n",
+                "Get contract storage data.\n",
                 {
                     {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
                     {"blocknum", RPCArg::Type::NUM,  RPCArg::Default{-1}, "Number of block to get state from."},
@@ -1252,7 +1252,7 @@ static RPCHelpMan getblock()
 RPCHelpMan callcontract()
 {
     return RPCHelpMan{"callcontract",
-                "\nCall contract methods offline, or test contract deployment offline.\n",
+                "Call contract methods offline, or test contract deployment offline.\n",
                 {
                     {"address", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address, or empty address \"\""},
                     {"data", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The data hex string"},
@@ -1570,7 +1570,7 @@ RPCHelpMan waitforlogs()
 RPCHelpMan searchlogs()
 {
     return RPCHelpMan{"searchlogs",
-                "\nSearch logs, requires -logevents to be enabled.\n",
+                "Search logs, requires -logevents to be enabled.\n",
                 {
                     {"fromblock", RPCArg::Type::NUM, RPCArg::Optional::NO, "The number of the earliest block (latest may be given to mean the most recent block)."},
                     {"toblock", RPCArg::Type::NUM, RPCArg::Optional::NO, "The number of the latest block (-1 may be given to mean the most recent block)."},
@@ -1653,7 +1653,7 @@ RPCHelpMan searchlogs()
 RPCHelpMan gettransactionreceipt()
 {
     return RPCHelpMan{"gettransactionreceipt",
-                "\nGet the transaction receipt.\n",
+                "Get the transaction receipt.\n",
                 {
                     {"hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The transaction hash"},
                 },
@@ -1738,7 +1738,7 @@ RPCHelpMan gettransactionreceipt()
 RPCHelpMan getblocktransactionreceipts()
 {
     return RPCHelpMan{"getblocktransactionreceipts",
-                "\nGet block transaction receipts.\n",
+                "Get block transaction receipts.\n",
                 {
                     {"hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The block hash"},
                 },
@@ -1824,7 +1824,7 @@ RPCHelpMan getblocktransactionreceipts()
 RPCHelpMan getdelegationinfoforaddress()
 {
     return RPCHelpMan{"getdelegationinfoforaddress",
-                "\nGet delegation information for an address.\n",
+                "Get delegation information for an address.\n",
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The qtum address string"},
                 },
@@ -2003,7 +2003,7 @@ RPCHelpMan getdelegationsforstaker()
 RPCHelpMan listcontracts()
 {
     return RPCHelpMan{"listcontracts",
-                "\nGet the contracts list.\n",
+                "Get the contracts list.\n",
                 {
                     {"start", RPCArg::Type::NUM, RPCArg::Default{1}, "The starting account index"},
                     {"maxdisplay", RPCArg::Type::NUM, RPCArg::Default{20}, "Max accounts to list"},
@@ -4675,7 +4675,7 @@ return RPCHelpMan{
 static RPCHelpMan qrc20name()
 {
     return RPCHelpMan{"qrc20name",
-                "\nReturns the name of the token\n",
+                "Returns the name of the token\n",
                 {
                     {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
                 },
@@ -4705,7 +4705,7 @@ static RPCHelpMan qrc20name()
 static RPCHelpMan qrc20symbol()
 {
     return RPCHelpMan{"qrc20symbol",
-                "\nReturns the symbol of the token\n",
+                "Returns the symbol of the token\n",
                 {
                     {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
                 },
@@ -4735,7 +4735,7 @@ static RPCHelpMan qrc20symbol()
 static RPCHelpMan qrc20totalsupply()
 {
     return RPCHelpMan{"qrc20totalsupply",
-                "\nReturns the total supply of the token\n",
+                "Returns the total supply of the token\n",
                 {
                     {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
                 },
@@ -4775,7 +4775,7 @@ static RPCHelpMan qrc20totalsupply()
 static RPCHelpMan qrc20decimals()
 {
     return RPCHelpMan{"qrc20decimals",
-                "\nReturns the number of decimals of the token\n",
+                "Returns the number of decimals of the token\n",
                 {
                     {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
                 },
@@ -4805,7 +4805,7 @@ static RPCHelpMan qrc20decimals()
 static RPCHelpMan qrc20balanceof()
 {
     return RPCHelpMan{"qrc20balanceof",
-                "\nReturns the token balance for address\n",
+                "Returns the token balance for address\n",
                 {
                     {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO,  "The qtum address to check token balance"},
@@ -4848,7 +4848,7 @@ static RPCHelpMan qrc20balanceof()
 static RPCHelpMan qrc20allowance()
 {
     return RPCHelpMan{"qrc20allowance",
-                "\nReturns remaining tokens allowed to spend for an address\n",
+                "Returns remaining tokens allowed to spend for an address\n",
                 {
                     {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address"},
                     {"addressfrom", RPCArg::Type::STR, RPCArg::Optional::NO,  "The qtum address of the account owning tokens"},
@@ -4890,7 +4890,7 @@ static RPCHelpMan qrc20allowance()
 static RPCHelpMan qrc20listtransactions()
 {
     return RPCHelpMan{"qrc20listtransactions",
-                "\nReturns transactions history for a specific address.\n",
+                "Returns transactions history for a specific address.\n",
                 {
                     {"contractaddress", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The contract address."},
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO,  "The qtum address to get history for."},

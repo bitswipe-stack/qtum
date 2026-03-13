@@ -411,7 +411,7 @@ static RPCHelpMan getindexinfo()
 static RPCHelpMan getdgpinfo()
 {
     return RPCHelpMan{"getdgpinfo",
-                "\nReturns an object containing DGP state info.\n",
+                "Returns an object containing DGP state info.\n",
                 {},
                 RPCResult{
                     RPCResult::Type::OBJ, "", "",
@@ -447,7 +447,7 @@ static RPCHelpMan getdgpinfo()
 static RPCHelpMan getblockhashes()
 {
     return RPCHelpMan{"getblockhashes",
-                "\nReturns array of hashes of blocks within the timestamp range provided.\n",
+                "Returns array of hashes of blocks within the timestamp range provided.\n",
                 {
                     {"high", RPCArg::Type::NUM, RPCArg::Optional::NO, "The newer block timestamp"},
                     {"low", RPCArg::Type::NUM, RPCArg::Optional::NO, "The older block timestamp"},
@@ -601,7 +601,7 @@ bool getAddressFromIndex(const int &type, const uint256 &hash, std::string &addr
 static RPCHelpMan getaddressdeltas()
 {
     return RPCHelpMan{"getaddressdeltas",
-            "\nReturns all changes for an address (requires addressindex to be enabled).\n",
+            "Returns all changes for an address (requires addressindex to be enabled).\n",
             {
                 {"argument", RPCArg::Type::OBJ, RPCArg::Optional::NO, "Json object",
                     {
@@ -768,7 +768,7 @@ static RPCHelpMan getaddressdeltas()
 static RPCHelpMan getaddressbalance()
 {
     return RPCHelpMan{"getaddressbalance",
-                "\nReturns the balance for an address(es) (requires addressindex to be enabled).\n",
+                "Returns the balance for an address(es) (requires addressindex to be enabled).\n",
                 {
                     {"argument", RPCArg::Type::OBJ, RPCArg::Optional::NO, "Json object",
                         {
@@ -839,7 +839,7 @@ static RPCHelpMan getaddressbalance()
 static RPCHelpMan getaddressutxos()
 {
     return RPCHelpMan{"getaddressutxos",
-                "\nReturns all unspent outputs for an address (requires addressindex to be enabled).\n",
+                "Returns all unspent outputs for an address (requires addressindex to be enabled).\n",
                 {
                     {"argument", RPCArg::Type::OBJ, RPCArg::Optional::NO, "Json object",
                         {
@@ -962,7 +962,7 @@ static RPCHelpMan getaddressutxos()
 static RPCHelpMan getaddressmempool()
 {
     return RPCHelpMan{"getaddressmempool",
-                "\nReturns all mempool deltas for an address (requires addressindex to be enabled).\n",
+                "Returns all mempool deltas for an address (requires addressindex to be enabled).\n",
                 {
                     {"argument", RPCArg::Type::OBJ, RPCArg::Optional::NO, "Json object",
                         {
@@ -1042,7 +1042,7 @@ static RPCHelpMan getaddressmempool()
 static RPCHelpMan getspentinfo()
 {
     return RPCHelpMan{"getspentinfo",
-                "\nReturns the txid and index where an output is spent.\n",
+                "Returns the txid and index where an output is spent.\n",
                 {
                     {"argument", RPCArg::Type::OBJ, RPCArg::Optional::NO, "Transaction data",
                         {
@@ -1099,7 +1099,7 @@ static RPCHelpMan getspentinfo()
 static RPCHelpMan getaddresstxids()
 {
     return RPCHelpMan{"getaddresstxids",
-                "\nReturns the txids for an address(es) (requires addressindex to be enabled).\n",
+                "Returns the txids for an address(es) (requires addressindex to be enabled).\n",
                 {
                     {"argument", RPCArg::Type::OBJ, RPCArg::Optional::NO, "Json object",
                         {
@@ -1217,7 +1217,7 @@ std::vector<std::string> getListArgsType()
 static RPCHelpMan listconf()
 {
     return RPCHelpMan{"listconf",
-                "\nReturns the current options that qtumd was started with.\n",
+                "Returns the current options that qtumd was started with.\n",
                 {},
                 RPCResult{
                     RPCResult::Type::OBJ_DYN, "", "",

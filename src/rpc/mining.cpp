@@ -419,7 +419,7 @@ static RPCHelpMan generateblock()
 static RPCHelpMan getsubsidy()
 {
     return RPCHelpMan{"getsubsidy",
-                "\nReturns subsidy value for the specified value of target.",
+                "Returns subsidy value for the specified value of target.",
                 {
                     {"height", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Specify block height."},
                 },

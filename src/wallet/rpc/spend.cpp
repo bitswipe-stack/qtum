@@ -2047,7 +2047,7 @@ CTransactionRef SplitUTXOs(std::shared_ptr<CWallet> const pwallet, const CTxDest
 RPCHelpMan splitutxosforaddress()
 {
     return RPCHelpMan{"splitutxosforaddress",
-                "\nSplit an address coins into utxo between min and max value." +
+                "Split an address coins into utxo between min and max value." +
                     HELP_REQUIRING_PASSPHRASE,
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The qtum address to split utxos."},
@@ -2326,7 +2326,7 @@ RPCHelpMan sendmanywithdupes()
 RPCHelpMan signrawsendertransactionwithwallet()
 {
     return RPCHelpMan{"signrawsendertransactionwithwallet",
-                "\nSign OP_SENDER outputs for raw transaction (serialized, hex-encoded).\n" +
+                "Sign OP_SENDER outputs for raw transaction (serialized, hex-encoded).\n" +
                     HELP_REQUIRING_PASSPHRASE,
                 {
                     {"hexstring", RPCArg::Type::STR, RPCArg::Optional::NO, "The transaction hex string"},
