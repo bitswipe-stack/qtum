@@ -10,9 +10,6 @@ import time
 
 
 class QtumDuplicateStakeTest(BitcoinTestFramework):
-    def add_options(self, parser):
-        self.add_wallet_options(parser)
-
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 2
@@ -37,15 +34,12 @@ class QtumDuplicateStakeTest(BitcoinTestFramework):
         # Create one "normal" block
         block, block_sig_key = create_unsigned_pos_block(self.node, self.staking_prevouts, nTime=t)
         block.sign_block(block_sig_key)
-        block.rehash()
 
         # Create a slightly different block using the same staking utxo (only difference is the nonce)
         alt_block = CBlock(block)
         alt_block.vtx = block.vtx[:]
         alt_block.nNonce = 1
-        alt_block.rehash()
         alt_block.sign_block(block_sig_key)
-        alt_block.rehash()
 
         # Send <block> to node
         self.p2p_node.send_message(msg_block(block))
@@ -67,7 +61,6 @@ class QtumDuplicateStakeTest(BitcoinTestFramework):
         # Create one "normal" block
         block, block_sig_key = create_unsigned_pos_block(self.node, self.staking_prevouts, nTime=t)
         block.sign_block(block_sig_key)
-        block.rehash()
 
         # Create a different block that spends the prevoutStake from <block>
         alt_block, alt_block_sig_key = create_unsigned_pos_block(self.alt_node, self.alt_staking_prevouts, nTime=t)
@@ -77,9 +70,7 @@ class QtumDuplicateStakeTest(BitcoinTestFramework):
         tx = rpc_sign_transaction(self.node, tx)
         alt_block.vtx.append(tx)
         alt_block.hashMerkleRoot = alt_block.calc_merkle_root()
-        alt_block.rehash()
         alt_block.sign_block(alt_block_sig_key)
-        alt_block.rehash()
 
         # Send <alt_block> to alt_node
         self.p2p_alt_node.send_message(msg_block(alt_block))
@@ -101,7 +92,6 @@ class QtumDuplicateStakeTest(BitcoinTestFramework):
         # Create one "normal" block
         block, block_sig_key = create_unsigned_pos_block(self.node, self.staking_prevouts, nTime=t)
         block.sign_block(block_sig_key)
-        block.rehash()
 
         # Create a different block that spends the prevoutStake from <block>
         alt_block, alt_block_sig_key = create_unsigned_pos_block(self.alt_node, self.alt_staking_prevouts, nTime=t)
@@ -111,9 +101,7 @@ class QtumDuplicateStakeTest(BitcoinTestFramework):
         tx = rpc_sign_transaction(self.node, tx)
         alt_block.vtx.append(tx)
         alt_block.hashMerkleRoot = alt_block.calc_merkle_root()
-        alt_block.rehash()
         alt_block.sign_block(alt_block_sig_key)
-        alt_block.rehash()
 
         # Send <alt_block> to alt_node
         self.p2p_alt_node.send_message(msg_block(alt_block))

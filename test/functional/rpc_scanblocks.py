@@ -19,7 +19,7 @@ from test_framework.wallet import (
     getnewdestination,
 )
 from test_framework.qtum import convert_btc_address_to_qtum
-import random 
+import random
 
 
 class ScanblocksTest(BitcoinTestFramework):

@@ -56,6 +56,19 @@ Link the specific boost version:
 brew link boost@1.86
 ```
 
+#### Wallet Dependencies
+
+If you do not need wallet functionality, you can use `-DENABLE_WALLET=OFF` in
+the `cmake -B` step below.
+
+SQLite is required, but since macOS ships with a useable `sqlite` package, you don't need to
+install anything.
+
+#### IPC Dependencies
+
+If you do not need IPC functionality (see [multiprocess.md](multiprocess.md))
+you can omit `capnp` and use `-DENABLE_IPC=OFF` in the `cmake -B` step below.
+
 ### 4. Clone Qtum repository
 
 `git` should already be installed by default on your system.
@@ -68,27 +81,6 @@ git clone https://github.com/qtumproject/qtum.git --recursive
 
 ### 5. Install Optional Dependencies
 
-#### Wallet Dependencies
-
-It is not necessary to build wallet functionality to run `qtumd` or  `qtum-qt`.
-
-###### Descriptor Wallet Support
-
-`sqlite` is required to support for descriptor wallets.
-
-macOS ships with a useable `sqlite` package, meaning you don't need to
-install anything.
-
-###### Legacy Wallet Support
-
-`berkeley-db@4` is only required to support for legacy wallets.
-Skip if you don't intend to use legacy wallets.
-
-``` bash
-brew install berkeley-db@4
-```
----
-
 #### GUI Dependencies
 
 ###### Qt
@@ -97,10 +89,8 @@ Qtum Core includes a GUI built with the cross-platform Qt Framework. To compile 
 Qt, libqrencode and pass `-DBUILD_GUI=ON`. Skip if you don't intend to use the GUI.
 
 ``` bash
-brew install qt@5
+brew install qt@6
 ```
-
-Note: Building may fail if Qt 6 is installed (`qt` or `qt@6`)
 
 Note: Building with Qt binaries downloaded from the Qt website is not officially supported.
 See the notes in [#7714](https://github.com/bitcoin/bitcoin/issues/7714).
@@ -146,21 +136,13 @@ brew install python
 #### Deploy Dependencies
 
 You can [deploy](#3-deploy-optional) a `.zip` containing the Qtum Core application.
-It is required that you have `python` installed.
+It is required that you have `python` and `zip` installed.
 
 ## Building Qtum Core
 
 ### 1. Configuration
 
 There are many ways to configure Qtum Core, here are a few common examples:
-
-##### Wallet (BDB + SQlite) Support, No GUI:
-
-If `berkeley-db@4` or `sqlite` are not installed, this will throw an error.
-
-``` bash
-cmake -B build -DWITH_BDB=ON
-```
 
 ##### Wallet (only SQlite) and GUI Support:
 
@@ -193,7 +175,7 @@ Run the following in your terminal to compile Qtum Core:
 
 ``` bash
 cmake --build build     # Append "-j N" here for N parallel jobs.
-ctest --test-dir build  # Append "-j N" for N parallel tests. Some tests are disabled if Python 3 is not available.
+ctest --test-dir build  # Append "-j N" for N parallel tests.
 ```
 
 ### 3. Deploy (optional)
@@ -208,6 +190,10 @@ cmake --build build --target deploy
 
 Qtum Core should now be available at `./build/bin/qtumd`.
 If you compiled support for the GUI, it should be available at `./build/bin/qtum-qt`.
+
+There is also a multifunction command line interface at `./build/bin/qtum`
+supporting subcommands like `qtum node`, `qtum gui`, `qtum rpc`, and
+others that can be listed with `qtum help`.
 
 The first time you run `qtumd` or `qtum-qt`, it will start downloading the blockchain.
 This process could take many hours, or even days on slower than average systems.

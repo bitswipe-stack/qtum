@@ -17,6 +17,9 @@ Unpack the files into a directory and run:
 
 - `bin/qtum-qt` (GUI) or
 - `bin/qtumd` (headless)
+- `bin/qtum` (wrapper command)
+
+The `qtum` command supports subcommands like `qtum gui`, `qtum node`, and `qtum rpc` exposing different functionality. Subcommands can be listed with `qtum help`.
 
 ### Windows
 
@@ -69,7 +72,7 @@ The Qtum repo's [root README](/README.md) contains relevant information on the d
 
 ### Miscellaneous
 - [Assets Attribution](assets-attribution.md)
-- [qtum.conf Configuration File](qtum-conf.md)
+- [qtum.conf Configuration File](bitcoin-conf.md)
 - [CJDNS Support](cjdns.md)
 - [Files](files.md)
 - [Fuzz-testing](fuzzing.md)

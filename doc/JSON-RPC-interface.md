@@ -62,6 +62,8 @@ qtum-cli -named createwallet wallet_name=mywallet load_on_startup=true
 qtum-cli -named createwallet mywallet load_on_startup=true
 ```
 
+`qtum rpc` can also be substituted for `qtum-cli -named`, and is a newer alternative.
+
 ## Versioning
 
 The RPC interface might change from one major version of Qtum Core to the
