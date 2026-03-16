@@ -30,9 +30,11 @@ class ReplaceByFeeTest(BitcoinTestFramework):
                 "-limitancestorsize=101",
                 "-limitdescendantcount=200",
                 "-limitdescendantsize=101",
+                "-minrelaytxfee=0.0000001"
             ],
             # second node has default mempool parameters
             [
+                "-minrelaytxfee=0.0000001"
             ],
         ]
         self.uses_wallet = None

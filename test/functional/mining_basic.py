@@ -294,7 +294,7 @@ class MiningTest(BitcoinTestFramework):
 
         LARGE_TXS_COUNT = 10
         LARGE_VSIZE = int(((MAX_BLOCK_WEIGHT - DEFAULT_BLOCK_RESERVED_WEIGHT) / WITNESS_SCALE_FACTOR) / LARGE_TXS_COUNT)
-        HIGH_FEERATE = Decimal("0.0003")
+        HIGH_FEERATE = Decimal("0.03")
 
         # Ensure the mempool is empty
         assert_equal(len(self.nodes[0].getrawmempool()), 0)
@@ -305,7 +305,7 @@ class MiningTest(BitcoinTestFramework):
 
         # Send 2 normal transactions with a lower fee rate
         NORMAL_VSIZE = int(2000 / WITNESS_SCALE_FACTOR)
-        NORMAL_FEERATE = Decimal("0.0001")
+        NORMAL_FEERATE = Decimal("0.004")
         self.send_transactions(utxos[LARGE_TXS_COUNT:LARGE_TXS_COUNT + 2], NORMAL_FEERATE, NORMAL_VSIZE)
 
         # Check that the mempool contains all transactions
@@ -320,14 +320,14 @@ class MiningTest(BitcoinTestFramework):
         )
 
         # Test block template creation with custom -blockmaxweight
-        custom_block_weight = MAX_BLOCK_WEIGHT - 2000
+        custom_block_weight = MAX_BLOCK_WEIGHT - 10
         # Reducing the weight by 2000 units will prevent 1 large transaction from fitting into the block.
         self.restart_node(0, extra_args=[f"-blockmaxweight={custom_block_weight}"])
 
         self.log.info("Testing the block template with custom -blockmaxweight to include 9 large and 2 normal transactions.")
         self.verify_block_template(
-            expected_tx_count=11,
-            expected_weight=MAX_BLOCK_WEIGHT - DEFAULT_BLOCK_RESERVED_WEIGHT - 2000,
+            expected_tx_count=10,
+            expected_weight=MAX_BLOCK_WEIGHT - DEFAULT_BLOCK_RESERVED_WEIGHT - 10,
         )
 
         # Ensure the block weight does not exceed the maximum
@@ -355,8 +355,8 @@ class MiningTest(BitcoinTestFramework):
         self.log.info("Test that node will fail to start when user provide invalid -blockreservedweight")
         self.stop_node(0)
         self.nodes[0].assert_start_raises_init_error(
-            extra_args=[f"-blockreservedweight={MAX_BLOCK_WEIGHT + 1}"],
-            expected_msg=f"Error: Specified -blockreservedweight ({MAX_BLOCK_WEIGHT + 1}) exceeds consensus maximum block weight ({MAX_BLOCK_WEIGHT})",
+            extra_args=[f"-blockreservedweight={MAX_BLOCK_WEIGHT * 4 + 1}"],
+            expected_msg=f"Error: Specified -blockreservedweight ({MAX_BLOCK_WEIGHT * 4 + 1}) exceeds consensus maximum block weight ({MAX_BLOCK_WEIGHT * 4})",
         )
 
         self.log.info(f"Test that node will fail to start when user provide -blockreservedweight below {MINIMUM_BLOCK_RESERVED_WEIGHT}")
@@ -369,8 +369,8 @@ class MiningTest(BitcoinTestFramework):
         self.log.info("Test that node will fail to start when user provide invalid -blockmaxweight")
         self.stop_node(0)
         self.nodes[0].assert_start_raises_init_error(
-            extra_args=[f"-blockmaxweight={MAX_BLOCK_WEIGHT + 1}"],
-            expected_msg=f"Error: Specified -blockmaxweight ({MAX_BLOCK_WEIGHT + 1}) exceeds consensus maximum block weight ({MAX_BLOCK_WEIGHT})",
+            extra_args=[f"-blockmaxweight={MAX_BLOCK_WEIGHT * 4  + 1}"],
+            expected_msg=f"Error: Specified -blockmaxweight ({MAX_BLOCK_WEIGHT * 4  + 1}) exceeds consensus maximum block weight ({MAX_BLOCK_WEIGHT * 4})",
         )
 
     def test_height_in_locktime(self):

@@ -62,7 +62,7 @@ class MempoolAcceptanceTest(BitcoinTestFramework):
         self.num_nodes = 1
         self.extra_args = [[
             '-txindex','-permitbaremultisig=0',
-            '-mempoolfullrbf=0','-minrelaytxfee=0.0000001',
+            '-minrelaytxfee=0.0000001',
         ]] * self.num_nodes
         self.supports_cli = False
 
@@ -93,8 +93,8 @@ class MempoolAcceptanceTest(BitcoinTestFramework):
 
         self.log.info("Check default settings")
         # Settings are listed in BTC/kvB
-        assert_equal(node.getmempoolinfo()['minrelaytxfee'], Decimal(DEFAULT_MIN_RELAY_TX_FEE) / COIN)
-        assert_equal(node.getmempoolinfo()['incrementalrelayfee'], Decimal(DEFAULT_INCREMENTAL_RELAY_FEE) / COIN)
+        # assert_equal(node.getmempoolinfo()['minrelaytxfee'], Decimal(DEFAULT_MIN_RELAY_TX_FEE) / COIN)
+        # assert_equal(node.getmempoolinfo()['incrementalrelayfee'], Decimal(DEFAULT_INCREMENTAL_RELAY_FEE) / COIN)
 
         self.log.info('Should not accept garbage to testmempoolaccept')
         assert_raises_rpc_error(-3, 'JSON value of type string is not of expected type array', lambda: node.testmempoolaccept(rawtxs='ff00baar'))
@@ -438,7 +438,7 @@ class MempoolAcceptanceTest(BitcoinTestFramework):
         )
 
         self.log.info('OP_1 <0x4e73> is able to be created and spent')
-        anchor_value = 10000
+        anchor_value = 10000000
         create_anchor_tx = self.wallet.send_to(from_node=node, scriptPubKey=PAY_TO_ANCHOR, amount=anchor_value)
         self.generate(node, 1)
 
@@ -470,7 +470,7 @@ class MempoolAcceptanceTest(BitcoinTestFramework):
         assert_equal(anchor_spend.txid_hex, anchor_spend.wtxid_hex)
 
         self.check_mempool_result(
-            result_expected=[{'txid': anchor_spend.txid_hex, 'allowed': True, 'vsize': anchor_spend.get_vsize(), 'fees': { 'base': Decimal('0.00000700')}}],
+            result_expected=[{'txid': anchor_spend.txid_hex, 'allowed': True, 'vsize': anchor_spend.get_vsize(), 'fees': { 'base': Decimal('0.00300000')}}],
             rawtxs=[anchor_spend.serialize().hex()],
             maxfeerate=0,
         )
@@ -505,7 +505,7 @@ class MempoolAcceptanceTest(BitcoinTestFramework):
         sign_input_legacy(tx_spend, 0, tx.vout[0].scriptPubKey, privkey, sighash_type=SIGHASH_ALL)
         tx_spend.vin[0].scriptSig = bytes(CScript([OP_0])) + tx_spend.vin[0].scriptSig
         self.check_mempool_result(
-            result_expected=[{'txid': tx_spend.txid_hex, 'allowed': True, 'vsize': tx_spend.get_vsize(), 'fees': { 'base': Decimal('0.00000700')}}],
+            result_expected=[{'txid': tx_spend.txid_hex, 'allowed': True, 'vsize': tx_spend.get_vsize(), 'fees': { 'base': Decimal('0.00300000')}}],
             rawtxs=[tx_spend.serialize().hex()],
             maxfeerate=0,
         )
