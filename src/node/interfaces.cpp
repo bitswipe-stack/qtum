@@ -1124,10 +1124,7 @@ public:
 
         BlockAssembler::Options assemble_options{options};
         ApplyArgsManOptions(*Assert(m_node.args), assemble_options);
-        bool fProofOfStake = assemble_options.is_coinstake;
-        int64_t nTime = assemble_options.proof_time;
-        int64_t nTimeLimit = assemble_options.time_limit;
-        return std::make_unique<BlockTemplateImpl>(assemble_options, BlockAssembler{chainman().ActiveChainstate(), context()->mempool.get(), assemble_options}.CreateNewBlock(fProofOfStake, nullptr, nTime, nTimeLimit), m_node);
+        return std::make_unique<BlockTemplateImpl>(assemble_options, BlockAssembler{chainman().ActiveChainstate(), context()->mempool.get(), assemble_options}.CreateNewBlock(), m_node);
     }
 
     bool checkBlock(const CBlock& block, const node::BlockCheckOptions& options, std::string& reason, std::string& debug) override

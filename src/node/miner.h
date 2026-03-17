@@ -93,6 +93,8 @@ struct CBlockTemplate
     /* A vector of package fee rates, ordered by the sequence in which
      * packages are selected for inclusion in the block template.*/
     std::vector<FeeFrac> m_package_feerates;
+    // The total fee is the Fees minus the Refund
+    int64_t nTotalFees = 0;
 };
 
 // Container for tracking updates to ancestor feerate as we include (parent)
@@ -299,12 +301,9 @@ public:
     // The original constructed reward tx (either coinbase or coinstake) without gas refund adjustments
     CMutableTransaction originalRewardTx; // qtum
 
-    //When GetAdjustedTime() exceeds this, no more transactions will attempt to be added
-    int64_t nTimeLimit;
-
     /** Construct a new block template */
-    std::unique_ptr<CBlockTemplate> CreateNewBlock(bool fProofOfStake=false, int64_t* pTotalFees = 0, int64_t nTime=0, int64_t nTimeLimit=0);
-    std::unique_ptr<CBlockTemplate> CreateEmptyBlock(bool fProofOfStake=false, int64_t* pTotalFees = 0, int64_t nTime=0);
+    std::unique_ptr<CBlockTemplate> CreateNewBlock();
+    std::unique_ptr<CBlockTemplate> CreateEmptyBlock();
 
     /** The number of transactions in the last assembled block (excluding coinbase transaction) */
     inline static std::optional<int64_t> m_last_block_num_txs{};
