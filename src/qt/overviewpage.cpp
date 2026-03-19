@@ -241,6 +241,9 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
 
 void OverviewPage::setPrivacy(bool privacy)
 {
+    if (!clientModel || !clientModel->getOptionsModel())
+        return;
+
     m_privacy = privacy;
     clientModel->getOptionsModel()->setOption(OptionsModel::OptionID::MaskValues, privacy);
     const auto& balances = walletModel->getCachedBalance();

@@ -927,7 +927,7 @@ void BitcoinGUI::addWallet(WalletModel* walletModel)
     const QString display_name = walletModel->getDisplayName();
     m_wallet_selector->addItem(display_name, QVariant::fromValue(walletModel));
     appTitleBar->addWallet(walletModel);
-    if(!(clientModel->fBatchProcessingMode))
+    if(clientModel && !(clientModel->fBatchProcessingMode))
         QTimer::singleShot(MODEL_UPDATE_DELAY, clientModel, SLOT(updateTip()));
 
     m_wallet_selector->setCurrentIndex(m_wallet_selector->count()-1);
@@ -1294,6 +1294,9 @@ void BitcoinGUI::setNetworkActive(bool network_active)
 
 void BitcoinGUI::updateHeadersSyncProgressLabel()
 {
+    if(!clientModel)
+        return;
+
     int64_t headersTipTime = clientModel->getHeaderTipTime();
     int headersTipHeight = clientModel->getHeaderTipHeight();
     int estHeadersLeft = GUIUtil::estimateNumberHeadersLeft(GetTime() - headersTipTime, headersTipHeight);
@@ -1398,7 +1401,7 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
         progressBar->setVisible(false);
 
         // notify tip changed when the sync is finished
-        if(clientModel->fBatchProcessingMode)
+        if(clientModel && clientModel->fBatchProcessingMode)
         {
             clientModel->fBatchProcessingMode = false;
             QMetaObject::invokeMethod(clientModel, "tipChanged", Qt::QueuedConnection);
@@ -1723,6 +1726,9 @@ void BitcoinGUI::updateWalletStatus()
 
 void BitcoinGUI::updateProxyIcon()
 {
+    if(!clientModel)
+        return;
+
     std::string ip_port;
     bool proxy_enabled = clientModel->getProxyInfo(ip_port);
 

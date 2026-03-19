@@ -411,7 +411,7 @@ void OptionsDialog::setOkButtonState(bool fState)
 
 void OptionsDialog::on_resetButton_clicked()
 {
-    if (model) {
+    if (model && m_client_model) {
         // confirmation dialog
         /*: Text explaining that the settings changed will not come into effect
             until the client is restarted. */
