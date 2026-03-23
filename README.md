@@ -217,11 +217,9 @@ Then install [Homebrew](https://brew.sh).
 
 #### Dependencies
 
-    brew install cmake automake berkeley-db@4 libtool boost miniupnpc openssl pkg-config protobuf qt@5 libevent imagemagick librsvg qrencode gmp
+    brew install cmake automake libtool boost miniupnpc openssl pkg-config protobuf qt@6 libevent imagemagick librsvg qrencode gmp
 
 NOTE: This will work for building on Intel Macs and Apple Silicon Macs
-
-NOTE: Building may fail if Qt 6 is installed (`qt` or `qt@6`). Building with Qt 5 is recommended.
 
 #### Build Qtum Core
 
