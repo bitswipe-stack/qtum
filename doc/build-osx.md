@@ -48,7 +48,7 @@ See [dependencies.md](dependencies.md) for a complete overview.
 To install, run the following from your terminal:
 
 ``` bash
-brew install cmake boost@1.90 pkgconf libevent miniupnpc openssl protobuf qt@6 imagemagick librsvg qrencode gmp
+brew install cmake boost@1.90 pkgconf libevent miniupnpc openssl qt@6 imagemagick librsvg qrencode gmp
 ```
 
 Link the specific boost version:

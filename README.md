@@ -147,31 +147,44 @@ Qtum uses a tool called Gitian to make reproducible builds that can be verified 
 This is a quick start script for compiling Qtum on Ubuntu
 
 ```bash
-    sudo apt-get install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils git cmake libboost-all-dev libgmp3-dev bison libtool-bin
+    # Installing dependencies for Qtum
+    sudo apt-get install build-essential cmake pkgconf python3 libgmp3-dev libssl-dev libevent-dev libboost-all-dev libsqlite3-dev libcapnp-dev capnproto git
     sudo apt-get install software-properties-common
     
     # If you want to build the Qt GUI:
-    sudo apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev protobuf-compiler qrencode
+    sudo apt-get install qt6-base-dev qt6-tools-dev qt6-l10n-tools qt6-tools-dev-tools libgl-dev libqrencode-dev
     
+    # Clone Qtum source code
     git clone https://github.com/qtumproject/qtum
     cd qtum
     git submodule update --init --recursive
 
-    ./contrib/install_db4.sh `pwd`
-    export BDB_PREFIX='/path/to/qtum/db4'
-
-    cd depends
-    make
-
-    # replace x86_64-pc-linux-gnu with the appropriate folder name for your system
-    libtool --finish depends/x86_64-pc-linux-gnu/lib 
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/x86_64-pc-linux-gnu/lib
+    # Building Qtum
+    cmake -DBUILD_GUI=ON -B build
+    cmake --build build -j$(nproc)
+```
+Or, compiling Qtum on Ubuntu and its dependencies
+```bash
+    # Installing building tools for Qtum
+    sudo apt-get install build-essential cmake pkgconf python3 curl m4 bison git
+    sudo apt-get install software-properties-common
     
-    # Note: cmake will prompt to install some more dependencies if needed
-    ./contrib/install_db4.sh `pwd`
+    # Clone Qtum source code
+    git clone https://github.com/qtumproject/qtum
+    cd qtum
+    git submodule update --init --recursive
+
+    # Building dependencies
+    cd depends
+    make -j$(nproc)
+    cd ..
+
+    # Building Qtum
+    # Replace x86_64-pc-linux-gnu with the appropriate folder name for your system
     cmake -B build --toolchain `pwd`/depends/x86_64-pc-linux-gnu/toolchain.cmake
     cmake --build build -j$(nproc)
 ```
+
 
 ### Build on CentOS
 
@@ -192,7 +205,7 @@ Here is a brief description for compiling Qtum on CentOS, for more details pleas
     sudo yum install libtool libdb4-cxx-devel openssl-devel libevent-devel gmp-devel
     
     # If you want to build the Qt GUI:
-    sudo yum install qt5-qttools-devel protobuf-devel qrencode-devel
+    sudo yum install qt5-qttools-devel qrencode-devel
     
     # Building Qtum
     git clone --recursive https://github.com/qtumproject/qtum.git
@@ -217,7 +230,7 @@ Then install [Homebrew](https://brew.sh).
 
 #### Dependencies
 
-    brew install cmake automake libtool boost miniupnpc openssl pkg-config protobuf qt@6 libevent imagemagick librsvg qrencode gmp
+    brew install cmake automake libtool boost miniupnpc openssl pkg-config qt@6 libevent imagemagick librsvg qrencode gmp
 
 NOTE: This will work for building on Intel Macs and Apple Silicon Macs
 

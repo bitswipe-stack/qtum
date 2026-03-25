@@ -52,7 +52,7 @@ Build requirements:
 
 Now, you can either build from self-compiled [depends](#dependencies) or install the required dependencies:
 
-    sudo apt-get install libevent-dev libboost-dev
+    sudo apt-get install libevent-dev libboost-all-dev
 
 SQLite is required for the wallet:
 
@@ -153,7 +153,7 @@ Build requirements:
     
 To build with Qt 5 (recommended) you need the following:
 
-    sudo yum install qt5-qttools-devel protobuf-devel qrencode-devel
+    sudo yum install qt5-qttools-devel qrencode-devel
 
 ### Ubuntu 16
 #### Dependency Build Instructions
