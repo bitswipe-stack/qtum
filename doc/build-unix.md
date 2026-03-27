@@ -148,12 +148,12 @@ You need to build boost manually, and if it's not in standard library paths, you
 
 Build requirements:
 
-    sudo yum install epel-release
-    sudo yum install gcc-c++ libtool libdb4-cxx-devel openssl-devel libevent-devel gmp-devel
+    sudo yum install epel-release cmake
+    sudo yum install gcc-c++ libevent-devel sqlite-devel capnproto capnproto-devel openssl-devel gmp-devel
     
-To build with Qt 5 (recommended) you need the following:
+To build with Qt 6 (recommended) you need the following:
 
-    sudo yum install qt5-qttools-devel qrencode-devel
+    sudo yum install qt6-qtbase-devel qt6-qttools-devel qrencode-devel
 
 ### Ubuntu 16
 #### Dependency Build Instructions

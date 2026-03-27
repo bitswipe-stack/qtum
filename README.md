@@ -140,7 +140,7 @@ Make sure to check out these resources as well for more information and to keep 
 
 ### Validate and Reproduce Binaries
 
-Qtum uses a tool called Gitian to make reproducible builds that can be verified by anyone. Instructions on setting up a Gitian VM and building Qtum are provided in [Gitan Building](https://github.com/qtumproject/qtum/blob/master/doc/gitian-building.md)
+Qtum uses a tool called Guix to make reproducible builds that can be verified by anyone. Instructions on setting up a Guix VM and building Qtum are provided in [Gitan Building](https://github.com/qtumproject/qtum/blob/master/contrib/guix/README.md)
 
 ### Build on Ubuntu
 
@@ -191,21 +191,22 @@ Or, compiling Qtum on Ubuntu and its dependencies
 Here is a brief description for compiling Qtum on CentOS, for more details please refer to [the specific document](https://github.com/qtumproject/qtum/blob/master/doc/build-unix.md)
 
     # Compiling boost manually
-    sudo yum install python-devel bzip2-devel
+    sudo yum install gcc gcc-c++ bzip2 bzip2-devel python3 python3-devel git
     git clone https://github.com/boostorg/boost.git
     cd boost
-    git checkout boost-1.73.0
+    git checkout boost-1.82.0
     git submodule update --init --recursive
     ./bootstrap.sh --prefix=/usr --libdir=/usr/lib64
     ./b2 headers
     sudo ./b2 -j4 install
+    cd ..
     
     # Installing Dependencies for Qtum
     sudo yum install epel-release cmake
-    sudo yum install libtool libdb4-cxx-devel openssl-devel libevent-devel gmp-devel
+    sudo yum install libevent-devel sqlite-devel capnproto capnproto-devel openssl-devel gmp-devel
     
     # If you want to build the Qt GUI:
-    sudo yum install qt5-qttools-devel qrencode-devel
+    sudo yum install qt6-qtbase-devel qt6-qttools-devel qrencode-devel
     
     # Building Qtum
     git clone --recursive https://github.com/qtumproject/qtum.git
