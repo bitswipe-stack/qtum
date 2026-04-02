@@ -7619,7 +7619,7 @@ double ChainstateManager::GuessVerificationProgress(const CBlockIndex* pindex) c
             // close to "1.0", because some users expect it to be. This also
             // avoids relying too much on the exact miner-set timestamp, which
             // may be off.
-            nNow - (m_best_header->nHeight - pindex->nHeight) * GetConsensus().nPowTargetSpacing :
+            nNow - (m_best_header->nHeight - pindex->nHeight) * GetConsensus().TargetSpacing(pindex->nHeight) :
             pindex->GetBlockTime(),
     };
 
