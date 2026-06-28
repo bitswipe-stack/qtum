@@ -18,6 +18,7 @@ from test_framework.blocktools import (
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import assert_equal, assert_raises_rpc_error
 from test_framework.wallet import MiniWallet
+from test_framework.blocktools import COINBASE_MATURITY
 
 MAX_DISCONNECTED_TX_POOL_BYTES = 20_000_000
 
@@ -28,7 +29,7 @@ class MempoolUpdateFromBlockTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 1
         # Ancestor and descendant limits depend on transaction_graph_test requirements
-        self.extra_args = [['-limitdescendantsize=1000', '-limitancestorsize=1000', f'-limitancestorcount={CUSTOM_ANCESTOR_COUNT}', f'-limitdescendantcount={CUSTOM_DESCENDANT_COUNT}']]
+        self.extra_args = [['-minrelaytxfee=0', '-blockmintxfee=0', '-limitdescendantsize=1000', '-limitancestorsize=1000', f'-limitancestorcount={CUSTOM_ANCESTOR_COUNT}', f'-limitdescendantcount={CUSTOM_DESCENDANT_COUNT}']]
 
     def create_empty_fork(self, fork_length):
         '''
@@ -66,6 +67,7 @@ class MempoolUpdateFromBlockTest(BitcoinTestFramework):
         More details: https://en.wikipedia.org/wiki/Tournament_(graph_theory)
         """
         wallet = MiniWallet(self.nodes[0])
+        self.generate(wallet, COINBASE_MATURITY + 1)
 
         # Prep for fork with empty blocks to not use invalidateblock directly
         # for reorg case. The rpc has different codepath
@@ -141,7 +143,7 @@ class MempoolUpdateFromBlockTest(BitcoinTestFramework):
         # Generate coins for the hundreds of transactions we will make
         parent_target_vsize = 100_000
         wallet = MiniWallet(self.nodes[0])
-        self.generate(wallet, (MAX_DISCONNECTED_TX_POOL_BYTES // parent_target_vsize) + 100)
+        self.generate(wallet, COINBASE_MATURITY + (MAX_DISCONNECTED_TX_POOL_BYTES // parent_target_vsize) + 100)
 
         assert_equal(self.nodes[0].getrawmempool(), [])
 
@@ -190,7 +192,7 @@ class MempoolUpdateFromBlockTest(BitcoinTestFramework):
         self.log.info('Check that too long chains on reorg are handled')
 
         wallet = MiniWallet(self.nodes[0])
-        self.generate(wallet, 101)
+        self.generate(wallet, COINBASE_MATURITY + 101)
 
         assert_equal(self.nodes[0].getrawmempool(), [])
 

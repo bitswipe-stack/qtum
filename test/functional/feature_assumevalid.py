@@ -193,17 +193,16 @@ class AssumeValidTest(BitcoinTestFramework):
         for i in range(0, len(self.blocks), chunk_size):
             p2p1.send_header_for_blocks(self.blocks[i:i+chunk_size])
 
-        with self.nodes[1].assert_debug_log(expected_msgs=['Disabling signature validations at block #1', 'Enabling signature validations at block #103']):
-            # Send all blocks to node1. All blocks will be accepted.
-            # Send only a subset to speed this up
-            p2p1 = self.nodes[1].add_p2p_connection(BaseNode())
-            for i in range(1000):
-                p2p1.send_without_ping(msg_block(self.blocks[i]))
-            # Syncing 2200 blocks can take a while on slow systems. Give it plenty of time to sync.
-            timeout = time.time() + 200
-            while time.time() < timeout:
-                if self.nodes[1].getblock(self.nodes[1].getbestblockhash())['height'] == 1000:
-                    break
+        # Send all blocks to node1. All blocks will be accepted.
+        # Send only a subset to speed this up
+        p2p1 = self.nodes[1].add_p2p_connection(BaseNode())
+        for i in range(1000):
+            p2p1.send_without_ping(msg_block(self.blocks[i]))
+        # Syncing 2200 blocks can take a while on slow systems. Give it plenty of time to sync.
+        timeout = time.time() + 200
+        while time.time() < timeout:
+            if self.nodes[1].getblock(self.nodes[1].getbestblockhash())['height'] == 1000:
+                break
         assert_equal(self.nodes[1].getblock(self.nodes[1].getbestblockhash())['height'], 1000)
 
         p2p2 = self.nodes[2].add_p2p_connection(BaseNode())

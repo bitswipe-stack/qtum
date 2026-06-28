@@ -157,7 +157,10 @@ class PackageRBFTest(BitcoinTestFramework):
         # Package 2 has a higher feerate but lower absolute fee
         package_hex2, package_txns2 = self.create_simple_package(coin, parent_fee=DEFAULT_FEE, child_fee=DEFAULT_CHILD_FEE - Decimal("0.00000001"))
         pkg_results2 = node.submitpackage(package_hex2)
-        assert_equal(f"package RBF failed: insufficient anti-DoS fees, rejecting replacement {package_txns2[1].txid_hex}, less fees than conflicting txs; {PACKAGE_FEE_MINUS_ONE} < {PACKAGE_FEE}", pkg_results2["package_msg"])
+        # .normalize() is needed because PACKAGE_FEE=Decimal("0.0020") has a trailing
+        # zero, but C++ FormatMoney trims trailing zeros (FormatMoney(200000)="0.002").
+        # Bitcoin's DEFAULT_FEE=0.0001 produces PACKAGE_FEE=0.0005 (no trailing zero).
+        assert_equal(f"package RBF failed: insufficient anti-DoS fees, rejecting replacement {package_txns2[1].txid_hex}, less fees than conflicting txs; {PACKAGE_FEE_MINUS_ONE} < {PACKAGE_FEE.normalize()}", pkg_results2["package_msg"])
         self.assert_mempool_contents(expected=package_txns1)
 
         self.log.info("Check replacement pays for incremental bandwidth")
@@ -328,10 +331,15 @@ class PackageRBFTest(BitcoinTestFramework):
             node.sendrawtransaction(tx.serialize().hex())
         self.assert_mempool_contents(expected=expected_txns)
 
-        # Now make conflicting packages for each coin
+        # Now make conflicting packages for each coin.
+        # CheckConflictTopology iterates over m_to_remove in hash order
+        # (CompareIteratorByHash in kernel/mempool_entry.h). Qtum transactions
+        # have different hashes than Bitcoin's due to the different serialization
+        # format (OP_SENDER, contract fields), so the iteration order differs.
+        # In Qtum, the child tx has the lowest hash in this cluster.
         package_hex1, _package_txns1 = self.create_simple_package(coin1, DEFAULT_FEE + Decimal('0.0008208'), DEFAULT_CHILD_FEE + Decimal('0.0008208'))
         package_result = node.submitpackage(package_hex1)
-        assert_equal(f"package RBF failed: {parent_result['tx'].txid_hex} has 2 descendants, max 1 allowed", package_result["package_msg"])
+        assert_equal(f"package RBF failed: {child_result['tx'].txid_hex} has both ancestor and descendant, exceeding cluster limit of 2", package_result["package_msg"])
 
         package_hex2, _package_txns2 = self.create_simple_package(coin2, DEFAULT_FEE + Decimal('0.0016'), DEFAULT_CHILD_FEE + Decimal('0.0016'))
         package_result = node.submitpackage(package_hex2)
@@ -380,14 +388,16 @@ class PackageRBFTest(BitcoinTestFramework):
             node.sendrawtransaction(tx.serialize().hex())
         self.assert_mempool_contents(expected=expected_txns)
 
-        # Now make conflicting packages for each coin
+        # Now make conflicting packages for each coin.
+        # In Qtum, parent1 and parent2 both have lower hashes than child,
+        # so CheckConflictTopology reports the parent error first.
         package_hex1, _package_txns1 = self.create_simple_package(coin1, DEFAULT_FEE + Decimal('0.0008208'), DEFAULT_CHILD_FEE + Decimal('0.0008208'))
         package_result = node.submitpackage(package_hex1)
         assert_equal(f"package RBF failed: {parent1_result['tx'].txid_hex} is not the only parent of child {child_result['tx'].txid_hex}", package_result["package_msg"])
 
         package_hex2, _package_txns2 = self.create_simple_package(coin2, DEFAULT_FEE + Decimal('0.0016'), DEFAULT_CHILD_FEE + Decimal('0.0016'))
         package_result = node.submitpackage(package_hex2)
-        assert_equal(f"package RBF failed: {child_result['tx'].txid_hex} has 2 ancestors, max 1 allowed", package_result["package_msg"])
+        assert_equal(f"package RBF failed: {parent2_result['tx'].txid_hex} is not the only parent of child {child_result['tx'].txid_hex}", package_result["package_msg"])
 
         package_hex3, _package_txns3 = self.create_simple_package(coin3, DEFAULT_FEE, DEFAULT_CHILD_FEE)
         package_result = node.submitpackage(package_hex3)
@@ -434,9 +444,11 @@ class PackageRBFTest(BitcoinTestFramework):
             node.sendrawtransaction(tx.serialize().hex())
         self.assert_mempool_contents(expected=expected_txns)
 
+        # In Qtum, child2 has the lowest hash in the cluster, so
+        # CheckConflictTopology reports child2's error first.
         package_hex1, _package_txns1 = self.create_simple_package(coin1, DEFAULT_FEE + Decimal('0.0016208'), DEFAULT_CHILD_FEE + Decimal('0.0016208'))
         package_result = node.submitpackage(package_hex1)
-        assert_equal(f"package RBF failed: {child1_result['tx'].txid_hex} is not the only child of parent {parent_result['tx'].txid_hex}", package_result["package_msg"])
+        assert_equal(f"package RBF failed: {child2_result['tx'].txid_hex} is not the only child of parent {parent_result['tx'].txid_hex}", package_result["package_msg"])
 
         package_hex2, _package_txns2 = self.create_simple_package(coin2, DEFAULT_FEE + Decimal('0.0008'), DEFAULT_CHILD_FEE + Decimal('0.0008'))
         package_result = node.submitpackage(package_hex2)
