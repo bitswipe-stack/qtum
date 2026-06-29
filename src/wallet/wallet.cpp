@@ -2275,6 +2275,8 @@ bool CWallet::HasAddressStakeScripts(const uint160& keyId, std::map<uint160, boo
             std::string strAddress = EncodeDestination(PKHash(keyId));
             WalletLogPrintf("Both pkh and pk descriptors are needed for %s address to do staking\n", strAddress);
         }
+
+        return canAddressStake;
     }
 
     return it->second;
