@@ -420,6 +420,7 @@ BASE_SCRIPTS = [
     'qtum_header_spam.py --dos-same-height',
     'qtum_header_spam.py --dos-variable-height',
     'qtum_header_spam.py --run-standard-tests',
+    'p2p_qtum_punish_invalid_contract_tx.py',
     'qtum_divergence_dos.py',
     'qtum_prioritize_create_over_call.py',
     'qtum_callcontract_timestamp.py',
