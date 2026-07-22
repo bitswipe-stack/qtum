@@ -12,12 +12,14 @@ add_executable(bench_qtum
   bech32.cpp
   bip324_ecdh.cpp
   block_assemble.cpp
+  blockencodings.cpp
   ccoins_caching.cpp
   chacha20.cpp
   checkblock.cpp
   checkblockindex.cpp
   checkqueue.cpp
   cluster_linearize.cpp
+  connectblock.cpp
   crypto_hash.cpp
   descriptors.cpp
   disconnected_transactions.cpp
@@ -34,6 +36,7 @@ add_executable(bench_qtum
   mempool_eviction.cpp
   mempool_stress.cpp
   merkle_root.cpp
+  obfuscation.cpp
   parse_hex.cpp
   peer_eviction.cpp
   poly1305.cpp
@@ -47,9 +50,10 @@ add_executable(bench_qtum
   sign_transaction.cpp
   streams_findbyte.cpp
   strencodings.cpp
+  txgraph.cpp
+  txorphanage.cpp
   util_time.cpp
   verify_script.cpp
-  xor.cpp
 )
 
 include(TargetDataSources)
@@ -78,8 +82,8 @@ if(ENABLE_WALLET)
   target_link_libraries(bench_qtum bitcoin_wallet)
 endif()
 
-add_test(NAME bench_sanity_check_high_priority
-  COMMAND bench_qtum -sanity-check -priority-level=high
+add_test(NAME bench_sanity_check
+  COMMAND bench_qtum -sanity-check
 )
 
-install_binary_component(bench_qtum)
+install_binary_component(bench_qtum INTERNAL)

@@ -11,9 +11,6 @@ import random
 import time
 
 class QtumIgnoreMPOSParticipantRewardTest(BitcoinTestFramework):
-    def add_options(self, parser):
-        self.add_wallet_options(parser)
-
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 1
@@ -32,7 +29,7 @@ class QtumIgnoreMPOSParticipantRewardTest(BitcoinTestFramework):
     def run_test(self):
         privkey = byte_to_base58(hash256(struct.pack('<I', 0)), 239)
         for n in self.nodes:
-            n.importprivkey(privkey)
+            wallet_importprivkey(n, privkey, 0)
 
         self.node = self.nodes[0]
         self.node.setmocktime(int(time.time()) - 1000000)
